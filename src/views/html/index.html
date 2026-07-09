@@ -1,0 +1,75 @@
+﻿<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Portal de Gestión SST</title>
+  <link rel="icon" type="image/x-icon" href="/img/favicon.ico" />
+  <link rel="stylesheet" href="/css/home.css" />
+</head>
+<body>
+
+  <header class="home-header">
+    <div class="home-header-inner">
+      <img src="/img/Cargo.png" alt="Logo Cargoban" class="home-logo" />
+      <span class="home-header-sep"></span>
+      <span class="home-header-label">Sistema de Gestión SST</span>
+    </div>
+  </header>
+
+  <div class="home-stage">
+    <p class="home-eyebrow">Portal de Gestión</p>
+    <h1 class="home-title">Inspecciones y Evaluaciones SST</h1>
+    <p class="home-subtitle">Seleccione el formulario que necesita diligenciar.</p>
+  </div>
+
+  <main class="home-main">
+    <div class="cards-grid">
+
+      <div class="card card--blue">
+        <div class="card-icon-wrap">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round"
+              d="M9 12.75 11.25 15 15 9.75m-3-7.036A11.959 11.959 0 0 1 3.598 6 11.99 11.99 0 0 0 3 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285Z" />
+          </svg>
+        </div>
+
+        <div class="card-body">
+          <p class="card-process">Proceso: Seguridad y Salud en el Trabajo</p>
+          <h2 class="card-title">Inspección de Extintores,<br>Botiquines y Camillas</h2>
+          <ul class="card-features">
+            <li>
+              <span class="feature-check">&#10003;</span>
+              Registro de evidencias fotográficas
+            </li>
+            <li>
+              <span class="feature-check">&#10003;</span>
+              Inventario detallado de botiquín
+            </li>
+            <li>
+              <span class="feature-check">&#10003;</span>
+              Almacenamiento en OneDrive y correo automático
+            </li>
+          </ul>
+        </div>
+
+        <a href="/inspeccion-sst" class="card-btn">
+          <span>Iniciar inspección</span>
+          
+            <path fill-rule="evenodd" d="M3 10a.75.75 0 0 1 .75-.75h10.638L10.23 5.29a.75.75 0 1 1 1.04-1.08l5.5 5.25a.75.75 0 0 1 0 1.08l-5.5 5.25a.75.75 0 1 1-1.04-1.08l4.158-3.96H3.75A.75.75 0 0 1 3 10Z" clip-rule="evenodd" />
+          </svg>
+        </a>
+      </div>
+
+    </div>
+  </main>
+
+  <footer class="home-footer">
+    <p>Cargoban Operador Logístico y Portuario S.A.S &copy; <span id="yr"></span></p>
+  </footer>
+
+  <script>
+    document.getElementById('yr').textContent = new Date().getFullYear();
+  </script>
+</body>
+</html>

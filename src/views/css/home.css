@@ -1,0 +1,281 @@
+/*
+  home.css — Estilos de la pantalla de inicio (index.html).
+*/
+
+:root {
+  --bg:           #f1f5f9;
+  --ink:          #1e293b;
+  --muted:        #64748b;
+  --line:         #e2e8f0;
+  --panel:        #ffffff;
+  --primary:      #2563eb;
+  --primary-dark: #1d4ed8;
+  --navy:         #0f172a;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  font-family: "Segoe UI", "Trebuchet MS", sans-serif;
+  color: var(--ink);
+}
+
+/* ── HEADER ─────────────────────────────────────── */
+.home-header {
+  background: #ffffff;
+  border-bottom: 1px solid var(--line);
+  box-shadow: 0 1px 6px rgba(15, 23, 42, 0.07);
+  padding: 14px 32px;
+}
+
+.home-header-inner {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.home-logo {
+  width: 260px;
+  height: 92px;
+  object-fit: contain;
+}
+
+.home-header-sep {
+  width: 1px;
+  height: 30px;
+  background: #d0d7e2;
+  flex-shrink: 0;
+}
+
+.home-header-label {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+/* ── STAGE / HERO ────────────────────────────────── */
+.home-stage {
+  padding: 64px 24px 48px;
+  text-align: center;
+  background: transparent;
+}
+
+.home-eyebrow {
+  display: inline-block;
+  margin: 0 0 16px;
+  padding: 5px 16px;
+  border: 1px solid rgba(37, 99, 235, 0.22);
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: var(--primary);
+  background: rgba(37, 99, 235, 0.06);
+  animation: fadeUp 0.45s ease both;
+}
+
+.home-title {
+  margin: 0 0 12px;
+  font-size: clamp(24px, 4vw, 36px);
+  font-weight: 900;
+  color: var(--navy);
+  line-height: 1.18;
+  letter-spacing: -0.5px;
+  animation: fadeUp 0.45s ease 0.07s both;
+}
+
+.home-subtitle {
+  margin: 0;
+  font-size: 15px;
+  color: var(--muted);
+  line-height: 1.65;
+  animation: fadeUp 0.45s ease 0.14s both;
+}
+
+/* ── MAIN ────────────────────────────────────────── */
+.home-main {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  padding: 8px 24px 64px;
+  position: relative;
+  z-index: 2;
+}
+
+/* ── CARDS GRID ──────────────────────────────────── */
+.cards-grid {
+  width: 100%;
+  max-width: 440px;
+}
+
+/* ── CARD ────────────────────────────────────────── */
+.card {
+  background: var(--panel);
+  border-radius: 20px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow:
+    0 1px 3px rgba(15, 23, 42, 0.04),
+    0 10px 36px rgba(15, 23, 42, 0.10);
+  border: 1px solid rgba(15, 23, 42, 0.06);
+  transition: box-shadow 250ms ease, transform 250ms ease;
+  animation: fadeUp 0.5s ease 0.22s both;
+}
+
+.card--blue:hover {
+  transform: translateY(-4px);
+  box-shadow:
+    0 4px 8px rgba(37, 99, 235, 0.06),
+    0 24px 56px rgba(37, 99, 235, 0.16);
+}
+
+/* Franja superior de color */
+.card--blue::before {
+  content: "";
+  display: block;
+  height: 4px;
+  background: linear-gradient(90deg, #1d4ed8, #3b82f6, #06b6d4);
+  flex-shrink: 0;
+}
+
+/* ── ICONO ───────────────────────────────────────── */
+.card-icon-wrap {
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  background: #eff6ff;
+  color: var(--primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 26px 26px 0;
+  flex-shrink: 0;
+}
+
+.card-icon-wrap svg {
+  width: 26px;
+  height: 26px;
+}
+
+/* ── CUERPO ──────────────────────────────────────── */
+.card-body {
+  padding: 18px 26px 22px;
+  flex: 1;
+}
+
+.card-process {
+  margin: 0 0 5px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color: var(--primary);
+}
+
+.card-title {
+  margin: 0 0 16px;
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--navy);
+  line-height: 1.3;
+}
+
+.card-features {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.card-features li {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 13px;
+  color: #475569;
+  font-weight: 500;
+}
+
+.feature-check {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #f0fdf4;
+  color: #16a34a;
+  font-size: 11px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+/* ── BOTÓN ───────────────────────────────────────── */
+.card-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin: 0 26px 26px;
+  padding: 14px 20px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 700;
+  text-decoration: none;
+  color: #ffffff;
+  background: linear-gradient(135deg, #1d4ed8 0%, #3b82f6 100%);
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.28);
+  transition: box-shadow 180ms ease, transform 180ms ease;
+}
+
+.card-btn:hover {
+  box-shadow: 0 6px 20px rgba(37, 99, 235, 0.4);
+  transform: translateY(-1px);
+}
+
+.card-btn svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+/* ── FOOTER ──────────────────────────────────────── */
+.home-footer {
+  text-align: center;
+  padding: 18px 20px;
+  font-size: 12px;
+  color: #94a3b8;
+  border-top: 1px solid var(--line);
+}
+
+.home-footer p { margin: 0; }
+
+/* ── ANIMACIONES ─────────────────────────────────── */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── RESPONSIVE ──────────────────────────────────── */
+@media (max-width: 600px) {
+  .home-stage  { padding: 44px 20px 32px; }
+  .home-header { padding: 10px 16px; }
+  .home-header-sep,
+  .home-header-label { display: none; }
+  .home-logo   { width: 180px; height: 64px; }
+  .home-main   { padding: 8px 16px 48px; }
+  .cards-grid  { max-width: 100%; }
+}
