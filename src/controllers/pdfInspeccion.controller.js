@@ -28,7 +28,7 @@ const path = require("node:path");
 const PDFDocument = require("pdfkit");
 const exifr = require("exifr");
 
-const LOGO_URL = "https://sst-inspeccion.onrender.com/img/Cargo.png";
+const LOGO_URL = "https://sstinspeccion.onrender.com/img/Cargo.png";
 
 // ===== Utilidades =====
 function getRequiredEnv(name) {
