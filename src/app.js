@@ -19,6 +19,14 @@
 */
 const path = require("node:path");
 require("dotenv").config();
+
+// Diagnóstico temporal: confirma qué variables de entorno llegaron al proceso.
+console.log("[ENV CHECK]", Object.fromEntries(
+  ["MS_TENANT_ID", "MS_CLIENT_ID", "MS_CLIENT_SECRET", "ONEDRIVE_USER_ID",
+   "ONEDRIVE_EXCEL_PATH", "ONEDRIVE_TABLE_NAME", "GRAPH_EMAIL_TO_TEST"]
+    .map((k) => [k, Boolean(process.env[k])])
+));
+
 const express = require("express");
 const multer = require("multer");
 const { enviarExtintorOneDrive } = require("./controllers/inspeccion.controller");
