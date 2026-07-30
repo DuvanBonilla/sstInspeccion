@@ -5,7 +5,9 @@
   - Genera dinámicamente una tarjeta (article) por cada extintor agregado,
     con campos: número, ubicación, tipo, capacidad, mes/año de próxima recarga,
     observaciones, imagen de evidencia y tabla de 19 condiciones (B/R/M/NC/NA).
-  - Permite agregar múltiples extintores y eliminar cualquiera excepto el primero.
+  - Permite agregar múltiples extintores y eliminar cualquiera (incluida la
+    única/primera tarjeta): la sección puede quedar vacía si la sede lo permite
+    (ver esSedeUrabana() en inspeccion-sst.js y validarInspeccion en el backend).
   - Muestra una vista previa de la imagen de evidencia al seleccionarla.
   - Lee todos los valores del DOM y los devuelve como array de objetos (leer()).
 
@@ -44,7 +46,7 @@ export function createExtintoresManager({ condiciones, crearOpciones, tipoOption
       <article class="extintor-card" data-extintor-index="${index}">
         <div class="extintor-card-header">
           <h3 class="extintor-card-title">Extintor ${index + 1}</h3>
-          ${index === 0 ? "" : `<button type="button" class="remove-btn" data-action="remove-extintor">Eliminar</button>`}
+          <button type="button" class="remove-btn" data-action="remove-extintor">Eliminar</button>
         </div>
 
         <div class="grid">
@@ -100,6 +102,16 @@ export function createExtintoresManager({ condiciones, crearOpciones, tipoOption
     `;
   }
 
+  // El botón "Eliminar" solo tiene sentido si hay más de una tarjeta: con una
+  // sola, para vaciar la sección se usa el botón "Omitir" (en inspeccion-sst.js).
+  function actualizarBotonesEliminar() {
+    const container = document.getElementById("extintores-container");
+    const cards = container.querySelectorAll("[data-extintor-index]");
+    cards.forEach((card) => {
+      card.querySelector('[data-action="remove-extintor"]')?.classList.toggle("hidden", cards.length <= 1);
+    });
+  }
+
   function agregar() {
     const container = document.getElementById("extintores-container");
     const index = extintorCounter++;
@@ -107,7 +119,11 @@ export function createExtintoresManager({ condiciones, crearOpciones, tipoOption
     const card = container.querySelector(`[data-extintor-index="${index}"]`);
     renderCondiciones(index, card);
     inicializarBloqueEvidencias(card, "evidencia");
-    card.querySelector('[data-action="remove-extintor"]')?.addEventListener("click", () => card.remove());
+    card.querySelector('[data-action="remove-extintor"]')?.addEventListener("click", () => {
+      card.remove();
+      actualizarBotonesEliminar();
+    });
+    actualizarBotonesEliminar();
   }
 
   function leerCondiciones(container) {

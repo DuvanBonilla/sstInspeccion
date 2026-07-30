@@ -375,7 +375,7 @@ body {
 }
 
 /* ── VALIDACIÓN ──────────────────────────────────── */
-.hidden { display: none; }
+.hidden { display: none !important; }
 
 .campo-error {
   border-color: var(--danger) !important;
@@ -544,6 +544,97 @@ button:disabled:hover {
   padding: 6px 12px;
   border-radius: 8px;
   box-shadow: none;
+}
+
+/* Botón omitir sección (solo sede Urabá) */
+.omitir-btn {
+  background: #fff7ed;
+  color: #c2410c;
+  border: 1.5px solid #fed7aa;
+  font-weight: 600;
+  box-shadow: none;
+}
+
+.omitir-btn:hover {
+  background: #ffedd5;
+  border-color: #fb923c;
+  box-shadow: none;
+  transform: none;
+}
+
+/* Resumen final (paso 7) */
+.resumen-general {
+  margin: 0 0 24px;
+  display: grid;
+  gap: 10px;
+}
+
+.resumen-general > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #e5e7eb;
+  font-size: 14px;
+}
+
+.resumen-general dt {
+  color: #6b7280;
+  font-weight: 600;
+}
+
+.resumen-general dd {
+  margin: 0;
+  color: #111827;
+  font-weight: 600;
+  text-align: right;
+}
+
+.resumen-secciones-titulo {
+  margin: 0 0 12px;
+  font-size: 15px;
+  color: #111827;
+}
+
+.resumen-secciones {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.resumen-seccion-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 13.5px;
+  font-weight: 600;
+  border: 1.5px solid transparent;
+}
+
+.resumen-seccion-item--ok {
+  background: #f0fdf4;
+  border-color: #bbf7d0;
+  color: #15803d;
+}
+
+.resumen-seccion-item--no {
+  background: #f8fafc;
+  border-color: #e2e8f0;
+  color: #64748b;
+}
+
+/* Aviso de sección omitida */
+.seccion-omitida-msg {
+  background: #fff7ed;
+  border: 1.5px dashed #fed7aa;
+  border-radius: 10px;
+  padding: 10px 14px;
+  color: #c2410c;
+  font-size: 13.5px;
+  font-weight: 600;
+  margin: 12px 0 0;
 }
 
 .remove-btn:hover {
@@ -948,7 +1039,7 @@ tbody tr:hover { background: #fafbfc; }
   gap: 14px;
 }
 
-.envio-estado.hidden { display: none; }
+.envio-estado.hidden { display: none !important; }
 
 /* Spinner */
 .envio-spinner {
@@ -1030,6 +1121,70 @@ tbody tr:hover { background: #fafbfc; }
 
 /* Icono de advertencia */
 .envio-icono--warn { background: #fffbeb; color: #d97706; }
+
+/* Bloque de links de aprobación (modal de éxito) */
+.envio-links {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 6px 0 16px;
+  text-align: left;
+}
+
+.envio-link-item {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+
+.envio-link-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #64748b;
+  margin-bottom: 4px;
+}
+
+.envio-link-row {
+  display: flex;
+  gap: 6px;
+}
+
+.envio-link-input {
+  flex: 1;
+  min-width: 0;
+  font-size: 12px;
+  font-family: "Courier New", monospace;
+  color: #1e293b;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 6px 8px;
+}
+
+.envio-link-copy {
+  flex-shrink: 0;
+  background: #1a2e4a;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.envio-link-copy:hover {
+  background: #142338;
+}
+
+.envio-link-copy.copiado {
+  background: #16a34a;
+}
 
 /* Botón Salir en el header */
 .btn-salir-formulario {

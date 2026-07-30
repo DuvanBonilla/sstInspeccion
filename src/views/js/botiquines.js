@@ -8,7 +8,9 @@
     del empaque, fecha de vencimiento, plan de intervención, fecha de intervención,
     cumplimiento y afectación al servicio.
   - También registra observación general y evidencia fotográfica del botiquín completo.
-  - Permite agregar varios botiquines y eliminar cualquiera excepto el primero.
+  - Permite agregar varios botiquines y eliminar cualquiera (incluida la
+    única/primera tarjeta): la sección puede quedar vacía si la sede lo permite
+    (ver esSedeUrabana() en inspeccion-sst.js y validarInspeccion en el backend).
   - Devuelve un array de objetos anidados (botiquín → items[]) con leer().
 
   Cómo interactúa:
@@ -74,7 +76,7 @@ export function createBotiquinesManager({ itemsBotiquin, crearOpciones }) {
       <article class="extintor-card" data-botiquin-index="${index}">
         <div class="extintor-card-header">
           <h3 class="extintor-card-title">Botiquín ${index + 1}</h3>
-          ${index === 0 ? "" : `<button type="button" class="remove-btn" data-action="remove-botiquin">Eliminar</button>`}
+          <button type="button" class="remove-btn" data-action="remove-botiquin">Eliminar</button>
         </div>
 
         <div class="grid">
@@ -155,6 +157,16 @@ export function createBotiquinesManager({ itemsBotiquin, crearOpciones }) {
     }
   }
 
+  // El botón "Eliminar" solo tiene sentido si hay más de una tarjeta: con una
+  // sola, para vaciar la sección se usa el botón "Omitir" (en inspeccion-sst.js).
+  function actualizarBotonesEliminar() {
+    const container = document.getElementById("botiquines-container");
+    const cards = container.querySelectorAll("[data-botiquin-index]");
+    cards.forEach((card) => {
+      card.querySelector('[data-action="remove-botiquin"]')?.classList.toggle("hidden", cards.length <= 1);
+    });
+  }
+
   function agregar() {
     const container = document.getElementById("botiquines-container");
     const index = botiquinCounter++;
@@ -176,7 +188,11 @@ export function createBotiquinesManager({ itemsBotiquin, crearOpciones }) {
     });
 
     inicializarBloqueEvidencias(card, "botiquin-evidencia");
-    card.querySelector('[data-action="remove-botiquin"]')?.addEventListener("click", () => card.remove());
+    card.querySelector('[data-action="remove-botiquin"]')?.addEventListener("click", () => {
+      card.remove();
+      actualizarBotonesEliminar();
+    });
+    actualizarBotonesEliminar();
   }
 
   function leer() {
