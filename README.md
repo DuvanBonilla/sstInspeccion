@@ -25,7 +25,7 @@ La inspección completa (datos generales + secciones + estado de las 3 aprobacio
 
 ```bash
 # 1. Clonar el repositorio
-git clone https://github.com/HEYDY116/usuario/sstInspeccion
+git clone https://github.com/usuario/sstInspeccion
 cd SST_INSPECCION-
 
 # 2. Instalar dependencias (OBLIGATORIO antes de iniciar)
