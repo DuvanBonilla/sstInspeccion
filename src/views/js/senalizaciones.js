@@ -5,7 +5,9 @@
   - Genera dinámicamente una tarjeta por cada señalización agregada, con campos:
     tipo, ubicación, observaciones, imagen de evidencia y tabla con:
     cantidad (numérico), estado (B/R/M/NC/NA) y aseo (B/R/M/NC/NA).
-  - Permite agregar varias señalizaciones y eliminar cualquiera excepto la primera.
+  - Permite agregar varias señalizaciones y eliminar cualquiera (incluida la
+    única/primera tarjeta): la sección puede quedar vacía si la sede lo permite
+    (ver esSedeUrabana() en inspeccion-sst.js y validarInspeccion en el backend).
   - Devuelve un array de objetos con todos los valores del DOM (leer()).
 
   Cómo interactúa:
@@ -50,7 +52,7 @@ export function createSenalizacionesManager({ crearOpciones }) {
       <article class="extintor-card" data-senalizacion-index="${index}">
         <div class="extintor-card-header">
           <h3 class="extintor-card-title">Señalización ${index + 1}</h3>
-          ${index === 0 ? "" : `<button type="button" class="remove-btn" data-action="remove-senalizacion">Eliminar</button>`}
+          <button type="button" class="remove-btn" data-action="remove-senalizacion">Eliminar</button>
         </div>
 
         <div class="grid">
@@ -87,6 +89,16 @@ export function createSenalizacionesManager({ crearOpciones }) {
     `;
   }
 
+  // El botón "Eliminar" solo tiene sentido si hay más de una tarjeta: con una
+  // sola, para vaciar la sección se usa el botón "Omitir" (en inspeccion-sst.js).
+  function actualizarBotonesEliminar() {
+    const container = document.getElementById("senalizaciones-container");
+    const cards = container.querySelectorAll("[data-senalizacion-index]");
+    cards.forEach((card) => {
+      card.querySelector('[data-action="remove-senalizacion"]')?.classList.toggle("hidden", cards.length <= 1);
+    });
+  }
+
   function agregar() {
     const container = document.getElementById("senalizaciones-container");
     const index = senalizacionCounter++;
@@ -94,7 +106,11 @@ export function createSenalizacionesManager({ crearOpciones }) {
     const card = container.querySelector(`[data-senalizacion-index="${index}"]`);
     renderCondicionSenalizacion(card);
     inicializarBloqueEvidencias(card, "senalizacion-evidencia");
-    card.querySelector('[data-action="remove-senalizacion"]')?.addEventListener("click", () => card.remove());
+    card.querySelector('[data-action="remove-senalizacion"]')?.addEventListener("click", () => {
+      card.remove();
+      actualizarBotonesEliminar();
+    });
+    actualizarBotonesEliminar();
   }
 
   function leer() {

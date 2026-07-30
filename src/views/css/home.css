@@ -223,16 +223,23 @@ body {
   flex-shrink: 0;
 }
 
+.card-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin: 0 26px 26px;
+}
+
 /* ── BOTÓN ───────────────────────────────────────── */
 .card-btn {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
-  margin: 0 26px 26px;
+  margin: 0;
   padding: 14px 20px;
   border-radius: 12px;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 700;
   text-decoration: none;
   color: #ffffff;
@@ -250,6 +257,15 @@ body {
   width: 16px;
   height: 16px;
   flex-shrink: 0;
+}
+
+.card-btn--stats {
+  background: linear-gradient(135deg, #0f766e 0%, #0ea5e9 100%);
+  box-shadow: 0 4px 12px rgba(14, 165, 233, 0.25);
+}
+
+.card-btn--stats:hover {
+  box-shadow: 0 6px 20px rgba(14, 165, 233, 0.34);
 }
 
 /* ── FOOTER ──────────────────────────────────────── */
@@ -278,4 +294,5 @@ body {
   .home-logo   { width: 180px; height: 64px; }
   .home-main   { padding: 8px 16px 48px; }
   .cards-grid  { max-width: 100%; }
+  .card-actions { grid-template-columns: 1fr; }
 }

@@ -2,15 +2,21 @@
   inspeccion-sst.js — Controlador principal del formulario SST en el navegador.
 
   Qué hace:
-  - Orquesta los 6 pasos del formulario: Info General → Extintores → Camillas
-    → Señalización → Botiquín → Equipos Tecnológicos.
+  - Orquesta los 7 pasos del formulario: Info General → Extintores → Camillas
+    → Señalización → Botiquín → Equipos Tecnológicos → Finalizar.
   - Valida cada paso antes de avanzar: marca en rojo los campos vacíos obligatorios
     y muestra un mensaje de error en pantalla.
+  - El paso 7 (Finalizar) muestra un resumen de la info general y qué secciones
+    se hicieron o no (renderResumenFinal()), y es donde vive el botón "Enviar".
   - Al enviar, recopila todos los datos del DOM en un objeto JSON (función payload())
     y los empaqueta junto con los archivos de evidencia en un FormData.
-  - Hace dos llamadas secuenciales al servidor:
-      1. POST /enviar-onedrive-extintor → guarda en Excel de OneDrive
-      2. POST /enviar-pdf-prueba-correo → genera PDF y lo envía por correo
+  - Hace una sola llamada al servidor:
+      POST /enviar-onedrive-extintor → guarda la inspección en Neon + evidencias en OneDrive.
+        El Inspector (quien diligencia el formulario) queda aprobado automáticamente
+        con los datos de la info general; se devuelven los links de aprobación de
+        Jefe de Área y COPASST, mostrados en el modal de éxito. El PDF y el correo
+        se generan más tarde, solo cuando las 3 aprobaciones quedan completas
+        (ver /aprobar/:token).
 
   Cómo interactúa:
   - Importa datos estáticos (listas de condiciones, ítems de botiquín, etc.) desde shared.js.
@@ -42,7 +48,7 @@ import { createBotiquinesManager } from "/js/botiquines.js";
 
 document.addEventListener("DOMContentLoaded", () => {
   let currentStep = 1;
-  const totalSteps = 6;
+  const totalSteps = 7;
 
   const extintoresManager = createExtintoresManager({
     condiciones,
@@ -70,9 +76,71 @@ document.addEventListener("DOMContentLoaded", () => {
     crearOpciones
   });
 
+  // Sede Urabá: cada una de las 5 secciones (pasos 2 a 6) se puede omitir
+  // explícitamente con el botón "Omitir" (se asume que esa sección no aplica
+  // para esa inspección). Fuera de Urabá el botón no aparece.
+  function esSedeUrabana() {
+    const sede = document.getElementById("sedeOperacion")?.value || "";
+    return sede.toLowerCase().includes("urab");
+  }
+
+  const SECCIONES_OMITIBLES = [
+    { key: "extintores", step: 2, containerId: "extintores-container", btnOmitirId: "btn-omitir-extintores", mensajeId: "mensaje-omitido-extintores", btnAgregarId: "btn-agregar-extintor", siguientePaso: 3 },
+    { key: "camillas", step: 3, containerId: "camillas-container", btnOmitirId: "btn-omitir-camillas", mensajeId: "mensaje-omitido-camillas", btnAgregarId: "btn-agregar-camilla", siguientePaso: 4 },
+    { key: "senalizaciones", step: 4, containerId: "senalizaciones-container", btnOmitirId: "btn-omitir-senalizaciones", mensajeId: "mensaje-omitido-senalizaciones", btnAgregarId: "btn-agregar-senalizacion", siguientePaso: 5 },
+    { key: "botiquines", step: 5, containerId: "botiquines-container", btnOmitirId: "btn-omitir-botiquines", mensajeId: "mensaje-omitido-botiquines", btnAgregarId: "btn-agregar-botiquin", siguientePaso: 6 },
+    { key: "equiposTecnologicos", step: 6, containerId: "equipos-tecnologicos-container", btnOmitirId: "btn-omitir-equipos", mensajeId: "mensaje-omitido-equipos", btnAgregarId: null, siguientePaso: 7 }
+  ];
+
+  const seccionesOmitidas = {};
+  SECCIONES_OMITIBLES.forEach((s) => { seccionesOmitidas[s.key] = false; });
+
+  // Muestra/oculta los botones "Omitir" según la sede (solo Urabá). Si la sede
+  // deja de ser Urabá, cancela cualquier omisión pendiente para no enviar
+  // secciones vacías por error en otra sede.
+  function actualizarVisibilidadOmitir() {
+    const urabana = esSedeUrabana();
+    SECCIONES_OMITIBLES.forEach((seccion) => {
+      document.getElementById(seccion.btnOmitirId)?.classList.toggle("hidden", !urabana);
+      if (!urabana && seccionesOmitidas[seccion.key]) {
+        incluirSeccion(seccion);
+      }
+    });
+  }
+
+  // El botón "Omitir sección" es un toggle: al omitir se convierte en
+  // "Incluir sección" y viceversa. No hay banner ni texto aparte.
+  function actualizarTextoOmitir(seccion) {
+    const btn = document.getElementById(seccion.btnOmitirId);
+    if (btn) btn.textContent = seccionesOmitidas[seccion.key] ? "Incluir sección" : "Omitir sección";
+  }
+
+  function omitirSeccion(seccion) {
+    seccionesOmitidas[seccion.key] = true;
+    document.getElementById(seccion.containerId)?.classList.add("hidden");
+    document.getElementById(seccion.mensajeId)?.classList.remove("hidden");
+    if (seccion.btnAgregarId) document.getElementById(seccion.btnAgregarId)?.classList.add("hidden");
+    actualizarTextoOmitir(seccion);
+  }
+
+  function incluirSeccion(seccion) {
+    seccionesOmitidas[seccion.key] = false;
+    document.getElementById(seccion.containerId)?.classList.remove("hidden");
+    document.getElementById(seccion.mensajeId)?.classList.add("hidden");
+    if (seccion.btnAgregarId) document.getElementById(seccion.btnAgregarId)?.classList.remove("hidden");
+    actualizarTextoOmitir(seccion);
+  }
+
   function validarPaso(numeroPaso) {
     const panel = document.querySelector(`[data-step-panel="${numeroPaso}"]`);
     if (!panel) return true;
+
+    const seccion = SECCIONES_OMITIBLES.find((s) => s.step === numeroPaso);
+    if (seccion && seccionesOmitidas[seccion.key]) {
+      panel.querySelectorAll(".campo-error").forEach((el) => el.classList.remove("campo-error"));
+      panel.querySelector(".validation-summary")?.remove();
+      return true;
+    }
 
     panel.querySelectorAll(".campo-error").forEach((el) => el.classList.remove("campo-error"));
 
@@ -134,6 +202,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
     currentStep = step;
 
+    if (currentStep === 7) renderResumenFinal();
+
     document.querySelectorAll("[data-step-panel]").forEach((panel) => {
       const panelStep = Number(panel.getAttribute("data-step-panel"));
       panel.classList.toggle("hidden", panelStep !== currentStep);
@@ -161,11 +231,13 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function payload(inspeccionId) {
-    const extintores = extintoresManager.leer();
-    const camillas = camillasManager.leer();
-    const senalizaciones = senalizacionesManager.leer();
-    const equiposTecnologicosData = equiposTecnologicosManager.leer();
-    const botiquinesData = botiquinesManager.leer();
+    // Las secciones omitidas (solo posible en sede Urabá) se envían vacías,
+    // sin importar lo que haya quedado en el DOM.
+    const extintores = seccionesOmitidas.extintores ? [] : extintoresManager.leer();
+    const camillas = seccionesOmitidas.camillas ? [] : camillasManager.leer();
+    const senalizaciones = seccionesOmitidas.senalizaciones ? [] : senalizacionesManager.leer();
+    const equiposTecnologicosData = seccionesOmitidas.equiposTecnologicos ? [] : equiposTecnologicosManager.leer();
+    const botiquinesData = seccionesOmitidas.botiquines ? [] : botiquinesManager.leer();
 
     return {
       inspeccionId: inspeccionId || generarInspeccionId(),
@@ -188,6 +260,33 @@ document.addEventListener("DOMContentLoaded", () => {
       extintores,
       extintor: extintores[0] || null
     };
+  }
+
+  // Resumen del paso 7: datos generales + qué secciones se hicieron y cuáles no
+  // (omitidas o simplemente vacías). Se recalcula cada vez que se entra al paso.
+  function renderResumenFinal() {
+    document.getElementById("resumen-fecha").textContent = document.getElementById("fecha").value || "-";
+    document.getElementById("resumen-sede").textContent = document.getElementById("sedeOperacion").value || "-";
+    document.getElementById("resumen-area").textContent = document.getElementById("areaTrabajo").value || "-";
+    document.getElementById("resumen-jefe").textContent = document.getElementById("jefeResponsable").value || "-";
+    document.getElementById("resumen-cargo-jefe").textContent = document.getElementById("cargoJefe").value || "-";
+    document.getElementById("resumen-responsable").textContent = document.getElementById("responsableInspeccion").value || "-";
+    document.getElementById("resumen-cargo-responsable").textContent = document.getElementById("cargoResponsable").value || "-";
+
+    const conteos = [
+      { label: "Extintores", n: seccionesOmitidas.extintores ? 0 : extintoresManager.leer().length },
+      { label: "Camillas", n: seccionesOmitidas.camillas ? 0 : camillasManager.leer().length },
+      { label: "Señalización", n: seccionesOmitidas.senalizaciones ? 0 : senalizacionesManager.leer().length },
+      { label: "Botiquín", n: seccionesOmitidas.botiquines ? 0 : botiquinesManager.leer().length },
+      { label: "Equipos Tecnológicos", n: seccionesOmitidas.equiposTecnologicos ? 0 : equiposTecnologicosManager.leer().length }
+    ];
+
+    document.getElementById("resumen-secciones").innerHTML = conteos.map(({ label, n }) => `
+      <div class="resumen-seccion-item ${n > 0 ? "resumen-seccion-item--ok" : "resumen-seccion-item--no"}">
+        <span>${label}</span>
+        <span>${n > 0 ? `Hecho (${n})` : "No se hizo"}</span>
+      </div>
+    `).join("");
   }
 
   // Anexa todas las fotos seleccionadas en un bloque de evidencias (data-role="{rolePrefix}-input")
@@ -230,7 +329,7 @@ document.addEventListener("DOMContentLoaded", () => {
     return fd;
   }
 
-  function mostrarModal(estado, inspeccionId = null, numInspeccion = null) {
+  function mostrarModal(estado, inspeccionId = null, numInspeccion = null, links = null) {
     const modal = document.getElementById("envio-modal");
     document.getElementById("envio-estado-cargando").classList.toggle("hidden", estado !== "cargando");
     document.getElementById("envio-estado-exito").classList.toggle("hidden", estado !== "exito");
@@ -246,8 +345,31 @@ document.addEventListener("DOMContentLoaded", () => {
           numEl.classList.add("hidden");
         }
       }
+      if (links) {
+        const inputJefe = document.getElementById("link-jefe");
+        const inputCopasst = document.getElementById("link-copasst");
+        if (inputJefe) inputJefe.value = links.jefe || "";
+        if (inputCopasst) inputCopasst.value = links.copasst || "";
+      }
     }
     modal.classList.add("visible");
+  }
+
+  // Copia el valor de un input de link al portapapeles y da feedback visual en el botón.
+  function copiarLink(boton) {
+    const targetId = boton.getAttribute("data-copy-target");
+    const input = document.getElementById(targetId);
+    if (!input || !input.value) return;
+
+    navigator.clipboard.writeText(input.value).then(() => {
+      const textoOriginal = boton.textContent;
+      boton.textContent = "Copiado";
+      boton.classList.add("copiado");
+      setTimeout(() => {
+        boton.textContent = textoOriginal;
+        boton.classList.remove("copiado");
+      }, 1500);
+    });
   }
 
   function cerrarModal() {
@@ -272,14 +394,16 @@ document.addEventListener("DOMContentLoaded", () => {
     try {
       const inspeccionId = generarInspeccionId();
 
-      // Primero guardar en OneDrive para obtener el número de inspección
+      // Guarda la inspección (Neon + evidencias en OneDrive). El Inspector queda
+      // aprobado automáticamente; se devuelven los links de Jefe y COPASST.
+      // El PDF y el correo ya no se envían aquí: se generan solo cuando las 3 aprobaciones están completas.
       const respuestaOneDrive = await fetch("/enviar-onedrive-extintor", { method: "POST", body: construirFormData(inspeccionId) });
       const datosOneDrive = await leerRespuesta(respuestaOneDrive);
 
       if (!respuestaOneDrive.ok) {
         const errMsg = Array.isArray(datosOneDrive.errores)
           ? datosOneDrive.errores.join(" | ")
-          : "Error al guardar en OneDrive";
+          : "Error al guardar la inspección";
         document.getElementById("envio-error-texto").textContent = errMsg;
         mostrarModal("error");
         btnEnviar.disabled = false;
@@ -287,23 +411,7 @@ document.addEventListener("DOMContentLoaded", () => {
       }
 
       const numInspeccion = datosOneDrive.numInspeccion ?? null;
-
-      // Luego enviar el correo incluyendo el número de inspección en el payload
-      const respuestaCorreo = await fetch("/enviar-pdf-prueba-correo", { method: "POST", body: construirFormData(inspeccionId, numInspeccion) });
-      const datosCorreo = await leerRespuesta(respuestaCorreo);
-
-      if (!respuestaCorreo.ok) {
-        const errCorreo = Array.isArray(datosCorreo.errores)
-          ? datosCorreo.errores.join(" | ")
-          : "Error al enviar correo";
-        document.getElementById("envio-error-texto").textContent =
-          `Datos guardados, pero el correo falló: ${errCorreo}`;
-        mostrarModal("error");
-        btnEnviar.disabled = false;
-        return;
-      }
-
-      mostrarModal("exito", inspeccionId, numInspeccion);
+      mostrarModal("exito", inspeccionId, numInspeccion, datosOneDrive.links);
     } catch {
       document.getElementById("envio-error-texto").textContent =
         "No fue posible completar el envío. Verifique su conexión.";
@@ -342,9 +450,27 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("fecha")?.addEventListener("click", abrirSelectorFecha);
   document.getElementById("btn-onedrive").addEventListener("click", enviarOneDrive);
 
+  // Botón "Omitir sección" / "Incluir sección" (toggle, solo visible en sede Urabá).
+  SECCIONES_OMITIBLES.forEach((seccion) => {
+    document.getElementById(seccion.btnOmitirId)?.addEventListener("click", () => {
+      if (seccionesOmitidas[seccion.key]) {
+        incluirSeccion(seccion);
+      } else {
+        omitirSeccion(seccion);
+        if (seccion.siguientePaso) irPaso(seccion.siguientePaso);
+      }
+    });
+  });
+  document.getElementById("sedeOperacion")?.addEventListener("input", actualizarVisibilidadOmitir);
+  actualizarVisibilidadOmitir();
+
   document.getElementById("btn-modal-nueva").addEventListener("click", () => location.reload());
   document.getElementById("btn-modal-inicio").addEventListener("click", () => { location.href = "/"; });
   document.getElementById("btn-modal-cerrar-error").addEventListener("click", cerrarModal);
+
+  document.querySelectorAll(".envio-link-copy").forEach((boton) => {
+    boton.addEventListener("click", () => copiarLink(boton));
+  });
 
   document.getElementById("btn-salir").addEventListener("click", mostrarModalCancelar);
   document.getElementById("btn-cancelar-no").addEventListener("click", cerrarModalCancelar);

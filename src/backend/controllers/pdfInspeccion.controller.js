@@ -26,7 +26,7 @@
 */
 const path = require("node:path");
 const PDFDocument = require("pdfkit");
-const exifr = require("exifr");
+const { extraerFechaExif, formatearFechaMs } = require("../utils/fechaEvidencia");
 
 const LOGO_URL = "https://sstinspeccion.onrender.com/img/Cargo.png";
 
@@ -71,30 +71,6 @@ function extraerEvidenciasPorIndex(files, prefix = "evidencia") {
   }
 
   return mapa;
-}
-
-// Extrae fecha/hora de la foto desde metadatos EXIF. Devuelve string "YYYY-MM-DD HH:MM" o null.
-async function extraerFechaExif(buffer) {
-  if (!buffer?.length) return null;
-  try {
-    const data = await exifr.parse(buffer, ["DateTimeOriginal", "DateTime"]);
-    const raw = data?.DateTimeOriginal || data?.DateTime;
-    if (!raw) return null;
-    const d = raw instanceof Date ? raw : new Date(raw);
-    if (isNaN(d)) return null;
-    const p = n => String(n).padStart(2, "0");
-    return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
-  } catch {
-    return null;
-  }
-}
-
-// Formatea un timestamp (ms) como "YYYY-MM-DD HH:MM".
-function formatearFechaMs(ms) {
-  const d = new Date(Number(ms));
-  if (isNaN(d)) return null;
-  const p = n => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
 }
 
 // Construye un Map<index, fechaString> a partir de la primera foto de cada índice:
@@ -256,7 +232,7 @@ function dibujarEvidenciasEnCaja(doc, files, x, y, width, height, opts = {}) {
 // Devuelve { lastY } con la posición justo debajo del último contenido dibujado (o null si no había
 // evidencias extra), para que el llamador pueda seguir agregando contenido sin dejar huecos.
 // opts.dibujarIdEnUltima (default true) controla si se dibuja el pie de ID en la última página
-// generada aquí; pásalo en false cuando el llamador vaya a agregar más contenido debajo (p.ej. firmas).
+// generada aquí; pásalo en false cuando el llamador vaya a agregar más contenido debajo (p.ej. aprobaciones).
 function renderPaginasEvidenciasExtra(doc, general, titulo, subtitulo, files, opts = {}) {
   const { dibujarIdEnUltima = true } = opts;
   const extra = Array.isArray(files) ? files.filter((f) => f?.buffer?.length).slice(2) : [];
@@ -316,15 +292,29 @@ function renderPaginasEvidenciasExtra(doc, general, titulo, subtitulo, files, op
 }
 
 //PAGINA 1 (EXTINTOR)
-async function crearPdfInspeccionExtintor(data, evidenciasPorIndex = new Map(), evidenciasCamillaPorIndex = new Map(), evidenciasSenalizacionPorIndex = new Map(), evidenciasEquipoTecnologicoPorIndex = new Map(), evidenciasBotiquinPorIndex = new Map(), body = {}) {
-  // Pre-extraer fechas (EXIF → fallback a lastModified enviado desde el navegador)
-  const [exifExtintores, exifCamillas, exifSenalizaciones, exifEquipos, exifBotiquines] = await Promise.all([
-    extraerFechasArchivos(evidenciasPorIndex,               body, "evidencia"),
-    extraerFechasArchivos(evidenciasCamillaPorIndex,        body, "evidencia-camilla"),
-    extraerFechasArchivos(evidenciasSenalizacionPorIndex,   body, "evidencia-senalizacion"),
-    extraerFechasArchivos(evidenciasEquipoTecnologicoPorIndex, body, "equipo-tecnologico-evidencia"),
-    extraerFechasArchivos(evidenciasBotiquinPorIndex,       body, "botiquin-evidencia"),
-  ]);
+// opts.aprobaciones: { inspector: {nombre}, jefe: {...}, copasst: {...} } — si no se pasa, quedan en blanco.
+// opts.fechasPrecomputadas: { extintores, camillas, senalizaciones, equipos, botiquines } (Maps ya calculados) —
+//   se usa al regenerar el PDF tras las 3 aprobaciones, cuando las evidencias vienen de OneDrive y no del request original.
+async function crearPdfInspeccionExtintor(data, evidenciasPorIndex = new Map(), evidenciasCamillaPorIndex = new Map(), evidenciasSenalizacionPorIndex = new Map(), evidenciasEquipoTecnologicoPorIndex = new Map(), evidenciasBotiquinPorIndex = new Map(), body = {}, opts = {}) {
+  const { aprobaciones = null, fechasPrecomputadas = null } = opts;
+
+  // Pre-extraer fechas (EXIF → fallback a lastModified enviado desde el navegador),
+  // salvo que ya vengan precalculadas (regeneración post-aprobación).
+  const [exifExtintores, exifCamillas, exifSenalizaciones, exifEquipos, exifBotiquines] = fechasPrecomputadas
+    ? [
+        fechasPrecomputadas.extintores || new Map(),
+        fechasPrecomputadas.camillas || new Map(),
+        fechasPrecomputadas.senalizaciones || new Map(),
+        fechasPrecomputadas.equipos || new Map(),
+        fechasPrecomputadas.botiquines || new Map()
+      ]
+    : await Promise.all([
+        extraerFechasArchivos(evidenciasPorIndex,               body, "evidencia"),
+        extraerFechasArchivos(evidenciasCamillaPorIndex,        body, "evidencia-camilla"),
+        extraerFechasArchivos(evidenciasSenalizacionPorIndex,   body, "evidencia-senalizacion"),
+        extraerFechasArchivos(evidenciasEquipoTecnologicoPorIndex, body, "equipo-tecnologico-evidencia"),
+        extraerFechasArchivos(evidenciasBotiquinPorIndex,       body, "botiquin-evidencia"),
+      ]);
 
   // Crear PDF con PDFKit
   return new Promise((resolve, reject) => {
@@ -337,9 +327,21 @@ async function crearPdfInspeccionExtintor(data, evidenciasPorIndex = new Map(), 
 
     const general = data || {};
 
-    const extintores = Array.isArray(general.extintores) && general.extintores.length > 0
-      ? general.extintores
-      : [{}];
+    // PDFKit abre la página 1 automáticamente al crear el doc. Como cualquier
+    // sección puede venir vacía (secciones opcionales, ver sede Urabá), no se
+    // puede asumir que "extintores" siempre dibuja esa primera página: la
+    // primera sección con contenido reutiliza la página inicial, y solo las
+    // siguientes llaman addPage(). Así nunca queda una página en blanco al inicio.
+    let primeraPaginaUsada = false;
+    function nuevaPagina() {
+      if (primeraPaginaUsada) {
+        doc.addPage();
+      } else {
+        primeraPaginaUsada = true;
+      }
+    }
+
+    const extintores = Array.isArray(general.extintores) ? general.extintores : [];
     const camillas = Array.isArray(general.camillas) && general.camillas.length > 0
       ? general.camillas
       : [];
@@ -354,7 +356,7 @@ async function crearPdfInspeccionExtintor(data, evidenciasPorIndex = new Map(), 
       : [];
 
     extintores.forEach((extintor, idx) => {
-      if (idx > 0) doc.addPage();
+      nuevaPagina();
 
       const condiciones = extintor.condiciones || {};
       let y = 25;
@@ -362,7 +364,7 @@ async function crearPdfInspeccionExtintor(data, evidenciasPorIndex = new Map(), 
       // ===== ENCABEZADO =====
       doc.rect(25, y, 545, 70).stroke();
       doc.rect(25, y, 150, 70).stroke();
-      doc.image(path.resolve(__dirname, "../views/img/Cargo.png"), 27, y + 3, { fit: [146, 64], align: "center", valign: "center" });
+      doc.image(path.resolve(__dirname, "../../views/img/Cargo.png"), 27, y + 3, { fit: [146, 64], align: "center", valign: "center" });
       doc.rect(175, y, 245, 70).stroke();
       doc.font("Helvetica-Bold").fontSize(16).text("INSPECCIÓN DE\nEXTINTORES\nEMERGENCIA", 175, y + 8, { width: 245, align: "center", lineGap: 2 });
       doc.rect(420, y, 150, 23).stroke();
@@ -501,25 +503,37 @@ datosExtintor.forEach(([label, valor]) => {
 
     // ===== PAGINAS DE CAMILLAS, SEÑALIZACIONES, EQUIPOS TECNOLÓGICOS Y BOTIQUINES =====
     camillas.forEach((camilla, idx) => {
-      doc.addPage();
+      nuevaPagina();
       renderPaginaCamilla(doc, general, camilla, idx, evidenciasCamillaPorIndex, exifCamillas.get(idx));
     });
 
     senalizaciones.forEach((senalizacion, idx) => {
-      doc.addPage();
+      nuevaPagina();
       renderPaginaSenalizacion(doc, general, senalizacion, idx, evidenciasSenalizacionPorIndex, exifSenalizaciones.get(idx));
     });
 
     if (equiposTecnologicos.length > 0) {
-      doc.addPage();
+      nuevaPagina();
       renderPaginaEquiposTecnologicos(doc, general, equiposTecnologicos, evidenciasEquipoTecnologicoPorIndex, exifEquipos);
     }
 
-    botiquines.forEach((botiquin, idx) => {
-      doc.addPage();
-      renderPaginaBotiquin(doc, general, botiquin, idx, evidenciasBotiquinPorIndex, exifBotiquines.get(idx), idx === botiquines.length - 1);
-    });
-    
+    if (botiquines.length > 0) {
+      botiquines.forEach((botiquin, idx) => {
+        nuevaPagina();
+        renderPaginaBotiquin(doc, general, botiquin, idx, evidenciasBotiquinPorIndex, exifBotiquines.get(idx), idx === botiquines.length - 1, aprobaciones);
+      });
+    } else {
+      // Sección de botiquín vacía (opcional): renderPaginaBotiquin es quien normalmente
+      // dibuja el bloque de aprobación en su última página. Sin botiquines no hay
+      // dónde colgarlo, así que se dibuja aquí en una página dedicada.
+      nuevaPagina();
+      let y = 25;
+      doc.font("Helvetica-Bold").fontSize(13).text("APROBACIÓN DE LA INSPECCIÓN", 25, y, { width: 545, align: "center" });
+      y += 40;
+      renderAprobaciones(doc, y, aprobaciones);
+      dibujarIdInspeccion(doc, general, y + 60 + 4);
+    }
+
     doc.end();
   });
 }
@@ -531,15 +545,15 @@ function renderPaginaCamilla(doc, general, camilla, idx, evidenciasCamillaPorInd
 
   doc.rect(25, y, 545, 70).stroke();
   doc.rect(25, y, 150, 70).stroke();
-  doc.image(path.resolve(__dirname, "../views/img/Cargo.png"), 27, y + 3, { fit: [146, 64], align: "center", valign: "center" });
+  doc.image(path.resolve(__dirname, "../../views/img/Cargo.png"), 27, y + 3, { fit: [146, 64], align: "center", valign: "center" });
   doc.rect(175, y, 245, 70).stroke();
   doc.font("Helvetica-Bold").fontSize(15).text("INSPECCIÓN DE CAMILLA\nEMERGENCIA", 175, y + 15, { width: 245, align: "center" });
   doc.rect(420, y, 150, 23).stroke();
   doc.rect(420, y + 23, 150, 23).stroke();
   doc.rect(420, y + 46, 150, 24).stroke();
   doc.font("Helvetica").fontSize(9)
-    .text("CODIGO:", 425, y + 7)
-    .text("VERSIÓN:", 425, y + 30)
+    .text("CODIGO: ST-FST 25", 425, y + 7)
+    .text("VERSIÓN: 01", 425, y + 30)
     .text("FECHA DE VERSIÓN: 4/6/2026", 425, y + 53);
 
   y += 70;
@@ -637,15 +651,15 @@ function renderPaginaSenalizacion(doc, general, senalizacion, idx, evidenciasSen
 
   doc.rect(25, y, 545, 70).stroke();
   doc.rect(25, y, 150, 70).stroke();
-  doc.image(path.resolve(__dirname, "../views/img/Cargo.png"), 27, y + 3, { fit: [146, 64], align: "center", valign: "center" });
+  doc.image(path.resolve(__dirname, "../../views/img/Cargo.png"), 27, y + 3, { fit: [146, 64], align: "center", valign: "center" });
   doc.rect(175, y, 245, 70).stroke();
   doc.font("Helvetica-Bold").fontSize(15).text("INSPECCIÓN DE\nSEÑALIZACIÓN", 175, y + 15, { width: 245, align: "center" });
   doc.rect(420, y, 150, 23).stroke();
   doc.rect(420, y + 23, 150, 23).stroke();
   doc.rect(420, y + 46, 150, 24).stroke();
   doc.font("Helvetica").fontSize(9)
-    .text("CODIGO:", 425, y + 7)
-    .text("VERSIÓN:", 425, y + 30)
+    .text("CODIGO: ST-FST 25", 425, y + 7)
+    .text("VERSIÓN: 01", 425, y + 30)
     .text("FECHA DE VERSIÓN: 4/6/2026", 425, y + 53);
 
   y += 70;
@@ -741,15 +755,15 @@ function renderPaginaEquiposTecnologicos(doc, general, equiposTecnologicos, evid
   
   doc.rect(25, y, 545, 70).stroke();
   doc.rect(25, y, 150, 70).stroke();
-  doc.image(path.resolve(__dirname, "../views/img/Cargo.png"), 27, y + 3, { fit: [146, 64], align: "center", valign: "center" });
+  doc.image(path.resolve(__dirname, "../../views/img/Cargo.png"), 27, y + 3, { fit: [146, 64], align: "center", valign: "center" });
   doc.rect(175, y, 245, 70).stroke();
   doc.font("Helvetica-Bold").fontSize(15).text("INSPECCIÓN DE\nEQUIPO TECNOLÓGICO DE\nATENCIÓN DE EMERGENCIA", 175, y + 15, { width: 245, align: "center" });
   doc.rect(420, y, 150, 23).stroke();
   doc.rect(420, y + 23, 150, 23).stroke();
   doc.rect(420, y + 46, 150, 24).stroke();
   doc.font("Helvetica").fontSize(9)
-    .text("CODIGO:", 425, y + 7)
-    .text("VERSIÓN:", 425, y + 30)
+    .text("CODIGO: ST-FST 25", 425, y + 7)
+    .text("VERSIÓN: 01", 425, y + 30)
     .text("FECHA DE VERSIÓN: 4/6/2026", 425, y + 53);
 
   y += 70;
@@ -894,30 +908,49 @@ function renderPaginaEquiposTecnologicos(doc, general, equiposTecnologicos, evid
 
 
 
-// Renderizar firmas al final del documento
-function renderFirmas(doc, y) {
+// Renderizar el bloque de aprobación al final del documento.
+// aprobaciones: { inspector: {nombre}, jefe: {...}, copasst: {...} }.
+// No se dibuja ninguna firma manuscrita/biométrica (restricción legal): se
+// imprime el nombre de quien aprobó cada rol. Si falta un rol, queda la línea
+// en blanco (aprobación pendiente).
+function renderAprobaciones(doc, y, aprobaciones = null) {
   doc.save();
   doc.lineWidth(0.5);
   const colW = 545 / 3;
   const boxH = 60;
   doc.rect(25, y, 545, boxH).stroke();
-  ["FIRMA INSPECTOR", "FIRMA JEFE AREA", "FIRMA COPASST"].forEach((nombre, i) => {
+
+  const roles = [
+    { key: "inspector", label: "APROBADO POR INSPECTOR" },
+    { key: "jefe", label: "APROBADO POR JEFE DE AREA" },
+    { key: "copasst", label: "APROBADO POR COPASST" }
+  ];
+
+  roles.forEach(({ key, label }, i) => {
     const fx = 25 + i * colW;
     if (i > 0) doc.moveTo(fx, y).lineTo(fx, y + boxH).stroke();
-    const lineY = y + 38;
+
+    const lineY = y + 32;
+    const aprobacion = aprobaciones?.[key];
+
+    if (aprobacion?.nombre) {
+      doc.font("Helvetica-Bold").fontSize(8).text(aprobacion.nombre, fx + 4, y + 6, { width: colW - 8, align: "center" });
+    }
+
     doc.moveTo(fx + 12, lineY).lineTo(fx + colW - 12, lineY).stroke();
-    doc.font("Helvetica-Bold").fontSize(8).text(nombre, fx, lineY + 5, { width: colW, align: "center" });
+    doc.font("Helvetica-Bold").fontSize(6.5).text(label, fx, lineY + 4, { width: colW, align: "center" });
   });
+
   doc.restore();
 }
 
 //PAGINA 5 (BOTIQUIN)
-function renderPaginaBotiquin(doc, general, botiquin, idx, evidenciasBotiquinPorIndex = new Map(), fechaExif, esUltimo = false) {
+function renderPaginaBotiquin(doc, general, botiquin, idx, evidenciasBotiquinPorIndex = new Map(), fechaExif, esUltimo = false, aprobaciones = null) {
   let y = 25;
 
   doc.rect(25, y, 545, 70).stroke();
   doc.rect(25, y, 150, 70).stroke();
-  doc.image(path.resolve(__dirname, "../views/img/Cargo.png"), 27, y + 3, { fit: [146, 64], align: "center", valign: "center" });
+  doc.image(path.resolve(__dirname, "../../views/img/Cargo.png"), 27, y + 3, { fit: [146, 64], align: "center", valign: "center" });
   doc.rect(175, y, 245, 70).stroke();
   doc.font("Helvetica-Bold").fontSize(15).text("INSPECCION DE BOTIQUIN", 175, y + 24, { width: 245, align: "center" });
   doc.rect(420, y, 150, 23).stroke();
@@ -1038,8 +1071,8 @@ function renderPaginaBotiquin(doc, general, botiquin, idx, evidenciasBotiquinPor
   }
 
   y += 6;
-  const firmasH = esUltimo ? 80 : 0;
-  if (y + 20 + 50 + 20 + 115 + firmasH > 817) {
+  const aprobacionesH = esUltimo ? 80 : 0;
+  if (y + 20 + 50 + 20 + 115 + aprobacionesH > 817) {
     doc.addPage();
     y = 25;
   }
@@ -1056,7 +1089,7 @@ function renderPaginaBotiquin(doc, general, botiquin, idx, evidenciasBotiquinPor
   doc.font("Helvetica").fontSize(8).text(observacionGeneral, 30, y + 6, { width: 535 });
   y += 35;
 
-  if (y + 20 + 115 + firmasH > 817) {
+  if (y + 20 + 115 + aprobacionesH > 817) {
     doc.addPage();
     y = 25;
   }
@@ -1077,25 +1110,25 @@ function renderPaginaBotiquin(doc, general, botiquin, idx, evidenciasBotiquinPor
     return;
   }
 
-  // Último botiquín: las evidencias adicionales (si las hay) van antes de las firmas, nunca después.
+  // Último botiquín: las evidencias adicionales (si las hay) van antes del bloque de aprobación, nunca después.
   const extra = renderPaginasEvidenciasExtra(doc, general, "BOTIQUÍN", botiquin?.numero, evidenciaArchivos, { dibujarIdEnUltima: false });
 
-  let yFirmas;
+  let yAprobaciones;
   if (extra) {
     const cabeEnLaMismaPagina = extra.lastY + 20 + 60 + 20 <= 817;
     if (cabeEnLaMismaPagina) {
-      yFirmas = extra.lastY + 20;
+      yAprobaciones = extra.lastY + 20;
     } else {
       dibujarIdInspeccion(doc, general, extra.lastY + 8);
       doc.addPage();
-      yFirmas = 25;
+      yAprobaciones = 25;
     }
   } else {
-    yFirmas = y + 20;
+    yAprobaciones = y + 20;
   }
 
-  renderFirmas(doc, yFirmas);
-  dibujarIdInspeccion(doc, general, yFirmas + 60 + 4);
+  renderAprobaciones(doc, yAprobaciones, aprobaciones);
+  dibujarIdInspeccion(doc, general, yAprobaciones + 60 + 4);
 }
 
 
@@ -1149,41 +1182,19 @@ async function subirPdfAOneDrive(pdfBuffer, inspeccionId) {
   return item?.webUrl || null;
 }
 
-//
-//sstsantamarta@cargoban.com.co
-//s.ocupacional@cargoban.com.co
-// ===== enviar Correo =====
-async function enviarPdfPruebaCorreo(req, res) {
-  try {
-    const data = leerPayload(req);
-    const payloadData = data?.payload || data;
-    
-    const sede = (payloadData?.sedeOperacion || "").toLowerCase().trim();
-    console.log("[correo] sede recibida:", JSON.stringify(sede));
-    let correoDestino;
-    if (sede.includes("santa marta")) {
-      correoDestino = "sstsantamarta@cargoban.com.co";
-    } else if (sede.includes("urab")) {
-      correoDestino = "s.ocupacional@cargoban.com.co";
-    } else {
-      correoDestino = data?.correoDestino || process.env.GRAPH_EMAIL_TO_TEST;
-    }
+// Decide el correo destino según la sede (con fallback manual/GRAPH_EMAIL_TO_TEST).
+function resolverCorreoDestino(sedeOperacion, correoManual) {
+  const sede = (sedeOperacion || "").toLowerCase().trim();
+  if (sede.includes("santa marta")) return "ticscargoban@gmail.com";
+  if (sede.includes("urab")) return "cagobanolp@cargoban.com.co";
+  return correoManual || process.env.GRAPH_EMAIL_TO_TEST;
+}
 
-    if (!correoDestino) {
-      return res.status(400).json({ ok: false, errores: ["No se pudo determinar el destinatario. Verifique la sede o defina GRAPH_EMAIL_TO_TEST en .env"] });
-    }
-
-    const evidenciasPorIndex = extraerEvidenciasPorIndex(req.files, "evidencia");
-    const evidenciasCamillaPorIndex = extraerEvidenciasPorIndex(req.files, "evidencia-camilla");
-    const evidenciasSenalizacionPorIndex = extraerEvidenciasPorIndex(req.files, "evidencia-senalizacion");
-    const evidenciasEquipoTecnologicoPorIndex = extraerEvidenciasPorIndex(req.files, "equipo-tecnologico-evidencia");
-    const evidenciasBotiquinPorIndex = extraerEvidenciasPorIndex(req.files, "botiquin-evidencia");
-    const pdfBuffer = await crearPdfInspeccionExtintor(payloadData, evidenciasPorIndex, evidenciasCamillaPorIndex, evidenciasSenalizacionPorIndex, evidenciasEquipoTecnologicoPorIndex, evidenciasBotiquinPorIndex, req.body);
-
-    const nombrePdf = `${payloadData?.inspeccionId || "inspeccion-sst"}.pdf`;
-    const numInspeccionCorreo = payloadData?.numInspeccion ?? null;
-
-    const htmlCorreo = `<!DOCTYPE html>
+// Arma el HTML del correo de notificación de inspección. Reutilizado tanto por
+// el envío inmediato (enviarPdfPruebaCorreo) como por el envío tras completar
+// las 3 aprobaciones (aprobaciones.controller.js).
+function construirHtmlCorreo({ inspeccionId, numInspeccion, fecha, sedeOperacion, areaTrabajo, jefeResponsable, responsableInspeccion, cargoResponsable, webUrl, titulo = "Nueva inspección registrada" }) {
+  const htmlCorreo = `<!DOCTYPE html>
 <html lang="es">
 <body style="margin:0;padding:0;background:#f4f4f5;font-family:'Segoe UI',Arial,sans-serif;">
 <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f5;padding:40px 16px;">
@@ -1213,9 +1224,9 @@ async function enviarPdfPruebaCorreo(req, res) {
             <tr>
               <td style="padding:32px 40px 20px;">
                 <p style="margin:0 0 6px;font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#6b7280;">Inspección SST</p>
-                <h1 style="margin:0 0 14px;font-size:22px;font-weight:700;color:#111827;line-height:1.3;">Nueva inspección registrada</h1>
-                ${numInspeccionCorreo != null ? `<p style="margin:0 0 8px;font-size:15px;font-weight:700;color:#1a2e4a;">Inspección N.° ${numInspeccionCorreo}</p>` : ""}
-                <span style="display:inline-block;background:#f3f4f6;border:1px solid #e5e7eb;border-radius:8px;padding:7px 14px;font-size:13px;font-weight:700;color:#1a2e4a;letter-spacing:.5px;font-family:monospace;">${payloadData?.inspeccionId || "-"}</span>
+                <h1 style="margin:0 0 14px;font-size:22px;font-weight:700;color:#111827;line-height:1.3;">${titulo}</h1>
+                ${numInspeccion != null ? `<p style="margin:0 0 8px;font-size:15px;font-weight:700;color:#1a2e4a;">Inspección N.° ${numInspeccion}</p>` : ""}
+                <span style="display:inline-block;background:#f3f4f6;border:1px solid #e5e7eb;border-radius:8px;padding:7px 14px;font-size:13px;font-weight:700;color:#1a2e4a;letter-spacing:.5px;font-family:monospace;">${inspeccionId || "-"}</span>
               </td>
             </tr>
           </table>
@@ -1229,27 +1240,27 @@ async function enviarPdfPruebaCorreo(req, res) {
           <table width="100%" cellpadding="0" cellspacing="0" style="font-size:13.5px;">
             <tr>
               <td style="padding:14px 40px;color:#6b7280;font-weight:600;width:44%;border-bottom:1px solid #f3f4f6;">Fecha</td>
-              <td style="padding:14px 40px 14px 0;color:#111827;border-bottom:1px solid #f3f4f6;">${payloadData?.fecha || "-"}</td>
+              <td style="padding:14px 40px 14px 0;color:#111827;border-bottom:1px solid #f3f4f6;">${fecha || "-"}</td>
             </tr>
             <tr style="background:#fafafa;">
               <td style="padding:14px 40px;color:#6b7280;font-weight:600;border-bottom:1px solid #f3f4f6;">Sede</td>
-              <td style="padding:14px 40px 14px 0;color:#111827;border-bottom:1px solid #f3f4f6;">${payloadData?.sedeOperacion || "-"}</td>
+              <td style="padding:14px 40px 14px 0;color:#111827;border-bottom:1px solid #f3f4f6;">${sedeOperacion || "-"}</td>
             </tr>
             <tr>
               <td style="padding:14px 40px;color:#6b7280;font-weight:600;border-bottom:1px solid #f3f4f6;">Área de trabajo</td>
-              <td style="padding:14px 40px 14px 0;color:#111827;border-bottom:1px solid #f3f4f6;">${payloadData?.areaTrabajo || "-"}</td>
+              <td style="padding:14px 40px 14px 0;color:#111827;border-bottom:1px solid #f3f4f6;">${areaTrabajo || "-"}</td>
             </tr>
             <tr style="background:#fafafa;">
               <td style="padding:14px 40px;color:#6b7280;font-weight:600;border-bottom:1px solid #f3f4f6;">Jefe del área</td>
-              <td style="padding:14px 40px 14px 0;color:#111827;border-bottom:1px solid #f3f4f6;">${payloadData?.jefeResponsable || "-"}</td>
+              <td style="padding:14px 40px 14px 0;color:#111827;border-bottom:1px solid #f3f4f6;">${jefeResponsable || "-"}</td>
             </tr>
             <tr>
               <td style="padding:14px 40px;color:#6b7280;font-weight:600;border-bottom:1px solid #f3f4f6;">Responsable inspección</td>
-              <td style="padding:14px 40px 14px 0;color:#111827;border-bottom:1px solid #f3f4f6;">${payloadData?.responsableInspeccion || "-"}</td>
+              <td style="padding:14px 40px 14px 0;color:#111827;border-bottom:1px solid #f3f4f6;">${responsableInspeccion || "-"}</td>
             </tr>
             <tr style="background:#fafafa;">
               <td style="padding:14px 40px;color:#6b7280;font-weight:600;">Cargo</td>
-              <td style="padding:14px 40px 14px 0;color:#111827;">${payloadData?.cargoResponsable || "-"}</td>
+              <td style="padding:14px 40px 14px 0;color:#111827;">${cargoResponsable || "-"}</td>
             </tr>
           </table>
 
@@ -1283,11 +1294,47 @@ async function enviarPdfPruebaCorreo(req, res) {
 </body>
 </html>`;
 
+  const linkHtml = webUrl
+    ? `<table width="100%" cellpadding="0" cellspacing="0"><tr><td align="center"><a href="${webUrl}" style="display:inline-block;padding:12px 28px;background:#1a2e4a;color:#ffffff;text-decoration:none;border-radius:8px;font-size:13px;font-weight:600;letter-spacing:.3px;">Ver documento en OneDrive</a></td></tr></table>`
+    : "";
+
+  return htmlCorreo.replace("{{LINK_ONEDRIVE}}", linkHtml);
+}
+
+// ===== enviar Correo =====
+async function enviarPdfPruebaCorreo(req, res) {
+  try {
+    const data = leerPayload(req);
+    const payloadData = data?.payload || data;
+
+    const correoDestino = resolverCorreoDestino(payloadData?.sedeOperacion, data?.correoDestino);
+
+    if (!correoDestino) {
+      return res.status(400).json({ ok: false, errores: ["No se pudo determinar el destinatario. Verifique la sede o defina GRAPH_EMAIL_TO_TEST en .env"] });
+    }
+
+    const evidenciasPorIndex = extraerEvidenciasPorIndex(req.files, "evidencia");
+    const evidenciasCamillaPorIndex = extraerEvidenciasPorIndex(req.files, "evidencia-camilla");
+    const evidenciasSenalizacionPorIndex = extraerEvidenciasPorIndex(req.files, "evidencia-senalizacion");
+    const evidenciasEquipoTecnologicoPorIndex = extraerEvidenciasPorIndex(req.files, "equipo-tecnologico-evidencia");
+    const evidenciasBotiquinPorIndex = extraerEvidenciasPorIndex(req.files, "botiquin-evidencia");
+    const pdfBuffer = await crearPdfInspeccionExtintor(payloadData, evidenciasPorIndex, evidenciasCamillaPorIndex, evidenciasSenalizacionPorIndex, evidenciasEquipoTecnologicoPorIndex, evidenciasBotiquinPorIndex, req.body);
+
+    const nombrePdf = `${payloadData?.inspeccionId || "inspeccion-sst"}.pdf`;
+    const numInspeccionCorreo = payloadData?.numInspeccion ?? null;
+
     const webUrl = await subirPdfAOneDrive(pdfBuffer, payloadData?.inspeccionId);
-    const linkHtml = webUrl
-      ? `<table width="100%" cellpadding="0" cellspacing="0"><tr><td align="center"><a href="${webUrl}" style="display:inline-block;padding:12px 28px;background:#1a2e4a;color:#ffffff;text-decoration:none;border-radius:8px;font-size:13px;font-weight:600;letter-spacing:.3px;">Ver documento en OneDrive</a></td></tr></table>`
-      : "";
-    const htmlFinal = htmlCorreo.replace("{{LINK_ONEDRIVE}}", linkHtml);
+    const htmlFinal = construirHtmlCorreo({
+      inspeccionId: payloadData?.inspeccionId,
+      numInspeccion: numInspeccionCorreo,
+      fecha: payloadData?.fecha,
+      sedeOperacion: payloadData?.sedeOperacion,
+      areaTrabajo: payloadData?.areaTrabajo,
+      jefeResponsable: payloadData?.jefeResponsable,
+      responsableInspeccion: payloadData?.responsableInspeccion,
+      cargoResponsable: payloadData?.cargoResponsable,
+      webUrl
+    });
 
     const subjectNum = numInspeccionCorreo != null ? `N.° ${numInspeccionCorreo} – ` : "";
 
@@ -1308,5 +1355,10 @@ async function enviarPdfPruebaCorreo(req, res) {
 // ===== Exports =====
 module.exports = {
   generarPdfPrueba,
-  enviarPdfPruebaCorreo
+  enviarPdfPruebaCorreo,
+  crearPdfInspeccionExtintor,
+  subirPdfAOneDrive,
+  enviarCorreoPorGraph,
+  resolverCorreoDestino,
+  construirHtmlCorreo
 };

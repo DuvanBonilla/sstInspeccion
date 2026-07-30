@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Estadísticas de Inspecciones SST</title>
+  <link rel="icon" type="image/x-icon" href="/img/favicon.ico" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/css/estadisticas.css" />
+</head>
+<body>
+  <header class="stats-header">
+    <div class="stats-header-inner">
+      <a href="/" class="stats-brand" aria-label="Volver al inicio">
+        <img src="/img/Cargo.png" alt="Logo Cargoban" class="stats-logo" />
+      </a>
+      <span class="stats-header-sep"></span>
+      <span class="stats-header-label">Sistema de Gestión SST</span>
+      <a href="/" class="stats-back-btn btn btn-light" aria-label="Regresar al panel de inicio">
+        <svg class="btn-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
+        </svg>
+        Regresar
+      </a>
+    </div>
+  </header>
+
+  <section class="stats-stage">
+    <p class="stats-eyebrow">Panel de control</p>
+    <h1 class="stats-title">Estadísticas de inspecciones</h1>
+  </section>
+
+  <main class="stats-main">
+    <section class="stats-filtros card">
+      <div class="card-header">
+        <div class="card-title-group">
+          <svg class="card-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 1 1-3 0m3 0a1.5 1.5 0 1 0-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-9.75 0h9.75" />
+          </svg>
+          <h2>Filtros de búsqueda</h2>
+        </div>
+      </div>
+      <form id="filtros-form" class="filtros-grid">
+        <label class="filtro-field">
+          <span>Desde</span>
+          <input type="date" name="fechaDesde" />
+        </label>
+        <label class="filtro-field">
+          <span>Hasta</span>
+          <input type="date" name="fechaHasta" />
+        </label>
+        <label class="filtro-field">
+          <span>Sede</span>
+          <input type="text" name="sedeOperacion" placeholder="Ej: Urabá" />
+        </label>
+        <label class="filtro-field">
+          <span>Estado</span>
+          <select name="estado">
+            <option value="">Todos los estados</option>
+            <option value="pendiente_aprobacion">Pendiente aprobación</option>
+            <option value="aprobada">Aprobada</option>
+            <option value="enviada">Enviada</option>
+          </select>
+        </label>
+        <label class="filtro-field filtro-q">
+          <span>Búsqueda general</span>
+          <div class="search-input-wrapper">
+            <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.603 10.602Z" />
+            </svg>
+            <input type="text" name="q" placeholder="Código, responsable, jefe o área..." />
+          </div>
+        </label>
+        <div class="filtro-actions">
+          <button type="submit" class="btn btn-primary">Aplicar filtros</button>
+          <button type="button" id="btn-limpiar" class="btn btn-light">Limpiar</button>
+        </div>
+      </form>
+    </section>
+
+    <section class="stats-kpis">
+      <article class="kpi card kpi--total">
+        <div class="kpi-header">
+          <p class="kpi-label">Total inspecciones</p>
+          <div class="kpi-icon-wrapper">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 0 0 2.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 0 0-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 0 0 .75-.75 2.25 2.25 0 0 0-.1-.664m-5.8 0A2.251 2.251 0 0 1 13.5 2.25H15c1.03 0 1.9.732 2.1 1.714m-7.4 17.188A2.25 2.25 0 0 1 7.5 19.5V6.24m0 13.26A2.249 2.249 0 0 0 7.5 19.5V6.24m0 13.26C5.624 19.185 4.5 17.47 4.5 15.5V6.108c0-1.135.845-2.098 1.976-2.192a48.424 48.424 0 0 1 1.123-.08" />
+            </svg>
+          </div>
+        </div>
+        <p class="kpi-value" id="kpi-total">0</p>
+      </article>
+      <article class="kpi card kpi--pendiente">
+        <div class="kpi-header">
+          <p class="kpi-label">Pendientes</p>
+          <div class="kpi-icon-wrapper">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+            </svg>
+          </div>
+        </div>
+        <p class="kpi-value" id="kpi-pendientes">0</p>
+      </article>
+      <article class="kpi card kpi--aprobada">
+        <div class="kpi-header">
+          <p class="kpi-label">Aprobadas</p>
+          <div class="kpi-icon-wrapper">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+            </svg>
+          </div>
+        </div>
+        <p class="kpi-value" id="kpi-aprobadas">0</p>
+      </article>
+      <article class="kpi card kpi--enviada">
+        <div class="kpi-header">
+          <p class="kpi-label">Enviadas</p>
+          <div class="kpi-icon-wrapper">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M6 12 3.269 3.125A59.769 59.769 0 0 1 21.485 12 59.768 59.768 0 0 1 3.27 20.875L5.999 12Zm0 0h7.5" />
+            </svg>
+          </div>
+        </div>
+        <p class="kpi-value" id="kpi-enviadas">0</p>
+      </article>
+      <article class="kpi card kpi--mes">
+        <div class="kpi-header">
+          <p class="kpi-label">Este mes</p>
+          <div class="kpi-icon-wrapper">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5" />
+            </svg>
+          </div>
+        </div>
+        <p class="kpi-value" id="kpi-mes">0</p>
+      </article>
+    </section>
+
+    <section class="stats-sedes card card--topline">
+      <div class="card-title-group">
+        <svg class="card-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+          <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z" />
+        </svg>
+        <h2>Distribución por sede</h2>
+      </div>
+      <div id="sedes-lista" class="sedes-lista"></div>
+    </section>
+
+    <section class="stats-tabla card card--topline">
+      <div class="tabla-head">
+        <div class="card-title-group">
+          <svg class="card-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 6.75h12M8.25 12h12m-12 5.25h12M3.75 6.75h.007v.008H3.75V6.75Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0ZM3.75 12h.007v.008H3.75V12Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm-3.75 5.25h.007v.008H3.75v-.008Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z" />
+          </svg>
+          <h2>Inspecciones registradas</h2>
+        </div>
+        <p id="tabla-meta" class="tabla-meta"></p>
+      </div>
+      <div class="tabla-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>N°</th>
+              <th>Código</th>
+              <th>Registro</th>
+              <th>Sede</th>
+              <th>Área</th>
+              <th>Responsable</th>
+              <th>Estado</th>
+              <th>Ítems</th>
+            </tr>
+          </thead>
+          <tbody id="tabla-body"></tbody>
+        </table>
+      </div>
+      <div class="tabla-actions">
+        <button id="btn-prev" class="btn btn-light" type="button">
+          <svg class="btn-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
+          </svg>
+          Anterior
+        </button>
+        <span id="page-info">Página 1</span>
+        <button id="btn-next" class="btn btn-light" type="button">
+          Siguiente
+          <svg class="btn-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
+          </svg>
+        </button>
+      </div>
+    </section>
+  </main>
+
+  <script src="/js/estadisticas.js"></script>
+</body>
+</html>

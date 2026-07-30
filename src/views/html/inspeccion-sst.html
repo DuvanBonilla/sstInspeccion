@@ -76,6 +76,11 @@
           <span class="step-badge">6</span>
           <span class="step-label">Equipos Tec.</span>
         </div>
+        <div class="step-line"></div>
+        <div class="step-indicator" data-step-indicator="7">
+          <span class="step-badge">7</span>
+          <span class="step-label">Finalizar</span>
+        </div>
       </nav>
 
       <button id="btn-salir" type="button" class="btn-salir-formulario" title="Salir del formulario">
@@ -103,40 +108,40 @@
         </div>
         <div class="field">
           <label for="sedeOperacion">Sede de operación</label>
-          <input id="sedeOperacion" type="text" list="sedes-operacion" placeholder="Seleccione o escriba" />
-          <datalist id="sedes-operacion">
-            <option value="Urabá"></option>
-            <option value="Santa Marta"></option>
-          </datalist>
+          <select id="sedeOperacion">
+            <option value="" disabled selected>Seleccione</option>
+            <option value="Urabá">Urabá</option>
+            <option value="Santa Marta">Santa Marta</option>
+          </select>
         </div>
         <div class="field">
           <label for="areaTrabajo">Área de trabajo</label>
-          <input id="areaTrabajo" type="text" list="areas-trabajo" placeholder="Seleccione o escriba" />
-          <datalist id="areas-trabajo">
-            <option value="SST"></option>
-            <option value="Administración"></option>
-            <option value="Gerencia"></option>
-          </datalist>
+          <select id="areaTrabajo">
+            <option value="" disabled selected>Seleccione</option>
+            <option value="SST">SST</option>
+            <option value="Administración">Administración</option>
+            <option value="Gerencia">Gerencia</option>
+          </select>
         </div>
         <div class="field"><label for="jefeResponsable">Nombre jefe /o del area a inspeccionar</label><input id="jefeResponsable" type="text" /></div>
         <div class="field">
           <label for="cargoJefe">Cargo jefe</label>
-          <input id="cargoJefe" type="text" list="cargos-jefe" placeholder="Seleccione o escriba" />
-          <datalist id="cargos-jefe">
-            <option value="SST"></option>
-            <option value="Administración"></option>
-            <option value="Gerencia"></option>
-          </datalist>
+          <select id="cargoJefe">
+            <option value="" disabled selected>Seleccione</option>
+            <option value="SST">SST</option>
+            <option value="Administración">Administración</option>
+            <option value="Gerencia">Gerencia</option>
+          </select>
         </div>
         <div class="field"><label for="responsableInspeccion">Responsable de la inspección</label><input id="responsableInspeccion" type="text" /></div>
         <div class="field">
           <label for="cargoResponsable">Cargo responsable</label>
-          <input id="cargoResponsable" type="text" list="cargos-responsable" placeholder="Seleccione o escriba" />
-          <datalist id="cargos-responsable">
-            <option value="SST"></option>
-            <option value="Administración"></option>
-            <option value="Gerencia"></option>
-          </datalist>
+          <select id="cargoResponsable">
+            <option value="" disabled selected>Seleccione</option>
+            <option value="SST">SST</option>
+            <option value="Administración">Administración</option>
+            <option value="Gerencia">Gerencia</option>
+          </select>
         </div>
       </div>
       <div class="step-actions no-pdf">
@@ -153,9 +158,11 @@
         <div class="section-note">Agregue uno o varios extintores. Cada extintor repite condiciones y evidencia.</div>
       </div>
       <div id="extintores-container" class="extintores-container"></div>
+      <p id="mensaje-omitido-extintores" class="seccion-omitida-msg hidden no-pdf">Sección omitida: se enviará sin extintores.</p>
       <div class="step-actions no-pdf">
         <button type="button" class="nav-btn" data-step-target="1">Anterior</button>
         <div class="step-actions-right">
+          <button id="btn-omitir-extintores" type="button" class="omitir-btn hidden">Omitir sección</button>
           <button id="btn-agregar-extintor" type="button" class="add-btn">+ Agregar extintor</button>
           <button type="button" class="nav-btn nav-primary" data-step-target="3">Siguiente: Camillas</button>
         </div>
@@ -169,9 +176,11 @@
         <div class="section-note">Agregue una o varias camillas con sus condiciones y evidencia.</div>
       </div>
       <div id="camillas-container" class="extintores-container"></div>
+      <p id="mensaje-omitido-camillas" class="seccion-omitida-msg hidden no-pdf">Sección omitida: se enviará sin camillas.</p>
       <div class="step-actions no-pdf">
         <button type="button" class="nav-btn" data-step-target="2">Anterior</button>
         <div class="step-actions-right">
+          <button id="btn-omitir-camillas" type="button" class="omitir-btn hidden">Omitir sección</button>
           <button id="btn-agregar-camilla" type="button" class="add-btn">+ Agregar camilla</button>
           <button type="button" class="nav-btn nav-primary" data-step-target="4">Siguiente: Señalización</button>
         </div>
@@ -185,9 +194,11 @@
         <div class="section-note">Agregue señalizaciones y su estado operativo.</div>
       </div>
       <div id="senalizaciones-container" class="extintores-container"></div>
+      <p id="mensaje-omitido-senalizaciones" class="seccion-omitida-msg hidden no-pdf">Sección omitida: se enviará sin señalizaciones.</p>
       <div class="step-actions no-pdf">
         <button type="button" class="nav-btn" data-step-target="3">Anterior</button>
         <div class="step-actions-right">
+          <button id="btn-omitir-senalizaciones" type="button" class="omitir-btn hidden">Omitir sección</button>
           <button id="btn-agregar-senalizacion" type="button" class="add-btn">+ Agregar señalización</button>
           <button type="button" class="nav-btn nav-primary" data-step-target="5">Siguiente: Botiquín</button>
         </div>
@@ -203,9 +214,11 @@
         <div class="section-note">Agregue uno o varios botiquines con su inventario y cumplimiento.</div>
       </div>
       <div id="botiquines-container" class="extintores-container"></div>
+      <p id="mensaje-omitido-botiquines" class="seccion-omitida-msg hidden no-pdf">Sección omitida: se enviará sin botiquines.</p>
       <div class="step-actions no-pdf">
         <button type="button" class="nav-btn" data-step-target="4">Anterior</button>
         <div class="step-actions-right">
+          <button id="btn-omitir-botiquines" type="button" class="omitir-btn hidden">Omitir sección</button>
           <button id="btn-agregar-botiquin" type="button" class="add-btn">+ Agregar botiquín</button>
           <button type="button" class="nav-btn nav-primary" data-step-target="6">Siguiente: Equipos Tec.</button>
         </div>
@@ -219,11 +232,39 @@
         <div class="section-note">Registre ubicación, condición, observaciones y afectación al servicio.</div>
       </div>
       <div id="equipos-tecnologicos-container" class="extintores-container"></div>
+      <p id="mensaje-omitido-equipos" class="seccion-omitida-msg hidden no-pdf">Sección omitida: se enviará sin equipos tecnológicos.</p>
 
-   
-     
       <div class="step-actions no-pdf">
         <button type="button" class="nav-btn" data-step-target="5">Anterior</button>
+        <div class="step-actions-right">
+          <button id="btn-omitir-equipos" type="button" class="omitir-btn hidden">Omitir sección</button>
+          <button type="button" class="nav-btn nav-primary" data-step-target="7">Siguiente: Finalizar</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- FINALIZAR -->
+    <section class="section step-panel hidden" data-step-panel="7">
+      <div class="section-head">
+        <h2>7. Finalizar</h2>
+        <div class="section-note">Revise el resumen antes de enviar la inspección.</div>
+      </div>
+
+      <dl class="resumen-general">
+        <div><dt>Fecha</dt><dd id="resumen-fecha"></dd></div>
+        <div><dt>Sede</dt><dd id="resumen-sede"></dd></div>
+        <div><dt>Área de trabajo</dt><dd id="resumen-area"></dd></div>
+        <div><dt>Jefe de área</dt><dd id="resumen-jefe"></dd></div>
+        <div><dt>Cargo jefe</dt><dd id="resumen-cargo-jefe"></dd></div>
+        <div><dt>Responsable inspección</dt><dd id="resumen-responsable"></dd></div>
+        <div><dt>Cargo responsable</dt><dd id="resumen-cargo-responsable"></dd></div>
+      </dl>
+
+      <h3 class="resumen-secciones-titulo">Secciones</h3>
+      <div id="resumen-secciones" class="resumen-secciones"></div>
+
+      <div class="step-actions no-pdf">
+        <button type="button" class="nav-btn" data-step-target="6">Anterior</button>
       </div>
       <div class="actions no-pdf">
         <button id="btn-onedrive" type="button">Enviar</button>
@@ -241,7 +282,7 @@
       <div id="envio-estado-cargando" class="envio-estado">
         <div class="envio-spinner"></div>
         <p class="envio-titulo">Enviando inspección...</p>
-        <p class="envio-sub">Guardando en OneDrive y enviando correo</p>
+        <p class="envio-sub">Guardando la inspección</p>
       </div>
 
       <!-- Estado de éxito -->
@@ -252,10 +293,28 @@
             <path d="M20 6L9 17l-5-5"/>
           </svg>
         </div>
-        <p class="exito-titulo">¡Inspección enviada!</p>
+        <p class="exito-titulo">¡Inspección guardada!</p>
         <p id="envio-num-inspeccion" class="envio-num-inspeccion hidden"></p>
         <p id="envio-inspeccion-id" class="envio-id-chip"></p>
-        <p class="exito-sub">Guardada en OneDrive y enviada por correo correctamente.</p>
+        <p class="exito-sub">El Inspector (quien diligenció el formulario) ya quedó aprobado automáticamente. Comparte estos links con Jefe de Área y COPASST para que aprueben. El correo con el PDF se envía automáticamente cuando las 3 aprobaciones estén completas.</p>
+
+        <div id="envio-links" class="envio-links">
+          <div class="envio-link-item">
+            <span class="envio-link-label">Jefe de Área</span>
+            <div class="envio-link-row">
+              <input type="text" id="link-jefe" class="envio-link-input" readonly />
+              <button type="button" class="envio-link-copy" data-copy-target="link-jefe">Copiar</button>
+            </div>
+          </div>
+          <div class="envio-link-item">
+            <span class="envio-link-label">COPASST</span>
+            <div class="envio-link-row">
+              <input type="text" id="link-copasst" class="envio-link-input" readonly />
+              <button type="button" class="envio-link-copy" data-copy-target="link-copasst">Copiar</button>
+            </div>
+          </div>
+        </div>
+
         <div class="exito-acciones">
           <button id="btn-modal-inicio" class="exito-btn exito-btn--primary">Ir al inicio</button>
           <button id="btn-modal-nueva" class="exito-btn exito-btn--link">Iniciar nueva inspección</button>

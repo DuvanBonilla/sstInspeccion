@@ -6,7 +6,9 @@
     número, ubicación, afectación a la productividad (SI/NO), observaciones,
     imagen de evidencia y tabla de 7 condiciones (señalización, acceso, soporte,
     instalación a pared, correas, limpieza, inmovilizador).
-  - Permite agregar varias camillas y eliminar cualquiera excepto la primera.
+  - Permite agregar varias camillas y eliminar cualquiera (incluida la única/
+    primera tarjeta): la sección puede quedar vacía si la sede lo permite
+    (ver esSedeUrabana() en inspeccion-sst.js y validarInspeccion en el backend).
   - Muestra vista previa de la imagen al seleccionarla.
   - Devuelve un array de objetos con todos los valores del DOM (leer()).
 
@@ -43,7 +45,7 @@ export function createCamillasManager({ condicionesCamilla, crearOpciones }) {
       <article class="extintor-card" data-camilla-index="${index}">
         <div class="extintor-card-header">
           <h3 class="extintor-card-title">Camilla ${index + 1}</h3>
-          ${index === 0 ? "" : `<button type="button" class="remove-btn" data-action="remove-camilla">Eliminar</button>`}
+          <button type="button" class="remove-btn" data-action="remove-camilla">Eliminar</button>
         </div>
 
         <div class="grid">
@@ -88,6 +90,16 @@ export function createCamillasManager({ condicionesCamilla, crearOpciones }) {
     `;
   }
 
+  // El botón "Eliminar" solo tiene sentido si hay más de una tarjeta: con una
+  // sola, para vaciar la sección se usa el botón "Omitir" (en inspeccion-sst.js).
+  function actualizarBotonesEliminar() {
+    const container = document.getElementById("camillas-container");
+    const cards = container.querySelectorAll("[data-camilla-index]");
+    cards.forEach((card) => {
+      card.querySelector('[data-action="remove-camilla"]')?.classList.toggle("hidden", cards.length <= 1);
+    });
+  }
+
   function agregar() {
     const container = document.getElementById("camillas-container");
     const index = camillaCounter++;
@@ -95,7 +107,11 @@ export function createCamillasManager({ condicionesCamilla, crearOpciones }) {
     const card = container.querySelector(`[data-camilla-index="${index}"]`);
     renderCondicionesCamilla(index, card);
     inicializarBloqueEvidencias(card, "camilla-evidencia");
-    card.querySelector('[data-action="remove-camilla"]')?.addEventListener("click", () => card.remove());
+    card.querySelector('[data-action="remove-camilla"]')?.addEventListener("click", () => {
+      card.remove();
+      actualizarBotonesEliminar();
+    });
+    actualizarBotonesEliminar();
   }
 
   function leerCondicionesCamilla(container) {
