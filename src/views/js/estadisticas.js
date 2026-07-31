@@ -3,12 +3,18 @@
 */
 (function () {
   const form = document.getElementById("filtros-form");
-  const btnLimpiar = document.getElementById("btn-limpiar");
+  const inputBusqueda = form.elements.q;
+  const selectEstado = form.elements.estado;
+  const selectSede = form.elements.sedeOperacion;
+
   const btnPrev = document.getElementById("btn-prev");
   const btnNext = document.getElementById("btn-next");
   const tablaBody = document.getElementById("tabla-body");
   const tablaMeta = document.getElementById("tabla-meta");
   const pageInfo = document.getElementById("page-info");
+  const columnasOrdenables = document.querySelectorAll("th[data-sort]");
+
+
 
   const kpis = {
     total: document.getElementById("kpi-total"),
@@ -24,18 +30,26 @@
     page: 1,
     pageSize: 10,
     totalPages: 1,
-    total: 0
+    total: 0,
+
+    sortBy: null,
+    sortOrder: "asc"
   };
 
   function leerFiltros() {
     const fd = new FormData(form);
-    return {
+
+    const filtros = {
       fechaDesde: String(fd.get("fechaDesde") || "").trim(),
       fechaHasta: String(fd.get("fechaHasta") || "").trim(),
       sedeOperacion: String(fd.get("sedeOperacion") || "").trim(),
       estado: String(fd.get("estado") || "").trim(),
       q: String(fd.get("q") || "").trim()
     };
+
+    console.log("FILTROS ACTUALES:", filtros);
+
+    return filtros;
   }
 
   function crearQuery(params) {
@@ -84,17 +98,17 @@
     tablaBody.innerHTML = items.map((it) => {
       const totalItems = Number(it.extintores || 0) + Number(it.camillas || 0) + Number(it.senalizaciones || 0) + Number(it.equipos || 0) + Number(it.botiquines || 0);
       return `
-        <tr>
-          <td>${it.num_inspeccion ?? "-"}</td>
-          <td>${it.inspeccion_id || "-"}</td>
-          <td>${formatearFecha(it.created_at)}</td>
-          <td>${it.sede_operacion || "-"}</td>
-          <td>${it.area_trabajo || "-"}</td>
-          <td>${it.responsable_inspeccion || "-"}</td>
-          <td>${renderEstado(it.estado)}</td>
-          <td>${totalItems}</td>
-        </tr>
-      `;
+          <tr>
+            <td>${it.num_inspeccion ?? "-"}</td>
+            <td>${it.inspeccion_id || "-"}</td>
+            <td>${formatearFecha(it.created_at)}</td>
+            <td>${it.sede_operacion || "-"}</td>
+            <td>${it.area_trabajo || "-"}</td>
+            <td>${it.responsable_inspeccion || "-"}</td>
+            <td>${renderEstado(it.estado)}</td>
+            <td>${totalItems}</td>
+          </tr>
+        `;
     }).join("");
   }
 
@@ -116,7 +130,7 @@
 
   async function cargarTabla() {
     const filtros = leerFiltros();
-    const query = crearQuery({ ...filtros, page: state.page, pageSize: state.pageSize });
+    const query = crearQuery({ ...filtros, page: state.page, pageSize: state.pageSize, sortBy: state.sortBy, sortOrder: state.sortOrder });
     const resp = await fetch(`/api/estadisticas/inspecciones?${query}`);
     const data = await resp.json();
     if (!resp.ok || !data.ok) throw new Error("No fue posible cargar la tabla");
@@ -136,17 +150,56 @@
     }
   }
 
-  form.addEventListener("submit", (event) => {
-    event.preventDefault();
+  async function actualizarFiltros() {
     state.page = 1;
-    cargarTodo();
+    await cargarTodo();
+  }
+
+  inputBusqueda.addEventListener("input", () => {
+    actualizarFiltros();
   });
 
-  btnLimpiar.addEventListener("click", () => {
-    form.reset();
-    state.page = 1;
-    cargarTodo();
+  selectEstado.addEventListener("change", () => {
+    actualizarFiltros();
   });
+
+  selectSede.addEventListener("change", () => {
+    actualizarFiltros();
+  });
+
+columnasOrdenables.forEach(columna => {
+
+    columna.addEventListener("click", () => {
+
+        const campo = columna.dataset.sort;
+
+        if (state.sortBy === campo) {
+            state.sortOrder =
+                state.sortOrder === "asc"
+                    ? "desc"
+                    : "asc";
+        } else {
+            state.sortBy = campo;
+            state.sortOrder = "asc";
+        }
+
+        // Actualizar las flechas
+        columnasOrdenables.forEach(c => {
+            c.classList.remove("asc", "desc");
+
+            if (c.dataset.sort === state.sortBy) {
+                c.classList.add(state.sortOrder);
+            }
+        });
+
+        state.page = 1;
+
+        cargarTabla();
+
+    });
+
+  });
+
 
   btnPrev.addEventListener("click", () => {
     if (state.page <= 1) return;
@@ -161,4 +214,86 @@
   });
 
   cargarTodo();
+
+  const calendario = flatpickr("#rangoFechas", {
+
+    mode: "range",
+
+    locale: "es",
+
+    dateFormat: "Y-m-d",
+
+    allowInput: false,
+
+
+    onChange(selectedDates) {
+
+      if (selectedDates.length !== 2) {
+        return;
+      }
+
+
+      const desde = flatpickr.formatDate(
+        selectedDates[0],
+        "Y-m-d"
+      );
+
+      const hasta = flatpickr.formatDate(
+        selectedDates[1],
+        "Y-m-d"
+      );
+
+
+      const inputDesde = document.getElementById("fechaDesde");
+      const inputHasta = document.getElementById("fechaHasta");
+
+
+      inputDesde.value = desde;
+      inputHasta.value = hasta;
+
+
+      actualizarResumen(desde, hasta);
+
+
+      setTimeout(() => {
+        actualizarFiltros();
+      }, 50);
+
+    }
+
+  });
+
+  function actualizarResumen(desde, hasta) {
+
+    document.getElementById("textoDesde").textContent = desde;
+    document.getElementById("textoHasta").textContent = hasta;
+
+    document.getElementById("rangoResumen")
+      .classList.remove("oculto");
+  }
+
+  document.getElementById("limpiarRango")
+    .addEventListener("click", () => {
+
+
+      calendario.clear();
+
+
+      document.getElementById("fechaDesde").value = "";
+      document.getElementById("fechaHasta").value = "";
+
+
+      document.getElementById("textoDesde").textContent = "";
+      document.getElementById("textoHasta").textContent = "";
+
+
+      document.getElementById("rangoResumen")
+        .classList.add("oculto");
+
+
+      actualizarFiltros();
+
+    });
+
 })();
+

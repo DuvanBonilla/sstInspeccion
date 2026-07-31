@@ -46,7 +46,11 @@ const upload = multer({ storage: multer.memoryStorage() });
 
 // Sirve archivos estaticos del frontend (HTML, CSS, JS) desde src/views/ (hermano de backend/).
 const VIEWS_DIR = path.resolve(__dirname, "..", "views");
+const FLATPICKR_DIR = path.resolve(__dirname,"..","..","node_modules","flatpickr","dist");
+
+
 app.use(express.static(VIEWS_DIR));
+app.use("/flatpickr", express.static(FLATPICKR_DIR));
 app.use(express.json({ limit: "2mb" }));
 app.use(express.urlencoded({ extended: true }));
 

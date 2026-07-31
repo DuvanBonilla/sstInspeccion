@@ -82,6 +82,7 @@ document.addEventListener("DOMContentLoaded", () => {
   function esSedeUrabana() {
     const sede = document.getElementById("sedeOperacion")?.value || "";
     return sede.toLowerCase().includes("urab");
+    
   }
 
   const SECCIONES_OMITIBLES = [
@@ -188,7 +189,19 @@ document.addEventListener("DOMContentLoaded", () => {
     } else if (summaryExistente) {
       summaryExistente.remove();
     }
-
+ 
+    if (numeroPaso === 7 && !tieneItemsInspeccion()) {
+      const msg = document.getElementById("msg");
+      if (msg) {
+        msg.textContent = "No puede enviar este informe porque no se ha registrado ningún ítem en la inspección.";
+      }
+      const btnEnviar = document.getElementById("btn-onedrive");
+      if (btnEnviar) {
+        btnEnviar.disabled = true;
+      }
+      return false;
+    }
+ 
     return valido;
   }
 
@@ -201,6 +214,7 @@ document.addEventListener("DOMContentLoaded", () => {
     panelSaliente?.querySelectorAll(".campo-error").forEach((el) => el.classList.remove("campo-error"));
 
     currentStep = step;
+    actualizarVisibilidadOmitir();
 
     if (currentStep === 7) renderResumenFinal();
 
@@ -238,7 +252,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const senalizaciones = seccionesOmitidas.senalizaciones ? [] : senalizacionesManager.leer();
     const equiposTecnologicosData = seccionesOmitidas.equiposTecnologicos ? [] : equiposTecnologicosManager.leer();
     const botiquinesData = seccionesOmitidas.botiquines ? [] : botiquinesManager.leer();
-
+ 
     return {
       inspeccionId: inspeccionId || generarInspeccionId(),
       fecha: document.getElementById("fecha").value,
@@ -261,7 +275,21 @@ document.addEventListener("DOMContentLoaded", () => {
       extintor: extintores[0] || null
     };
   }
-
+ 
+  function contarItemsInspeccion() {
+    return (
+      (seccionesOmitidas.extintores ? 0 : extintoresManager.leer().length) +
+      (seccionesOmitidas.camillas ? 0 : camillasManager.leer().length) +
+      (seccionesOmitidas.senalizaciones ? 0 : senalizacionesManager.leer().length) +
+      (seccionesOmitidas.botiquines ? 0 : botiquinesManager.leer().length) +
+      (seccionesOmitidas.equiposTecnologicos ? 0 : equiposTecnologicosManager.leer().length)
+    );
+  }
+ 
+  function tieneItemsInspeccion() {
+    return contarItemsInspeccion() > 0;
+  }
+ 
   // Resumen del paso 7: datos generales + qué secciones se hicieron y cuáles no
   // (omitidas o simplemente vacías). Se recalcula cada vez que se entra al paso.
   function renderResumenFinal() {
@@ -287,6 +315,26 @@ document.addEventListener("DOMContentLoaded", () => {
         <span>${n > 0 ? `Hecho (${n})` : "No se hizo"}</span>
       </div>
     `).join("");
+ 
+    const totalItems = contarItemsInspeccion();
+    const msg = document.getElementById("msg");
+    const btnEnviar = document.getElementById("btn-onedrive");
+ 
+    if (totalItems === 0) {
+      if (msg) {
+        msg.textContent = "No puede enviar este informe porque no se ha registrado ningún ítem en la inspección.";
+      }
+      if (btnEnviar) {
+        btnEnviar.disabled = true;
+      }
+    } else {
+      if (msg) {
+        msg.textContent = "";
+      }
+      if (btnEnviar) {
+        btnEnviar.disabled = false;
+      }
+    }
   }
 
   // Anexa todas las fotos seleccionadas en un bloque de evidencias (data-role="{rolePrefix}-input")
@@ -372,6 +420,52 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+  function abrirMenuCompartir(boton) {
+    const targetId = boton.getAttribute("data-share-target");
+    const menu = document.querySelector(`[data-menu-target="${targetId}"]`);
+    if (!menu) return;
+    
+    menu.classList.toggle("hidden");
+    
+    // Cerrar menú si haces click afuera
+    if (!menu.classList.contains("hidden")) {
+      const cerrarMenu = (e) => {
+        if (!menu.contains(e.target) && e.target !== boton) {
+          menu.classList.add("hidden");
+          document.removeEventListener("click", cerrarMenu);
+        }
+      };
+      setTimeout(() => document.addEventListener("click", cerrarMenu), 0);
+    }
+  }
+
+  async function compartirPor(metodo, inputId) {
+    const input = document.getElementById(inputId);
+    if (!input || !input.value) return;
+
+    const url = input.value;
+    const texto = "Enlace de aprobación de inspección SST";
+
+    try {
+      if (metodo === "whatsapp") {
+        const mensaje = encodeURIComponent(`${texto}: ${url}`);
+        window.open(`https://wa.me/?text=${mensaje}`, "_blank");
+      } else if (metodo === "telegram") {
+        const mensaje = encodeURIComponent(`${texto}: ${url}`);
+        window.open(`https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent(texto)}`, "_blank");
+      } else if (metodo === "email") {
+        const asunto = encodeURIComponent("Enlace de aprobación - Inspección SST");
+        const cuerpo = encodeURIComponent(`${texto}:\n${url}`);
+        window.location.href = `mailto:?subject=${asunto}&body=${cuerpo}`;
+      } else if (metodo === "copy") {
+        await navigator.clipboard.writeText(url);
+        alert("Enlace copiado al portapapeles");
+      }
+    } catch (error) {
+      console.error(`Error compartiendo por ${metodo}:`, error);
+    }
+  }
+
   function cerrarModal() {
     document.getElementById("envio-modal").classList.remove("visible");
   }
@@ -386,7 +480,15 @@ document.addEventListener("DOMContentLoaded", () => {
 
   async function enviarOneDrive() {
     if (!validarPaso(currentStep)) return;
-
+ 
+    if (!tieneItemsInspeccion()) {
+      const msg = document.getElementById("msg");
+      if (msg) {
+        msg.textContent = "No puede enviar este informe porque no se ha registrado ningún ítem en la inspección.";
+      }
+      return;
+    }
+ 
     const btnEnviar = document.getElementById("btn-onedrive");
     btnEnviar.disabled = true;
     mostrarModal("cargando");
@@ -462,6 +564,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   });
   document.getElementById("sedeOperacion")?.addEventListener("input", actualizarVisibilidadOmitir);
+  document.getElementById("sedeOperacion")?.addEventListener("change", actualizarVisibilidadOmitir);
   actualizarVisibilidadOmitir();
 
   document.getElementById("btn-modal-nueva").addEventListener("click", () => location.reload());
@@ -470,6 +573,18 @@ document.addEventListener("DOMContentLoaded", () => {
 
   document.querySelectorAll(".envio-link-copy").forEach((boton) => {
     boton.addEventListener("click", () => copiarLink(boton));
+  });
+
+  document.querySelectorAll(".envio-link-share").forEach((boton) => {
+    boton.addEventListener("click", () => abrirMenuCompartir(boton));
+  });
+
+  document.querySelectorAll(".envio-share-option").forEach((opcion) => {
+    opcion.addEventListener("click", () => {
+      const metodo = opcion.getAttribute("data-share-method");
+      const inputId = opcion.getAttribute("data-share-input");
+      compartirPor(metodo, inputId);
+    });
   });
 
   document.getElementById("btn-salir").addEventListener("click", mostrarModalCancelar);

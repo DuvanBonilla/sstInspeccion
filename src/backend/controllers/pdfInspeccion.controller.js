@@ -39,6 +39,29 @@ function getRequiredEnv(name) {
   return value;
 }
 
+const PDF_DESTINOS_POR_SEDE = new Map([
+  ["uraba", "Respuestas_PDF/URABÁ"],
+  ["santa marta", "Respuestas_PDF/STM"],
+]);
+
+function normalizarSedeParaRuta(sedeOperacion) {
+  return String(sedeOperacion || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+}
+
+function resolverCarpetaDestinoPdf(sedeOperacion) {
+  const sede = normalizarSedeParaRuta(sedeOperacion);
+
+  for (const [clave, carpeta] of PDF_DESTINOS_POR_SEDE) {
+    if (sede.includes(clave)) return carpeta;
+  }
+
+  return "Respuestas_PDF";
+}
+
 // Extrae el payload del body de la request, parseando JSON si viene como string.
 function leerPayload(req) {
   if (typeof req.body?.payload === "string") {
@@ -1155,15 +1178,16 @@ async function generarPdfPrueba(req, res) {
 }
 
 // ===== subir PDF a OneDrive (carpeta Respuestas_PDF) =====
-async function subirPdfAOneDrive(pdfBuffer, inspeccionId) {
+async function subirPdfAOneDrive(pdfBuffer, inspeccionId, sedeOperacion = null) {
   const token = await getAccessToken();
   const userId = getRequiredEnv("ONEDRIVE_USER_ID");
   const excelPath = process.env.ONEDRIVE_EXCEL_PATH || "";
-  const normalizado = excelPath.replace(/\\/g, "/");
+  const normalizado = excelPath.replace(/\\/g, "/").trim();
   const conSlash = normalizado.startsWith("/") ? normalizado : `/${normalizado}`;
   const carpetaPadre = conSlash.slice(0, conSlash.lastIndexOf("/"));
   const nombreArchivo = `${inspeccionId || "inspeccion"}.pdf`;
-  const rutaPdf = `${carpetaPadre}/Respuestas_PDF/${nombreArchivo}`;
+  const carpetaDestino = resolverCarpetaDestinoPdf(sedeOperacion);
+  const rutaPdf = `${carpetaPadre}/${carpetaDestino}/${nombreArchivo}`;
 
   const url = `https://graph.microsoft.com/v1.0/users/${encodeURIComponent(userId)}/drive/root:${encodeURI(rutaPdf)}:/content`;
 
@@ -1186,7 +1210,7 @@ async function subirPdfAOneDrive(pdfBuffer, inspeccionId) {
 function resolverCorreoDestino(sedeOperacion, correoManual) {
   const sede = (sedeOperacion || "").toLowerCase().trim();
   if (sede.includes("santa marta")) return "ticscargoban@gmail.com";
-  if (sede.includes("urab")) return "cagobanolp@cargoban.com.co";
+  if (sede.includes("urab")) return "cargobanolp@cargoban.com.co";
   return correoManual || process.env.GRAPH_EMAIL_TO_TEST;
 }
 
@@ -1323,7 +1347,7 @@ async function enviarPdfPruebaCorreo(req, res) {
     const nombrePdf = `${payloadData?.inspeccionId || "inspeccion-sst"}.pdf`;
     const numInspeccionCorreo = payloadData?.numInspeccion ?? null;
 
-    const webUrl = await subirPdfAOneDrive(pdfBuffer, payloadData?.inspeccionId);
+    const webUrl = await subirPdfAOneDrive(pdfBuffer, payloadData?.inspeccionId, payloadData?.sedeOperacion);
     const htmlFinal = construirHtmlCorreo({
       inspeccionId: payloadData?.inspeccionId,
       numInspeccion: numInspeccionCorreo,

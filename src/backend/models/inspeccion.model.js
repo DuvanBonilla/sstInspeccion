@@ -635,7 +635,29 @@ async function listarInspeccionesConFiltros(filtros = {}, paginacion = {}) {
   const page = Math.max(1, Number(paginacion.page) || 1);
   const pageSize = Math.min(100, Math.max(1, Number(paginacion.pageSize) || 10));
   const offset = (page - 1) * pageSize;
+  const sortBy = paginacion.sortBy;
+  const sortOrder = paginacion.sortOrder === "desc" ? "DESC" : "ASC";
 
+  const columnasOrdenables = {
+  numero: "i.num_inspeccion",
+  codigo: "i.inspeccion_id",
+  registro: "i.created_at",
+  sedeOperacion: "i.sede_operacion",
+  area: "i.area_trabajo",
+  responsable: "i.responsable_inspeccion",
+  estado: "i.estado",
+  items: `
+    (
+      COALESCE(ext.cantidad,0) +
+      COALESCE(cam.cantidad,0) +
+      COALESCE(sen.cantidad,0) +
+      COALESCE(eqp.cantidad,0) +
+      COALESCE(bot.cantidad,0)
+    )
+  `
+  };
+
+  const columnaOrden = columnasOrdenables[sortBy] || "i.created_at";
   const { whereSql, valores } = construirFiltrosInspecciones(filtros);
 
   const totalSql = `SELECT COUNT(*)::int AS total FROM inspecciones i WHERE ${whereSql}`;
@@ -673,7 +695,7 @@ async function listarInspeccionesConFiltros(filtros = {}, paginacion = {}) {
       SELECT inspeccion_pk, COUNT(*)::int AS cantidad FROM botiquines GROUP BY inspeccion_pk
     ) bot ON bot.inspeccion_pk = i.id
     WHERE ${whereSql}
-    ORDER BY i.created_at DESC
+    ORDER BY ${columnaOrden} ${sortOrder}
     LIMIT $${valores.length + 1}
     OFFSET $${valores.length + 2}
   `;

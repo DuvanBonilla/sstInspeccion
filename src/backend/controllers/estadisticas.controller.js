@@ -44,8 +44,10 @@ async function listarInspecciones(req, res) {
     const filtros = leerFiltros(req);
     const page = Number(req.query.page) || 1;
     const pageSize = Number(req.query.pageSize) || 10;
+    const sortBy = req.query.sortBy || null;
+    const sortOrder = req.query.sortOrder || "asc";
 
-    const listado = await listarInspeccionesConFiltros(filtros, { page, pageSize });
+    const listado = await listarInspeccionesConFiltros(filtros, { page, pageSize, sortBy, sortOrder });
     return res.status(200).json({ ok: true, ...listado });
   } catch (error) {
     const mensaje = error instanceof Error ? error.message : "Error consultando inspecciones";

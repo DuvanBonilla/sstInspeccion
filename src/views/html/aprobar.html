@@ -1,5 +1,6 @@
 <!doctype html>
 <html lang="es">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
@@ -7,6 +8,7 @@
   <link rel="icon" type="image/x-icon" href="/img/favicon.ico" />
   <link rel="stylesheet" href="/css/aprobar.css" />
 </head>
+
 <body>
 
   <header class="aprobar-header">
@@ -32,14 +34,17 @@
 
     <div id="estado-error" class="aprobar-card hidden">
       <h1 class="aprobar-title aprobar-title--error">Link no válido</h1>
-      <p class="aprobar-texto">Este link de aprobación no existe o ya no está disponible. Verifica que lo hayas copiado completo.</p>
+      <p class="aprobar-texto">Este link de aprobación no existe o ya no está disponible. Verifica que lo hayas copiado
+        completo.</p>
     </div>
 
     <div id="estado-ya-aprobado" class="aprobar-card hidden">
       <h1 class="aprobar-title">Ya aprobaste esta inspección</h1>
-      <p class="aprobar-texto">Registrado como <strong id="ya-aprobado-nombre"></strong>. No es necesario volver a confirmar.</p>
+      <p class="aprobar-texto">Registrado como <strong id="ya-aprobado-nombre"></strong>. No es necesario volver a
+        confirmar.</p>
       <div class="aprobar-campo aprobar-campo--center">
-        <button type="button" id="btn-ver-informe-ya" class="aprobar-btn-secundario btn-ver-informe">Ver informe</button>
+        <button type="button" id="btn-ver-informe-ya" class="aprobar-btn-secundario btn-ver-informe">Ver
+          informe</button>
       </div>
     </div>
 
@@ -53,18 +58,40 @@
       <h1 class="aprobar-title">Aprobar inspección</h1>
 
       <dl class="aprobar-resumen">
-        <div><dt>Inspección</dt><dd id="resumen-id"></dd></div>
-        <div><dt>Fecha</dt><dd id="resumen-fecha"></dd></div>
-        <div><dt>Sede</dt><dd id="resumen-sede"></dd></div>
-        <div><dt>Área de trabajo</dt><dd id="resumen-area"></dd></div>
-        <div><dt>Jefe de área</dt><dd id="resumen-jefe"></dd></div>
-        <div><dt>Responsable inspección</dt><dd id="resumen-responsable"></dd></div>
-        <div><dt>Ítems inspeccionados</dt><dd id="resumen-conteos"></dd></div>
+        <div>
+          <dt>Inspección</dt>
+          <dd id="resumen-id"></dd>
+        </div>
+        <div>
+          <dt>Fecha</dt>
+          <dd id="resumen-fecha"></dd>
+        </div>
+        <div>
+          <dt>Sede</dt>
+          <dd id="resumen-sede"></dd>
+        </div>
+        <div>
+          <dt>Área de trabajo</dt>
+          <dd id="resumen-area"></dd>
+        </div>
+        <div>
+          <dt>Jefe de área</dt>
+          <dd id="resumen-jefe"></dd>
+        </div>
+        <div>
+          <dt>Responsable inspección</dt>
+          <dd id="resumen-responsable"></dd>
+        </div>
+        <div>
+          <dt>Ítems inspeccionados</dt>
+          <dd id="resumen-conteos"></dd>
+        </div>
       </dl>
 
-      <p class="aprobar-nota">No se solicita firma manuscrita. Al confirmar con tu nombre, declaras que revisaste y apruebas esta inspección.</p>
+      <p class="aprobar-nota">No se solicita firma manuscrita. Al confirmar con tu nombre, declaras que revisaste y
+        apruebas esta inspección.</p>
 
-	
+
       <div class="aprobar-campo">
         <button type="button" id="btn-ver-informe" class="aprobar-btn-secundario btn-ver-informe">Ver informe</button>
       </div>
@@ -87,4 +114,5 @@
 
   <script src="/js/aprobar.js"></script>
 </body>
+
 </html>

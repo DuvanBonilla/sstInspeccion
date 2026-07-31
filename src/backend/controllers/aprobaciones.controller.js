@@ -252,7 +252,7 @@ async function finalizarInspeccion(inspeccionId) {
     }
   );
 
-  const webUrl = await subirPdfAOneDrive(pdfBuffer, row.inspeccion_id);
+  const webUrl = await subirPdfAOneDrive(pdfBuffer, row.inspeccion_id, row.sede_operacion);
 
   const correoDestino = resolverCorreoDestino(row.sede_operacion, null);
   if (correoDestino) {

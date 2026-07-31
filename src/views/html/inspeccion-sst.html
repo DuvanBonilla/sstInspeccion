@@ -22,6 +22,7 @@
 -->
 <!doctype html>
 <html lang="es">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -29,6 +30,7 @@
   <link rel="icon" type="image/x-icon" href="/img/favicon.ico" />
   <link rel="stylesheet" href="/css/inspeccion-sst.css" />
 </head>
+
 <body>
   <header class="sst-header no-pdf">
     <div class="sst-header-inner">
@@ -85,8 +87,12 @@
 
       <button id="btn-salir" type="button" class="btn-salir-formulario" title="Salir del formulario">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-          <path fill-rule="evenodd" d="M3 4.25A2.25 2.25 0 0 1 5.25 2h5.5A2.25 2.25 0 0 1 13 4.25v2a.75.75 0 0 1-1.5 0v-2a.75.75 0 0 0-.75-.75h-5.5a.75.75 0 0 0-.75.75v11.5c0 .414.336.75.75.75h5.5a.75.75 0 0 0 .75-.75v-2a.75.75 0 0 1 1.5 0v2A2.25 2.25 0 0 1 10.75 18h-5.5A2.25 2.25 0 0 1 3 15.75V4.25Z" clip-rule="evenodd"/>
-          <path fill-rule="evenodd" d="M6 10a.75.75 0 0 1 .75-.75h9.546l-1.048-.943a.75.75 0 1 1 1.004-1.114l2.5 2.25a.75.75 0 0 1 0 1.114l-2.5 2.25a.75.75 0 1 1-1.004-1.114l1.048-.943H6.75A.75.75 0 0 1 6 10Z" clip-rule="evenodd"/>
+          <path fill-rule="evenodd"
+            d="M3 4.25A2.25 2.25 0 0 1 5.25 2h5.5A2.25 2.25 0 0 1 13 4.25v2a.75.75 0 0 1-1.5 0v-2a.75.75 0 0 0-.75-.75h-5.5a.75.75 0 0 0-.75.75v11.5c0 .414.336.75.75.75h5.5a.75.75 0 0 0 .75-.75v-2a.75.75 0 0 1 1.5 0v2A2.25 2.25 0 0 1 10.75 18h-5.5A2.25 2.25 0 0 1 3 15.75V4.25Z"
+            clip-rule="evenodd" />
+          <path fill-rule="evenodd"
+            d="M6 10a.75.75 0 0 1 .75-.75h9.546l-1.048-.943a.75.75 0 1 1 1.004-1.114l2.5 2.25a.75.75 0 0 1 0 1.114l-2.5 2.25a.75.75 0 1 1-1.004-1.114l1.048-.943H6.75A.75.75 0 0 1 6 10Z"
+            clip-rule="evenodd" />
         </svg>
       </button>
     </div>
@@ -123,7 +129,8 @@
             <option value="Gerencia">Gerencia</option>
           </select>
         </div>
-        <div class="field"><label for="jefeResponsable">Nombre jefe /o del area a inspeccionar</label><input id="jefeResponsable" type="text" /></div>
+        <div class="field"><label for="jefeResponsable">Nombre jefe /o del area a inspeccionar</label><input
+            id="jefeResponsable" type="text" /></div>
         <div class="field">
           <label for="cargoJefe">Cargo jefe</label>
           <select id="cargoJefe">
@@ -133,7 +140,8 @@
             <option value="Gerencia">Gerencia</option>
           </select>
         </div>
-        <div class="field"><label for="responsableInspeccion">Responsable de la inspección</label><input id="responsableInspeccion" type="text" /></div>
+        <div class="field"><label for="responsableInspeccion">Responsable de la inspección</label><input
+            id="responsableInspeccion" type="text" /></div>
         <div class="field">
           <label for="cargoResponsable">Cargo responsable</label>
           <select id="cargoResponsable">
@@ -158,7 +166,8 @@
         <div class="section-note">Agregue uno o varios extintores. Cada extintor repite condiciones y evidencia.</div>
       </div>
       <div id="extintores-container" class="extintores-container"></div>
-      <p id="mensaje-omitido-extintores" class="seccion-omitida-msg hidden no-pdf">Sección omitida: se enviará sin extintores.</p>
+      <p id="mensaje-omitido-extintores" class="seccion-omitida-msg hidden no-pdf">Sección omitida: se enviará sin
+        extintores.</p>
       <div class="step-actions no-pdf">
         <button type="button" class="nav-btn" data-step-target="1">Anterior</button>
         <div class="step-actions-right">
@@ -176,7 +185,8 @@
         <div class="section-note">Agregue una o varias camillas con sus condiciones y evidencia.</div>
       </div>
       <div id="camillas-container" class="extintores-container"></div>
-      <p id="mensaje-omitido-camillas" class="seccion-omitida-msg hidden no-pdf">Sección omitida: se enviará sin camillas.</p>
+      <p id="mensaje-omitido-camillas" class="seccion-omitida-msg hidden no-pdf">Sección omitida: se enviará sin
+        camillas.</p>
       <div class="step-actions no-pdf">
         <button type="button" class="nav-btn" data-step-target="2">Anterior</button>
         <div class="step-actions-right">
@@ -194,7 +204,8 @@
         <div class="section-note">Agregue señalizaciones y su estado operativo.</div>
       </div>
       <div id="senalizaciones-container" class="extintores-container"></div>
-      <p id="mensaje-omitido-senalizaciones" class="seccion-omitida-msg hidden no-pdf">Sección omitida: se enviará sin señalizaciones.</p>
+      <p id="mensaje-omitido-senalizaciones" class="seccion-omitida-msg hidden no-pdf">Sección omitida: se enviará sin
+        señalizaciones.</p>
       <div class="step-actions no-pdf">
         <button type="button" class="nav-btn" data-step-target="3">Anterior</button>
         <div class="step-actions-right">
@@ -214,7 +225,8 @@
         <div class="section-note">Agregue uno o varios botiquines con su inventario y cumplimiento.</div>
       </div>
       <div id="botiquines-container" class="extintores-container"></div>
-      <p id="mensaje-omitido-botiquines" class="seccion-omitida-msg hidden no-pdf">Sección omitida: se enviará sin botiquines.</p>
+      <p id="mensaje-omitido-botiquines" class="seccion-omitida-msg hidden no-pdf">Sección omitida: se enviará sin
+        botiquines.</p>
       <div class="step-actions no-pdf">
         <button type="button" class="nav-btn" data-step-target="4">Anterior</button>
         <div class="step-actions-right">
@@ -225,14 +237,15 @@
       </div>
     </section>
 
-       <!-- EQUIPOS TECNOLÓGICOS -->
+    <!-- EQUIPOS TECNOLÓGICOS -->
     <section class="section step-panel hidden" data-step-panel="6">
       <div class="section-head">
         <h2>6. Equipo tecnológico de atención de emergencia</h2>
         <div class="section-note">Registre ubicación, condición, observaciones y afectación al servicio.</div>
       </div>
       <div id="equipos-tecnologicos-container" class="extintores-container"></div>
-      <p id="mensaje-omitido-equipos" class="seccion-omitida-msg hidden no-pdf">Sección omitida: se enviará sin equipos tecnológicos.</p>
+      <p id="mensaje-omitido-equipos" class="seccion-omitida-msg hidden no-pdf">Sección omitida: se enviará sin equipos
+        tecnológicos.</p>
 
       <div class="step-actions no-pdf">
         <button type="button" class="nav-btn" data-step-target="5">Anterior</button>
@@ -251,13 +264,34 @@
       </div>
 
       <dl class="resumen-general">
-        <div><dt>Fecha</dt><dd id="resumen-fecha"></dd></div>
-        <div><dt>Sede</dt><dd id="resumen-sede"></dd></div>
-        <div><dt>Área de trabajo</dt><dd id="resumen-area"></dd></div>
-        <div><dt>Jefe de área</dt><dd id="resumen-jefe"></dd></div>
-        <div><dt>Cargo jefe</dt><dd id="resumen-cargo-jefe"></dd></div>
-        <div><dt>Responsable inspección</dt><dd id="resumen-responsable"></dd></div>
-        <div><dt>Cargo responsable</dt><dd id="resumen-cargo-responsable"></dd></div>
+        <div>
+          <dt>Fecha</dt>
+          <dd id="resumen-fecha"></dd>
+        </div>
+        <div>
+          <dt>Sede</dt>
+          <dd id="resumen-sede"></dd>
+        </div>
+        <div>
+          <dt>Área de trabajo</dt>
+          <dd id="resumen-area"></dd>
+        </div>
+        <div>
+          <dt>Jefe de área</dt>
+          <dd id="resumen-jefe"></dd>
+        </div>
+        <div>
+          <dt>Cargo jefe</dt>
+          <dd id="resumen-cargo-jefe"></dd>
+        </div>
+        <div>
+          <dt>Responsable inspección</dt>
+          <dd id="resumen-responsable"></dd>
+        </div>
+        <div>
+          <dt>Cargo responsable</dt>
+          <dd id="resumen-cargo-responsable"></dd>
+        </div>
       </dl>
 
       <h3 class="resumen-secciones-titulo">Secciones</h3>
@@ -277,7 +311,7 @@
   <!-- Modal de envío -->
   <div id="envio-modal" class="envio-modal" aria-modal="true" role="dialog">
     <div class="envio-modal-box cancelar-modal-box">
-        
+
       <!-- Estado de carga -->
       <div id="envio-estado-cargando" class="envio-estado">
         <div class="envio-spinner"></div>
@@ -288,31 +322,54 @@
       <!-- Estado de éxito -->
       <div id="envio-estado-exito" class="envio-estado hidden">
         <div class="exito-icono-wrap">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
-               stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M20 6L9 17l-5-5"/>
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M20 6L9 17l-5-5" />
           </svg>
         </div>
         <p class="exito-titulo">¡Inspección guardada!</p>
         <p id="envio-num-inspeccion" class="envio-num-inspeccion hidden"></p>
         <p id="envio-inspeccion-id" class="envio-id-chip"></p>
-        <p class="exito-sub">El Inspector (quien diligenció el formulario) ya quedó aprobado automáticamente. Comparte estos links con Jefe de Área y COPASST para que aprueben. El correo con el PDF se envía automáticamente cuando las 3 aprobaciones estén completas.</p>
+        <p class="exito-sub">El Inspector (quien diligenció el formulario) ya quedó aprobado automáticamente. Comparte
+          estos links con Jefe de Área y COPASST para que aprueben. El correo con el PDF se envía automáticamente cuando
+          las 3 aprobaciones estén completas.</p>
 
         <div id="envio-links" class="envio-links">
+
           <div class="envio-link-item">
             <span class="envio-link-label">Jefe de Área</span>
+
             <div class="envio-link-row">
               <input type="text" id="link-jefe" class="envio-link-input" readonly />
-              <button type="button" class="envio-link-copy" data-copy-target="link-jefe">Copiar</button>
+
+              <button type="button" class="envio-link-share" data-share-target="link-jefe">
+                Compartir
+              </button>
+
+              <div class="envio-share-menu hidden" data-menu-target="link-jefe">
+                <button type="button" class="envio-share-option" data-share-method="copy"
+                  data-share-input="link-jefe">Copiar link</button>
+              </div>
             </div>
           </div>
+
           <div class="envio-link-item">
-            <span class="envio-link-label">COPASST</span>
+            <span class="envio-link-label">Brigadista</span>
+
             <div class="envio-link-row">
               <input type="text" id="link-copasst" class="envio-link-input" readonly />
-              <button type="button" class="envio-link-copy" data-copy-target="link-copasst">Copiar</button>
+
+              <button type="button" class="envio-link-share" data-share-target="link-copasst">
+                Compartir
+              </button>
+
+              <div class="envio-share-menu hidden" data-menu-target="link-copasst">
+                <button type="button" class="envio-share-option" data-share-method="copy"
+                  data-share-input="link-copasst">Copiar link</button>
+              </div>
             </div>
           </div>
+
         </div>
 
         <div class="exito-acciones">
@@ -324,10 +381,10 @@
       <!-- Estado de error -->
       <div id="envio-estado-error" class="envio-estado hidden">
         <div class="envio-icono envio-icono--error">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
-               stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="12" cy="12" r="10"/>
-            <path d="M15 9l-6 6M9 9l6 6"/>
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10" />
+            <path d="M15 9l-6 6M9 9l6 6" />
           </svg>
         </div>
         <p class="envio-titulo">Error al enviar</p>
@@ -342,11 +399,11 @@
   <div id="cancelar-modal" class="envio-modal" aria-modal="true" role="dialog">
     <div class="envio-modal-box cancelar-modal-box">
       <div class="cancelar-icono-wrap">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
-             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="12" cy="12" r="10"/>
-          <line x1="12" y1="8" x2="12" y2="12"/>
-          <line x1="12" y1="16" x2="12.01" y2="16"/>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+          stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10" />
+          <line x1="12" y1="8" x2="12" y2="12" />
+          <line x1="12" y1="16" x2="12.01" y2="16" />
         </svg>
       </div>
       <p class="cancelar-titulo">¿Seguro que deseas salir?</p>
@@ -360,4 +417,5 @@
 
   <script type="module" defer src="/js/inspeccion-sst.js"></script>
 </body>
+
 </html>

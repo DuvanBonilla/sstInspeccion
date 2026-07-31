@@ -599,3 +599,60 @@ tr:hover td {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+.rango-resumen{
+    margin-top:10px;
+    padding:12px 14px;
+    border:1px solid var(--line);
+    border-radius:10px;
+    background:var(--head);
+
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:16px;
+}
+
+.rango-info{
+    display:flex;
+    flex-direction:column;
+    gap:4px;
+    font-size:.92rem;
+    color:var(--ink);
+}
+
+.btn-limpiar-rango{
+    width:32px;
+    height:32px;
+
+    border:none;
+    border-radius:50%;
+
+    background:#ef4444;
+    color:#fff;
+
+    cursor:pointer;
+    transition:.2s;
+}
+
+.btn-limpiar-rango:hover{
+    transform:scale(1.08);
+}
+
+.oculto{
+    display:none;
+}
+
+th[data-sort]{
+    cursor:pointer;
+    user-select:none;
+}
+
+th.asc::after{
+    content:" ▲";
+    font-size:11px;
+}
+
+th.desc::after{
+    content:" ▼";
+    font-size:11px;
+}
