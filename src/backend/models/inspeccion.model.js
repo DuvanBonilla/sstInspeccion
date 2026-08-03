@@ -716,6 +716,38 @@ async function listarInspeccionesConFiltros(filtros = {}, paginacion = {}) {
   };
 }
 
+async function obtenerLinksInspeccion(inspeccionId) {
+
+  const { rows } = await query(
+    `SELECT
+        inspeccion_id,
+        num_inspeccion,
+        token_jefe,
+        token_copasst
+     FROM inspecciones
+     WHERE inspeccion_id = $1`,
+    [inspeccionId]
+  );
+
+  if (!rows.length) {
+    return null;
+  }
+
+  const inspeccion = rows[0];
+
+  const baseUrl = process.env.APP_URL || "http://localhost:3000";
+
+  return {
+    inspeccionId: inspeccion.inspeccion_id,
+    numInspeccion: inspeccion.num_inspeccion,
+    links: {
+      jefe: `${baseUrl}/aprobar?token=${inspeccion.token_jefe}`,
+      copasst: `${baseUrl}/aprobar?token=${inspeccion.token_copasst}`
+    }
+  };
+
+}
+
 // Exporta funciones y constantes para uso en el controlador.
 module.exports = {
   CAMPOS_CONDICION,
@@ -725,5 +757,6 @@ module.exports = {
   guardarInspeccionEnDB,
   obtenerInspeccionCompleta,
   obtenerResumenEstadisticas,
-  listarInspeccionesConFiltros
+  listarInspeccionesConFiltros,
+  obtenerLinksInspeccion
 };

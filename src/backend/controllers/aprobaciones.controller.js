@@ -32,6 +32,7 @@ const {
   resolverCorreoDestino,
   construirHtmlCorreo
 } = require("./pdfInspeccion.controller");
+const { recuperarLinksAprobacion } = require("../controllers/inspeccion.controller");
 
 // GET /api/aprobaciones/:token
 async function obtenerResumenAprobacion(req, res) {
@@ -284,5 +285,6 @@ async function finalizarInspeccion(inspeccionId) {
 module.exports = {
   obtenerResumenAprobacion,
   previsualizarAprobacion,
-  registrarAprobacion
+  registrarAprobacion,
+ 
 };

@@ -342,14 +342,9 @@
             <div class="envio-link-row">
               <input type="text" id="link-jefe" class="envio-link-input" readonly />
 
-              <button type="button" class="envio-link-share" data-share-target="link-jefe">
-                Compartir
+              <button type="button" class="envio-link-copy" data-copy-target="link-jefe">
+                Copiar
               </button>
-
-              <div class="envio-share-menu hidden" data-menu-target="link-jefe">
-                <button type="button" class="envio-share-option" data-share-method="copy"
-                  data-share-input="link-jefe">Copiar link</button>
-              </div>
             </div>
           </div>
 
@@ -359,23 +354,18 @@
             <div class="envio-link-row">
               <input type="text" id="link-copasst" class="envio-link-input" readonly />
 
-              <button type="button" class="envio-link-share" data-share-target="link-copasst">
-                Compartir
+              <button type="button" class="envio-link-copy" data-copy-target="link-copasst">
+                Copiar
               </button>
-
-              <div class="envio-share-menu hidden" data-menu-target="link-copasst">
-                <button type="button" class="envio-share-option" data-share-method="copy"
-                  data-share-input="link-copasst">Copiar link</button>
-              </div>
             </div>
           </div>
-
+          <div class="exito-acciones">
+            <button id="btn-modal-inicio" class="exito-btn exito-btn--primary">Ir al inicio</button>
+            <button id="btn-modal-nueva" class="exito-btn exito-btn--link">Iniciar nueva inspección</button>
+          </div>
         </div>
 
-        <div class="exito-acciones">
-          <button id="btn-modal-inicio" class="exito-btn exito-btn--primary">Ir al inicio</button>
-          <button id="btn-modal-nueva" class="exito-btn exito-btn--link">Iniciar nueva inspección</button>
-        </div>
+
       </div>
 
       <!-- Estado de error -->
@@ -414,8 +404,8 @@
       </div>
     </div>
   </div>
-
-  <script type="module" defer src="/js/inspeccion-sst.js"></script>
+  <script src="../js/modal-envio.js"></script>
+  <script type="module" defer src="../js/inspeccion-sst.js"></script>
 </body>
 
 </html>

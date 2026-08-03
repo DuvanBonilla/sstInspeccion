@@ -34,8 +34,8 @@ console.log("[ENV CHECK]", Object.fromEntries(
 
 const express = require("express");
 const multer = require("multer");
-const { enviarExtintorOneDrive } = require("./controllers/inspeccion.controller");
-const { generarPdfPrueba, enviarPdfPruebaCorreo } = require("./controllers/pdfInspeccion.controller");
+const { enviarExtintorOneDrive, obtenerLinks } = require("./controllers/inspeccion.controller");
+const { generarPdfPrueba, enviarPdfPruebaCorreo,  } = require("./controllers/pdfInspeccion.controller");
 const { obtenerResumenAprobacion, registrarAprobacion, previsualizarAprobacion } = require("./controllers/aprobaciones.controller");
 const { obtenerResumen, listarInspecciones } = require("./controllers/estadisticas.controller");
 
@@ -70,7 +70,14 @@ app.get("/estadisticas", (req, res) => {
   res.sendFile(path.resolve(VIEWS_DIR, "html", "estadisticas.html"));
 });
 
+  app.get(
+    "/api/inspecciones/:id/links",
+    obtenerLinks
+);
+
 app.post("/enviar-onedrive-extintor", upload.any(), enviarExtintorOneDrive);
+
+
 app.post("/pdf-prueba", upload.any(), generarPdfPrueba);
 app.post("/enviar-pdf-prueba-correo", upload.any(), enviarPdfPruebaCorreo);
 

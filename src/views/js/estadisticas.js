@@ -89,14 +89,43 @@
     return `<span class="estado-pill estado-${safe}">${safe.replaceAll("_", " ")}</span>`;
   }
 
+
   function renderTabla(items) {
     if (!Array.isArray(items) || items.length === 0) {
-      tablaBody.innerHTML = '<tr><td colspan="8">No hay inspecciones para los filtros seleccionados.</td></tr>';
+      tablaBody.innerHTML = '<tr><td colspan="9">No hay inspecciones para los filtros seleccionados.</td></tr>';
       return;
     }
 
     tablaBody.innerHTML = items.map((it) => {
+      console.log(it.estado);
       const totalItems = Number(it.extintores || 0) + Number(it.camillas || 0) + Number(it.senalizaciones || 0) + Number(it.equipos || 0) + Number(it.botiquines || 0);
+      tablaBody.querySelectorAll(".btn-recuperar-links").forEach((btn) => {
+
+        btn.addEventListener("click", () => {
+
+          recuperarLinks(btn.dataset.inspeccionId);
+
+        });
+
+      });
+      const recuperarBtn = `
+        <button
+        type="button"
+        class="btn-recuperar"
+        data-inspeccion-id="${it.inspeccion_id}"
+        data-num-inspeccion="${it.num_inspeccion}"
+        ${it.estado === "pendiente_aprobacion" ? "" : "disabled"}>
+        🔗 Recuperar
+        </button>
+        `;
+      const verPdfBtn = `
+        <button
+        type="button"
+        class="btn-ver-pdf"
+        data-inspeccion-id="${it.inspeccion_id}">
+        📄 Ver PDF
+        </button>
+        `;
       return `
           <tr>
             <td>${it.num_inspeccion ?? "-"}</td>
@@ -107,8 +136,10 @@
             <td>${it.responsable_inspeccion || "-"}</td>
             <td>${renderEstado(it.estado)}</td>
             <td>${totalItems}</td>
+            <td>${recuperarBtn} ${verPdfBtn}</td>
           </tr>
         `;
+
     }).join("");
   }
 
@@ -145,7 +176,7 @@
     try {
       await Promise.all([cargarResumen(), cargarTabla()]);
     } catch {
-      tablaBody.innerHTML = '<tr><td colspan="8">Error cargando estadísticas. Intenta de nuevo.</td></tr>';
+      tablaBody.innerHTML = '<tr><td colspan="9">Error cargando estadísticas. Intenta de nuevo.</td></tr>';
       tablaMeta.textContent = "";
     }
   }
@@ -167,34 +198,34 @@
     actualizarFiltros();
   });
 
-columnasOrdenables.forEach(columna => {
+  columnasOrdenables.forEach(columna => {
 
     columna.addEventListener("click", () => {
 
-        const campo = columna.dataset.sort;
+      const campo = columna.dataset.sort;
 
-        if (state.sortBy === campo) {
-            state.sortOrder =
-                state.sortOrder === "asc"
-                    ? "desc"
-                    : "asc";
-        } else {
-            state.sortBy = campo;
-            state.sortOrder = "asc";
+      if (state.sortBy === campo) {
+        state.sortOrder =
+          state.sortOrder === "asc"
+            ? "desc"
+            : "asc";
+      } else {
+        state.sortBy = campo;
+        state.sortOrder = "asc";
+      }
+
+      // Actualizar las flechas
+      columnasOrdenables.forEach(c => {
+        c.classList.remove("asc", "desc");
+
+        if (c.dataset.sort === state.sortBy) {
+          c.classList.add(state.sortOrder);
         }
+      });
 
-        // Actualizar las flechas
-        columnasOrdenables.forEach(c => {
-            c.classList.remove("asc", "desc");
+      state.page = 1;
 
-            if (c.dataset.sort === state.sortBy) {
-                c.classList.add(state.sortOrder);
-            }
-        });
-
-        state.page = 1;
-
-        cargarTabla();
+      cargarTabla();
 
     });
 
@@ -213,7 +244,63 @@ columnasOrdenables.forEach(columna => {
     cargarTabla();
   });
 
-  cargarTodo();
+  tablaBody.addEventListener("click", (e) => {
+
+    const btnRecuperar = e.target.closest(".btn-recuperar");
+
+    if (btnRecuperar) {
+
+      recuperarLinks(btnRecuperar);
+
+      return;
+
+    }
+
+    const btnPdf = e.target.closest(".btn-ver-pdf");
+
+    if (btnPdf) {
+
+      const inspeccionId = btnPdf.dataset.inspeccionId;
+
+      console.log("Ver PDF:", inspeccionId);
+
+    }
+
+  });;
+
+async function recuperarLinks(btnRecuperar) {
+
+    const inspeccionId = btnRecuperar.dataset.inspeccionId;
+
+    console.log("Recuperar inspección:", inspeccionId);
+
+    //mostrarModal("cargando");
+
+    try {
+
+        const resp = await fetch(`/api/inspecciones/${inspeccionId}/links`);
+
+        const data = await resp.json();
+
+        console.log(data);
+
+        mostrarModal(
+            "exito",
+            inspeccionId,
+            data.numInspeccion,
+            data.links,
+            "recuperar"
+        );
+
+    } catch (err) {
+
+        console.error(err);
+
+        mostrarModal("error");
+
+    }
+
+}
 
   const calendario = flatpickr("#rangoFechas", {
 

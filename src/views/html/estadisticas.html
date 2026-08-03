@@ -210,6 +210,7 @@
               <th data-sort="responsable">Responsable</th>
               <th data-sort="estado">Estado</th>
               <th data-sort="items">Ítems</th>
+              <th>Acciones</th>
             </tr>
           </thead>
           <tbody id="tabla-body"></tbody>
@@ -233,10 +234,90 @@
         </button>
       </div>
     </section>
+    <!-- Modal de envío -->
+    <div id="envio-modal" class="envio-modal" aria-modal="true" role="dialog">
+      <div class="envio-modal-box cancelar-modal-box">
+
+        <!-- Estado de carga -->
+        <div id="envio-estado-cargando" class="envio-estado">
+          <div class="envio-spinner"></div>
+          <p class="envio-titulo">Enviando inspección...</p>
+          <p class="envio-sub">Guardando la inspección</p>
+        </div>
+
+        <!-- Estado de éxito -->
+        <div id="envio-estado-exito" class="envio-estado hidden">
+          <div class="exito-icono-wrap">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+              stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M20 6L9 17l-5-5" />
+            </svg>
+          </div>
+          <p class="exito-titulo">¡Inspección guardada!</p>
+          <p id="envio-num-inspeccion" class="envio-num-inspeccion hidden"></p>
+          <p id="envio-inspeccion-id" class="envio-id-chip"></p>
+          <p class="exito-sub">El Inspector (quien diligenció el formulario) ya quedó aprobado automáticamente. Comparte
+            estos links con Jefe de Área y COPASST para que aprueben. El correo con el PDF se envía automáticamente
+            cuando
+            las 3 aprobaciones estén completas.</p>
+
+          <div id="envio-links" class="envio-links">
+
+            <div class="envio-link-item">
+              <span class="envio-link-label">Jefe de Área</span>
+
+              <div class="envio-link-row">
+                <input type="text" id="link-jefe" class="envio-link-input" readonly />
+
+                <button type="button" class="envio-link-copy" data-copy-target="link-jefe">
+                  Copiar
+                </button>
+              </div>
+            </div>
+
+            <div class="envio-link-item">
+              <span class="envio-link-label">Brigadista</span>
+
+              <div class="envio-link-row">
+                <input type="text" id="link-copasst" class="envio-link-input" readonly />
+
+                <button type="button" class="envio-link-copy" data-copy-target="link-copasst">
+                  Copiar
+                </button>
+              </div>
+            </div>
+            <div class="exito-acciones">
+              <button id="btn-modal-inicio" class="exito-btn exito-btn--primary">Ir al inicio</button>
+              <button id="btn-modal-nueva" class="exito-btn exito-btn--link">Iniciar nueva inspección</button>
+            </div>
+          </div>
+
+
+        </div>
+
+        <!-- Estado de error -->
+        <div id="envio-estado-error" class="envio-estado hidden">
+          <div class="envio-icono envio-icono--error">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+              stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10" />
+              <path d="M15 9l-6 6M9 9l6 6" />
+            </svg>
+          </div>
+          <p class="envio-titulo">Error al enviar</p>
+          <p id="envio-error-texto" class="envio-sub"></p>
+          <button id="btn-modal-cerrar-error" class="nav-btn">Cerrar</button>
+        </div>
+
+      </div>
+    </div>
   </main>
+
   <script src="/flatpickr/flatpickr.min.js"></script>
   <script src="/flatpickr/l10n/es.js"></script>
-  <script src="/js/estadisticas.js"></script>
+  <script src="../js/modal-envio.js"></script>
+  <script src="../js/estadisticas.js"></script>
+
 </body>
 
 </html>
