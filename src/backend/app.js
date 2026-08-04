@@ -86,6 +86,7 @@ app.get("/api/aprobaciones/:token/preview", previsualizarAprobacion);
 app.post("/api/aprobaciones/:token", registrarAprobacion);
 app.get("/api/estadisticas/resumen", obtenerResumen);
 app.get("/api/estadisticas/inspecciones", listarInspecciones);
+app.get("/api/inspecciones/:id/links", obtenerLinks);
 
 app.listen(PORT, () => {
   console.log(`Servidor MVC activo en http://localhost:${PORT}`);

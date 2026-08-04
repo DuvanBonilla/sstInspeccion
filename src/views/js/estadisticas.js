@@ -108,7 +108,7 @@
         });
 
       });
-const recuperarBtn = `
+      const recuperarBtn = `
 <button
     type="button"
     class="btn-recuperar accion-btn accion-btn-links"
@@ -132,7 +132,7 @@ const recuperarBtn = `
 </button>
 `;
 
-const verPdfBtn = `
+      const verPdfBtn = `
 <button
     type="button"
     class="btn-ver-pdf accion-btn accion-btn-pdf"
@@ -291,9 +291,9 @@ const verPdfBtn = `
 
     if (btnPdf) {
 
-      const inspeccionId = btnPdf.dataset.inspeccionId;
+      verPdf(btnPdf);
 
-      console.log("Ver PDF:", inspeccionId);
+      return;
 
     }
 
@@ -328,6 +328,36 @@ const verPdfBtn = `
 
 
       );
+
+    } catch (err) {
+
+      console.error(err);
+
+      mostrarModal("error");
+
+    }
+
+  }
+
+  async function verPdf(btnPdf) {
+
+    const inspeccionId = btnPdf.dataset.inspeccionId;
+
+    try {
+
+      const resp = await fetch(`/api/inspecciones/${inspeccionId}/links`);
+
+      const data = await resp.json();
+
+      if (!resp.ok || !data.ok) {
+        throw new Error("No fue posible recuperar el enlace de la inspección.");
+      }
+
+      const previewUrl = data.links.inspector
+        .replace("/aprobar/", "/api/aprobaciones/")
+        + "/preview";
+
+      window.open(previewUrl, "_blank", "noopener");
 
     } catch (err) {
 

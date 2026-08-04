@@ -722,6 +722,7 @@ async function obtenerLinksInspeccion(inspeccionId) {
     `SELECT
         inspeccion_id,
         num_inspeccion,
+        token_inspector,
         token_jefe,
         token_copasst
      FROM inspecciones
@@ -742,6 +743,7 @@ async function obtenerLinksInspeccion(inspeccionId) {
     inspeccionId: inspeccion.inspeccion_id,
     numInspeccion: inspeccion.num_inspeccion,
     links: {
+      inspector: `${baseUrl}/aprobar/${inspeccion.token_inspector}`,
       jefe: `${baseUrl}/aprobar/${inspeccion.token_jefe}`,
       copasst: `${baseUrl}/aprobar/${inspeccion.token_copasst}`
     }
