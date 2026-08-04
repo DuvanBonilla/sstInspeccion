@@ -108,24 +108,55 @@
         });
 
       });
-      const recuperarBtn = `
-        <button
-        type="button"
-        class="btn-recuperar"
-        data-inspeccion-id="${it.inspeccion_id}"
-        data-num-inspeccion="${it.num_inspeccion}"
-        ${it.estado === "pendiente_aprobacion" ? "" : "disabled"}>
-        🔗 Recuperar
-        </button>
-        `;
-      const verPdfBtn = `
-        <button
-        type="button"
-        class="btn-ver-pdf"
-        data-inspeccion-id="${it.inspeccion_id}">
-        📄 Ver PDF
-        </button>
-        `;
+const recuperarBtn = `
+<button
+    type="button"
+    class="btn-recuperar accion-btn accion-btn-links"
+    data-inspeccion-id="${it.inspeccion_id}"
+    data-num-inspeccion="${it.num_inspeccion}"
+    ${it.estado === "pendiente_aprobacion" ? "" : "disabled"}>
+
+    <svg xmlns="http://www.w3.org/2000/svg"
+         fill="none"
+         viewBox="0 0 24 24"
+         stroke-width="2"
+         stroke="currentColor">
+
+        <path stroke-linecap="round"
+              stroke-linejoin="round"
+              d="M13.19 8.688a4.5 4.5 0 016.364 6.364l-3 3a4.5 4.5 0 01-6.364 0m3.182-9.546-3 3m0 0a4.5 4.5 0 000 6.364m0-6.364a4.5 4.5 0 00-6.364 0l-3 3a4.5 4.5 0 106.364 6.364l3-3"/>
+    </svg>
+
+    Enlaces
+
+</button>
+`;
+
+const verPdfBtn = `
+<button
+    type="button"
+    class="btn-ver-pdf accion-btn accion-btn-pdf"
+    data-inspeccion-id="${it.inspeccion_id}">
+
+    <svg xmlns="http://www.w3.org/2000/svg"
+         fill="none"
+         viewBox="0 0 24 24"
+         stroke-width="2"
+         stroke="currentColor">
+
+        <path stroke-linecap="round"
+              stroke-linejoin="round"
+              d="M19.5 14.25v4.125A2.625 2.625 0 0116.875 21H7.125A2.625 2.625 0 014.5 18.375V5.625A2.625 2.625 0 017.125 3h6.19a2.25 2.25 0 011.591.659l3.935 3.935A2.25 2.25 0 0119.5 9.185V14.25z"/>
+
+        <path stroke-linecap="round"
+              stroke-linejoin="round"
+              d="M9 15h6M9 11h6"/>
+    </svg>
+
+    PDF
+
+</button>
+`;
       return `
           <tr>
             <td>${it.num_inspeccion ?? "-"}</td>
@@ -268,7 +299,7 @@
 
   });;
 
-async function recuperarLinks(btnRecuperar) {
+  async function recuperarLinks(btnRecuperar) {
 
     const inspeccionId = btnRecuperar.dataset.inspeccionId;
 
@@ -278,29 +309,35 @@ async function recuperarLinks(btnRecuperar) {
 
     try {
 
-        const resp = await fetch(`/api/inspecciones/${inspeccionId}/links`);
+      const resp = await fetch(`/api/inspecciones/${inspeccionId}/links`);
 
-        const data = await resp.json();
+      const data = await resp.json();
 
-        console.log(data);
+      console.log("RESPUESTA COMPLETA:");
+      console.log(data);
 
-        mostrarModal(
-            "exito",
-            inspeccionId,
-            data.numInspeccion,
-            data.links,
-            "recuperar"
-        );
+      console.log("LINKS:");
+      console.log(data.links);
+
+      mostrarModal(
+        "exito",
+        inspeccionId,
+        data.numInspeccion,
+        data.links,
+        "recuperar"
+
+
+      );
 
     } catch (err) {
 
-        console.error(err);
+      console.error(err);
 
-        mostrarModal("error");
+      mostrarModal("error");
 
     }
 
-}
+  }
 
   const calendario = flatpickr("#rangoFechas", {
 

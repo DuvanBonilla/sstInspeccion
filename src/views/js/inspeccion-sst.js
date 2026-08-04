@@ -377,21 +377,6 @@ document.addEventListener("DOMContentLoaded", () => {
     return fd;
   }
 
-  mostrarModal("cargando");
-
-
-
-  mostrarModal("error");
-
-
-
-  mostrarModal(
-    "exito",
-    inspeccionId,
-    numInspeccion,
-    datosOneDrive.links,
-    "crear"
-  );
 
   function mostrarModalCancelar() {
     document.getElementById("cancelar-modal").classList.add("visible");
@@ -416,9 +401,6 @@ document.addEventListener("DOMContentLoaded", () => {
     btnEnviar.disabled = true;
     mostrarModal("cargando");
 
-    const recuperarBtn = document.getElementById("recuperar-link");
-    recuperarBtn.disabled = true;
-    mostrarModal("cargando");
 
     try {
       const inspeccionId = generarInspeccionId();

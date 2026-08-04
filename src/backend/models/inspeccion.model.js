@@ -639,14 +639,14 @@ async function listarInspeccionesConFiltros(filtros = {}, paginacion = {}) {
   const sortOrder = paginacion.sortOrder === "desc" ? "DESC" : "ASC";
 
   const columnasOrdenables = {
-  numero: "i.num_inspeccion",
-  codigo: "i.inspeccion_id",
-  registro: "i.created_at",
-  sedeOperacion: "i.sede_operacion",
-  area: "i.area_trabajo",
-  responsable: "i.responsable_inspeccion",
-  estado: "i.estado",
-  items: `
+    numero: "i.num_inspeccion",
+    codigo: "i.inspeccion_id",
+    registro: "i.created_at",
+    sedeOperacion: "i.sede_operacion",
+    area: "i.area_trabajo",
+    responsable: "i.responsable_inspeccion",
+    estado: "i.estado",
+    items: `
     (
       COALESCE(ext.cantidad,0) +
       COALESCE(cam.cantidad,0) +
@@ -737,12 +737,13 @@ async function obtenerLinksInspeccion(inspeccionId) {
 
   const baseUrl = process.env.APP_URL || "http://localhost:3000";
 
+
   return {
     inspeccionId: inspeccion.inspeccion_id,
     numInspeccion: inspeccion.num_inspeccion,
     links: {
-      jefe: `${baseUrl}/aprobar?token=${inspeccion.token_jefe}`,
-      copasst: `${baseUrl}/aprobar?token=${inspeccion.token_copasst}`
+      jefe: `${baseUrl}/aprobar/${inspeccion.token_jefe}`,
+      copasst: `${baseUrl}/aprobar/${inspeccion.token_copasst}`
     }
   };
 

@@ -2,22 +2,22 @@ function mostrarModal(estado, inspeccionId = null, numInspeccion = null, links =
   const modal = document.getElementById("envio-modal");
 
 
-const estadoCargando = document.getElementById("envio-estado-cargando");
-const estadoExito = document.getElementById("envio-estado-exito");
-const estadoError = document.getElementById("envio-estado-error");
+  const estadoCargando = document.getElementById("envio-estado-cargando");
+  const estadoExito = document.getElementById("envio-estado-exito");
+  const estadoError = document.getElementById("envio-estado-error");
 
-if (!estadoCargando || !estadoExito || !estadoError) {
-  console.error("Faltan elementos del modal", {
-    estadoCargando,
-    estadoExito,
-    estadoError
-  });
-  return;
-}
+  if (!estadoCargando || !estadoExito || !estadoError) {
+    console.error("Faltan elementos del modal", {
+      estadoCargando,
+      estadoExito,
+      estadoError
+    });
+    return;
+  }
 
-estadoCargando.classList.toggle("hidden", estado !== "cargando");
-estadoExito.classList.toggle("hidden", estado !== "exito");
-estadoError.classList.toggle("hidden", estado !== "error");
+  estadoCargando.classList.toggle("hidden", estado !== "cargando");
+  estadoExito.classList.toggle("hidden", estado !== "exito");
+  estadoError.classList.toggle("hidden", estado !== "error");
 
   if (estado === "exito") {
 
@@ -33,8 +33,14 @@ estadoError.classList.toggle("hidden", estado !== "error");
   modal.classList.add("visible");
 }
 
-function configurarModalExito(inspeccionId, numInspeccion, links, modo = "crear") {
-  document.getElementById("envio-inspeccion-id").textContent = inspeccionId;
+function configurarModalExito(
+  inspeccionId,
+  numInspeccion,
+  links,
+  modo = "crear"
+) {
+  document.getElementById("envio-inspeccion-id").textContent =
+    inspeccionId;
 
   const numEl = document.getElementById("envio-num-inspeccion");
 
@@ -47,22 +53,39 @@ function configurarModalExito(inspeccionId, numInspeccion, links, modo = "crear"
     }
   }
 
+  console.log("Links recibidos en configurarModalExito:", links);
+
   if (links) {
     const inputJefe = document.getElementById("link-jefe");
     const inputCopasst = document.getElementById("link-copasst");
 
-    if (inputJefe) inputJefe.value = links.jefe || "";
-    if (inputCopasst) inputCopasst.value = links.copasst || "";
+    console.log("Elemento input jefe:", inputJefe);
+    console.log("Elemento input copasst:", inputCopasst);
+
+    if (inputJefe) {
+      inputJefe.value = links.jefe || "";
+      inputJefe.setAttribute("value", links.jefe || "");
+    }
+
+    if (inputCopasst) {
+      inputCopasst.value = links.copasst || "";
+      inputCopasst.value = links.copasst || "";
+    }
+
+    console.log("Valor asignado al jefe:", inputJefe?.value);
+    console.log("Valor asignado al copasst:", inputCopasst?.value);
   }
 
   const titulo = document.querySelector(".exito-titulo");
   const subtitulo = document.querySelector(".exito-sub");
 
-  const btnInicio = document.getElementById("btn-modal-inicio");
-  const btnNueva = document.getElementById("btn-modal-nueva");
+  const btnInicio =
+    document.getElementById("btn-modal-inicio");
+
+  const btnNueva =
+    document.getElementById("btn-modal-nueva");
 
   if (modo === "crear") {
-
     titulo.textContent = "¡Inspección guardada!";
 
     subtitulo.textContent =
@@ -70,9 +93,7 @@ function configurarModalExito(inspeccionId, numInspeccion, links, modo = "crear"
 
     btnInicio?.classList.remove("hidden");
     btnNueva?.classList.remove("hidden");
-
   } else if (modo === "recuperar") {
-
     titulo.textContent = "Enlaces recuperados";
 
     subtitulo.textContent =
@@ -80,7 +101,6 @@ function configurarModalExito(inspeccionId, numInspeccion, links, modo = "crear"
 
     btnInicio?.classList.add("hidden");
     btnNueva?.classList.add("hidden");
-
   }
 }
 
@@ -104,6 +124,10 @@ function copiarLink(boton) {
 function cerrarModal() {
   document.getElementById("envio-modal").classList.remove("visible");
 }
+
+document.querySelectorAll(".envio-link-copy").forEach((btn) => {
+  btn.addEventListener("click", () => copiarLink(btn));
+});
 
 window.mostrarModal = mostrarModal;
 window.cerrarModal = cerrarModal;
