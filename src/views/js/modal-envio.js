@@ -56,24 +56,35 @@ function configurarModalExito(
   console.log("Links recibidos en configurarModalExito:", links);
 
   if (links) {
+
+    const bloqueJefe = document.getElementById("bloque-jefe");
+    const bloqueCopasst = document.getElementById("bloque-copasst");
+
     const inputJefe = document.getElementById("link-jefe");
     const inputCopasst = document.getElementById("link-copasst");
 
-    console.log("Elemento input jefe:", inputJefe);
-    console.log("Elemento input copasst:", inputCopasst);
-
-    if (inputJefe) {
-      inputJefe.value = links.jefe || "";
-      inputJefe.setAttribute("value", links.jefe || "");
+    // JEFE
+    if (links.jefe) {
+      bloqueJefe.hidden = false;
+      inputJefe.value = links.jefe;
+      inputJefe.setAttribute("value", links.jefe);
+    } else {
+      bloqueJefe.hidden = true;
+      inputJefe.value = "";
+      inputJefe.setAttribute("value", "");
     }
 
-    if (inputCopasst) {
-      inputCopasst.value = links.copasst || "";
-      inputCopasst.value = links.copasst || "";
+    // COPASST
+    if (links.copasst) {
+      bloqueCopasst.hidden = false;
+      inputCopasst.value = links.copasst;
+      inputCopasst.setAttribute("value", links.copasst);
+    } else {
+      bloqueCopasst.hidden = true;
+      inputCopasst.value = "";
+      inputCopasst.setAttribute("value", "");
     }
 
-    console.log("Valor asignado al jefe:", inputJefe?.value);
-    console.log("Valor asignado al copasst:", inputCopasst?.value);
   }
 
   const titulo = document.querySelector(".exito-titulo");
@@ -106,19 +117,33 @@ function configurarModalExito(
 
 // Copia el valor de un input de link al portapapeles y da feedback visual en el botón.
 function copiarLink(boton) {
+
   const targetId = boton.getAttribute("data-copy-target");
   const input = document.getElementById(targetId);
+
   if (!input || !input.value) return;
 
-  navigator.clipboard.writeText(input.value).then(() => {
-    const textoOriginal = boton.textContent;
-    boton.textContent = "Copiado";
-    boton.classList.add("copiado");
-    setTimeout(() => {
-      boton.textContent = textoOriginal;
-      boton.classList.remove("copiado");
-    }, 1500);
-  });
+  // Abrir el enlace en una nueva pestaña
+  window.open(input.value, "_blank", "noopener,noreferrer");
+
+  // Copiar al portapapeles
+  navigator.clipboard.writeText(input.value)
+    .then(() => {
+      const textoOriginal = boton.textContent;
+
+      boton.textContent = "Abierto ✓";
+
+      boton.classList.add("copiado");
+
+      setTimeout(() => {
+        boton.textContent = textoOriginal;
+        boton.classList.remove("copiado");
+      }, 1500);
+    })
+    .catch(err => {
+      console.error("No fue posible copiar el enlace:", err);
+    });
+
 }
 
 function cerrarModal() {

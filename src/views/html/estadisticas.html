@@ -266,51 +266,54 @@
             <div class="envio-link-item">
               <span class="envio-link-label">Jefe de Área</span>
 
-              <div class="envio-link-row">
-                <input type="text" id="link-jefe" class="envio-link-input" readonly />
+              <div id="bloque-jefe" class="envio-link-item">
+                <span class="envio-link-label">Jefe de Área</span>
 
-                <button type="button" class="envio-link-copy" data-copy-target="link-jefe">
-                  Copiar
-                </button>
+                <div class="envio-link-row">
+                  <input type="text" id="link-jefe" class="envio-link-input" readonly />
+
+                  <button type="button" class="envio-link-copy" data-copy-target="link-jefe">
+                    Copiar
+                  </button>
+                </div>
               </div>
+
+              <div id="bloque-copasst" class="envio-link-item">
+                <span class="envio-link-label">Brigadista</span>
+
+                <div class="envio-link-row">
+                  <input type="text" id="link-copasst" class="envio-link-input" readonly />
+
+                  <button type="button" class="envio-link-copy" data-copy-target="link-copasst">
+                    Copiar
+                  </button>
+                </div>
+              </div>
+              <button id="btn-modal-cerrar" type="button" class="modal-close" onclick="cerrarModal()"
+                aria-label="Cerrar" title="Cerrar">
+                ✕
+              </button>
             </div>
 
-            <div class="envio-link-item">
-              <span class="envio-link-label">Brigadista</span>
 
-              <div class="envio-link-row">
-                <input type="text" id="link-copasst" class="envio-link-input" readonly />
+          </div>
 
-                <button type="button" class="envio-link-copy" data-copy-target="link-copasst">
-                  Copiar
-                </button>
-              </div>
+          <!-- Estado de error -->
+          <div id="envio-estado-error" class="envio-estado hidden">
+            <div class="envio-icono envio-icono--error">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10" />
+                <path d="M15 9l-6 6M9 9l6 6" />
+              </svg>
             </div>
-            <button id="btn-modal-cerrar" type="button" class="modal-close" onclick="cerrarModal()" aria-label="Cerrar"
-              title="Cerrar">
-              ✕
-            </button>
+            <p class="envio-titulo">Error al enviar</p>
+            <p id="envio-error-texto" class="envio-sub"></p>
+            <button id="btn-modal-cerrar-error" class="nav-btn">Cerrar</button>
           </div>
 
-
         </div>
-
-        <!-- Estado de error -->
-        <div id="envio-estado-error" class="envio-estado hidden">
-          <div class="envio-icono envio-icono--error">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-              stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-              <circle cx="12" cy="12" r="10" />
-              <path d="M15 9l-6 6M9 9l6 6" />
-            </svg>
-          </div>
-          <p class="envio-titulo">Error al enviar</p>
-          <p id="envio-error-texto" class="envio-sub"></p>
-          <button id="btn-modal-cerrar-error" class="nav-btn">Cerrar</button>
-        </div>
-
       </div>
-    </div>
   </main>
 
   <script src="/flatpickr/flatpickr.min.js"></script>

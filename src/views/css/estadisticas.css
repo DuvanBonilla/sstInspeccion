@@ -1105,14 +1105,18 @@ th.desc::after{
 }
 
 .modal-close {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+
     display: flex;
     align-items: center;
     justify-content: center;
 
-    width: 46px;
-    height: 46px;
+    width: 30px;
+    height: 30px;
 
-    margin: 16px auto 0;
+    margin: 0;
 
     border: 1px solid #e2e8f0;
     border-radius: 50%;
@@ -1120,13 +1124,14 @@ th.desc::after{
     background: #f8fafc;
     color: #0f172a;
 
-    font-size: 24px;
+    font-size: 15px;
     font-weight: 300;
     line-height: 1;
 
     cursor: pointer;
-
     transition: all .2s ease;
+
+    z-index: 10;
 }
 
 .modal-close:hover {

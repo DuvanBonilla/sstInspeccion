@@ -175,7 +175,14 @@ function validarInspeccion(payload) {
   // se exige el mínimo de 1 ítem por sección. Fuera de eso, cualquier ítem
   // que sí venga (omitido o no, Urabá o no) se valida igual que siempre —
   // omitir una sección es dejarla en cero ítems, no aceptar datos incompletos.
-  const seccionMinimoOpcional = sedeOperacion.toLowerCase().includes("urab");
+  const SEDES_PERMITEN_OMITIR = [
+    "urab",
+    "santa marta"
+  ];
+
+  const seccionMinimoOpcional = SEDES_PERMITEN_OMITIR.some(sede =>
+    sedeOperacion.toLowerCase().includes(sede)
+  );
 
   if (!seccionMinimoOpcional) {
     // Validaciones de existencia mínima de cada sección.
@@ -717,14 +724,21 @@ async function listarInspeccionesConFiltros(filtros = {}, paginacion = {}) {
 }
 
 async function obtenerLinksInspeccion(inspeccionId) {
+  console.log("VERSIÓN NUEVA DE obtenerLinksInspeccion");
 
   const { rows } = await query(
     `SELECT
-        inspeccion_id,
-        num_inspeccion,
-        token_inspector,
-        token_jefe,
-        token_copasst
+      inspeccion_id,
+      num_inspeccion,
+
+      token_inspector,
+      token_jefe,
+      token_copasst,
+
+      aprobacion_inspector_nombre,
+      aprobacion_jefe_nombre,
+      aprobacion_copasst_nombre
+
      FROM inspecciones
      WHERE inspeccion_id = $1`,
     [inspeccionId]
@@ -738,15 +752,33 @@ async function obtenerLinksInspeccion(inspeccionId) {
 
   const baseUrl = process.env.APP_URL || "http://localhost:3000";
 
+  const links = {};
+
+  // Solo devuelve el enlace si aún NO ha aprobado
+  if (!inspeccion.aprobacion_inspector_nombre) {
+    links.inspector = `${baseUrl}/aprobar/${inspeccion.token_inspector}`;
+  }
+
+  if (!inspeccion.aprobacion_jefe_nombre) {
+    links.jefe = `${baseUrl}/aprobar/${inspeccion.token_jefe}`;
+  }
+
+  if (!inspeccion.aprobacion_copasst_nombre) {
+    links.copasst = `${baseUrl}/aprobar/${inspeccion.token_copasst}`;
+  }
+
+  console.log("Aprobaciones:", {
+    inspector: inspeccion.aprobacion_inspector_nombre,
+    jefe: inspeccion.aprobacion_jefe_nombre,
+    copasst: inspeccion.aprobacion_copasst_nombre
+  });
+
+  console.log("Links que se enviarán:", links);
 
   return {
     inspeccionId: inspeccion.inspeccion_id,
     numInspeccion: inspeccion.num_inspeccion,
-    links: {
-      inspector: `${baseUrl}/aprobar/${inspeccion.token_inspector}`,
-      jefe: `${baseUrl}/aprobar/${inspeccion.token_jefe}`,
-      copasst: `${baseUrl}/aprobar/${inspeccion.token_copasst}`
-    }
+    links
   };
 
 }

@@ -99,15 +99,7 @@
     tablaBody.innerHTML = items.map((it) => {
       console.log(it.estado);
       const totalItems = Number(it.extintores || 0) + Number(it.camillas || 0) + Number(it.senalizaciones || 0) + Number(it.equipos || 0) + Number(it.botiquines || 0);
-      tablaBody.querySelectorAll(".btn-recuperar-links").forEach((btn) => {
 
-        btn.addEventListener("click", () => {
-
-          recuperarLinks(btn.dataset.inspeccionId);
-
-        });
-
-      });
       const recuperarBtn = `
 <button
     type="button"
@@ -116,19 +108,17 @@
     data-num-inspeccion="${it.num_inspeccion}"
     ${it.estado === "pendiente_aprobacion" ? "" : "disabled"}>
 
-    <svg xmlns="http://www.w3.org/2000/svg"
-         fill="none"
-         viewBox="0 0 24 24"
-         stroke-width="2"
-         stroke="currentColor">
+<svg xmlns="http://www.w3.org/2000/svg"
+     fill="none"
+     viewBox="0 0 24 24"
+     stroke-width="2"
+     stroke="currentColor">
+  <path stroke-linecap="round"
+        stroke-linejoin="round"
+        d="M8.25 7.5H6.375A2.625 2.625 0 003.75 10.125v7.5A2.625 2.625 0 006.375 20.25h7.5a2.625 2.625 0 002.625-2.625V15.75M15.75 3.75H20.25m0 0v4.5m0-4.5L10.5 13.5"/>
+</svg>
 
-        <path stroke-linecap="round"
-              stroke-linejoin="round"
-              d="M13.19 8.688a4.5 4.5 0 016.364 6.364l-3 3a4.5 4.5 0 01-6.364 0m3.182-9.546-3 3m0 0a4.5 4.5 0 000 6.364m0-6.364a4.5 4.5 0 00-6.364 0l-3 3a4.5 4.5 0 106.364 6.364l3-3"/>
-    </svg>
-
-    Enlaces
-
+    
 </button>
 `;
 
@@ -153,7 +143,7 @@
               d="M9 15h6M9 11h6"/>
     </svg>
 
-    PDF
+    
 
 </button>
 `;
@@ -448,6 +438,8 @@
       actualizarFiltros();
 
     });
+
+  cargarTodo();
 
 })();
 
