@@ -81,7 +81,10 @@ document.addEventListener("DOMContentLoaded", () => {
   // para esa inspección). Fuera de Urabá el botón no aparece.
   function esSedeUrabana() {
     const sede = document.getElementById("sedeOperacion")?.value || "";
-    return sede.toLowerCase().includes("urab");
+    return [
+      "urab",
+      "santa marta"
+    ].some(x => sede.toLowerCase().includes(x));
 
   }
 
@@ -423,11 +426,19 @@ document.addEventListener("DOMContentLoaded", () => {
 
       const numInspeccion = datosOneDrive.numInspeccion ?? null;
       mostrarModal("exito", inspeccionId, numInspeccion, datosOneDrive.links);
-    } catch {
+    } catch (err) {
+
+      console.error("===== ERROR COMPLETO =====");
+      console.error(err);
+      console.error(err.stack);
+
       document.getElementById("envio-error-texto").textContent =
-        "No fue posible completar el envío. Verifique su conexión.";
+        err?.message || "No fue posible completar el envío.";
+
       mostrarModal("error");
+
       btnEnviar.disabled = false;
+
     }
   }
 

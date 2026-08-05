@@ -96,6 +96,13 @@ function configurarModalExito(
   const btnNueva =
     document.getElementById("btn-modal-nueva");
 
+  console.log({
+    titulo,
+    subtitulo,
+    btnInicio,
+    btnNueva
+  });
+
   if (modo === "crear") {
     titulo.textContent = "¡Inspección guardada!";
 
