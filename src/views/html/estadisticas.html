@@ -307,26 +307,29 @@
             ✕
           </button>
         </div>
+        <div id="envio-estado-error" class="envio-estado hidden">
 
+          <button id="btn-modal-cerrar-error" type="button" class="modal-close" onclick="cerrarModal()"
+            aria-label="Cerrar" title="Cerrar">
+            ✕
+          </button>
 
-      </div>
+          <div class="envio-icono envio-icono--error">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+              stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10" />
+              <path d="M15 9l-6 6M9 9l6 6" />
+            </svg>
+          </div>
 
-      <!-- Estado de error -->
-      <div id="envio-estado-error" class="envio-estado hidden">
-        <div class="envio-icono envio-icono--error">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-            stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="12" cy="12" r="10" />
-            <path d="M15 9l-6 6M9 9l6 6" />
-          </svg>
+          <p class="envio-titulo">Ocurrió un error</p>
+
+          <p id="envio-error-texto" class="envio-sub">
+            No fue posible procesar la solicitud.
+          </p>
+
         </div>
-        <p class="envio-titulo">Error al enviar</p>
-        <p id="envio-error-texto" class="envio-sub"></p>
-        <button id="btn-modal-cerrar-error" class="nav-btn">Cerrar</button>
       </div>
-
-    </div>
-    </div>
   </main>
 
   <script src="/flatpickr/flatpickr.min.js"></script>
@@ -334,8 +337,5 @@
   <script src="../js/modal-envio.js"></script>
   <script src="../js/estadisticas.js"></script>
 
-
-
 </body>
-
 </html>
