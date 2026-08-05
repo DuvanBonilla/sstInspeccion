@@ -336,16 +336,18 @@
     try {
 
       const resp = await fetch(`/api/inspecciones/${inspeccionId}/links`);
-
       const data = await resp.json();
 
       if (!resp.ok || !data.ok) {
         throw new Error("No fue posible recuperar el enlace de la inspección.");
       }
 
-      const previewUrl = data.links.inspector
-        .replace("/aprobar/", "/api/aprobaciones/")
-        + "/preview";
+      if (!data.previewToken) {
+        throw new Error("No existe el token para generar el PDF.");
+      }
+
+      const previewUrl =
+        `/api/aprobaciones/${data.previewToken}/preview`;
 
       window.open(previewUrl, "_blank", "noopener");
 

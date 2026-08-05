@@ -724,7 +724,6 @@ async function listarInspeccionesConFiltros(filtros = {}, paginacion = {}) {
 }
 
 async function obtenerLinksInspeccion(inspeccionId) {
-  
 
   const { rows } = await query(
     `SELECT
@@ -752,17 +751,15 @@ async function obtenerLinksInspeccion(inspeccionId) {
 
   const baseUrl = process.env.APP_URL || "http://localhost:3000";
 
+  // Enlaces para compartir
   const links = {};
 
-  // Solo devuelve el enlace si aún NO ha aprobado
-  if (!inspeccion.aprobacion_inspector_nombre) {
-    links.inspector = `${baseUrl}/aprobar/${inspeccion.token_inspector}`;
-  }
-
+  // El jefe solo aparece si aún no ha aprobado
   if (!inspeccion.aprobacion_jefe_nombre) {
     links.jefe = `${baseUrl}/aprobar/${inspeccion.token_jefe}`;
   }
 
+  // El COPASST solo aparece si aún no ha aprobado
   if (!inspeccion.aprobacion_copasst_nombre) {
     links.copasst = `${baseUrl}/aprobar/${inspeccion.token_copasst}`;
   }
@@ -770,6 +767,11 @@ async function obtenerLinksInspeccion(inspeccionId) {
   return {
     inspeccionId: inspeccion.inspeccion_id,
     numInspeccion: inspeccion.num_inspeccion,
+
+    // Token exclusivo para generar el PDF
+    previewToken: inspeccion.token_inspector,
+
+    // Enlaces que se muestran al usuario
     links
   };
 
