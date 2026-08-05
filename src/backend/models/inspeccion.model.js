@@ -599,6 +599,7 @@ function construirFiltrosInspecciones({ fechaDesde, fechaHasta, sedeOperacion, e
 }
 
 async function obtenerResumenEstadisticas(filtros = {}) {
+
   const { whereSql, valores } = construirFiltrosInspecciones(filtros);
 
   const resumenSql = `

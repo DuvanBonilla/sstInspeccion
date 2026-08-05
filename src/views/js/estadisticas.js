@@ -85,8 +85,22 @@
   }
 
   function renderEstado(estado) {
+
     const safe = estado || "sin_estado";
-    return `<span class="estado-pill estado-${safe}">${safe.replaceAll("_", " ")}</span>`;
+
+    const nombres = {
+      pendiente_aprobacion: "Pendiente aprobación",
+      enviada: "Enviada",
+      aprobada: "Aprobada"
+    };
+
+    return `
+    <span
+      class="estado-dot estado-${safe}"
+      title="${nombres[safe] || safe}">
+    </span>
+  `;
+
   }
 
 
