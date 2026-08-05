@@ -724,7 +724,7 @@ async function listarInspeccionesConFiltros(filtros = {}, paginacion = {}) {
 }
 
 async function obtenerLinksInspeccion(inspeccionId) {
-  console.log("VERSIÓN NUEVA DE obtenerLinksInspeccion");
+  
 
   const { rows } = await query(
     `SELECT
@@ -766,14 +766,6 @@ async function obtenerLinksInspeccion(inspeccionId) {
   if (!inspeccion.aprobacion_copasst_nombre) {
     links.copasst = `${baseUrl}/aprobar/${inspeccion.token_copasst}`;
   }
-
-  console.log("Aprobaciones:", {
-    inspector: inspeccion.aprobacion_inspector_nombre,
-    jefe: inspeccion.aprobacion_jefe_nombre,
-    copasst: inspeccion.aprobacion_copasst_nombre
-  });
-
-  console.log("Links que se enviarán:", links);
 
   return {
     inspeccionId: inspeccion.inspeccion_id,
