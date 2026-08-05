@@ -190,40 +190,75 @@
     tablaMeta.textContent = `${state.total} inspecciones encontradas`;
   }
 
-  async function cargarResumen() {
-    const filtros = leerFiltros();
+  async function cargarResumen(filtros) {
+
     const query = crearQuery(filtros);
+
     const resp = await fetch(`/api/estadisticas/resumen?${query}`);
+
     const data = await resp.json();
-    if (!resp.ok || !data.ok) throw new Error("No fue posible cargar el resumen");
+
+    if (!resp.ok || !data.ok) {
+      throw new Error("No fue posible cargar el resumen");
+    }
+
     setKpis(data.resumen || {});
+
   }
 
-  async function cargarTabla() {
-    const filtros = leerFiltros();
-    const query = crearQuery({ ...filtros, page: state.page, pageSize: state.pageSize, sortBy: state.sortBy, sortOrder: state.sortOrder });
+  async function cargarTabla(filtros) {
+
+    const query = crearQuery({
+      ...filtros,
+      page: state.page,
+      pageSize: state.pageSize,
+      sortBy: state.sortBy,
+      sortOrder: state.sortOrder
+    });
+
     const resp = await fetch(`/api/estadisticas/inspecciones?${query}`);
+
     const data = await resp.json();
-    if (!resp.ok || !data.ok) throw new Error("No fue posible cargar la tabla");
+
+    if (!resp.ok || !data.ok) {
+      throw new Error("No fue posible cargar la tabla");
+    }
 
     state.total = Number(data.total || 0);
     state.totalPages = Number(data.totalPages || 1);
+
     renderTabla(data.items || []);
     updatePaginacion();
-  }
 
+  }
   async function cargarTodo() {
+
     try {
-      await Promise.all([cargarResumen(), cargarTabla()]);
+
+      const filtros = leerFiltros();
+
+      await Promise.all([
+        cargarResumen(filtros),
+        cargarTabla(filtros)
+      ]);
+
     } catch {
-      tablaBody.innerHTML = '<tr><td colspan="9">Error cargando estadísticas. Intenta de nuevo.</td></tr>';
+
+      tablaBody.innerHTML =
+        '<tr><td colspan="9">Error cargando estadísticas. Intenta de nuevo.</td></tr>';
+
       tablaMeta.textContent = "";
+
     }
+
   }
 
   async function actualizarFiltros() {
+
     state.page = 1;
+
     await cargarTodo();
+
   }
 
   inputBusqueda.addEventListener("input", () => {
