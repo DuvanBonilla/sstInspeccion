@@ -171,7 +171,12 @@
             <td>${it.responsable_inspeccion || "-"}</td>
             <td>${renderEstado(it.estado)}</td>
             <td>${totalItems}</td>
-            <td>${recuperarBtn} ${verPdfBtn}</td>
+            <td>
+              <div class="acciones-botones">
+                ${recuperarBtn}
+                ${verPdfBtn}
+              </div>
+            </td>
           </tr>
         `;
 

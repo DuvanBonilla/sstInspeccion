@@ -1149,16 +1149,34 @@ th.desc::after{
 =            Botones de acciones           =
 ==========================================*/
 
-.accion-btn{
+/*==========================================
+=            Botones de acciones           =
+==========================================*/
 
-    display:flex;
+.acciones-botones{
+
+    display:inline-flex;
+
     align-items:center;
     justify-content:center;
 
-    width:28px;
-    height:28px;
+    gap:8px;
+
+    white-space:nowrap;
+}
+
+.accion-btn{
+
+    display:flex;
+
+    align-items:center;
+    justify-content:center;
+
+    width:22px;
+    height:22px;
 
     padding:0;
+    margin:0;
 
     border:none;
     background:transparent;
@@ -1167,38 +1185,53 @@ th.desc::after{
 
     cursor:pointer;
 
+    flex-shrink:0;
+
     transition:background .18s ease, color .18s ease;
 }
 
 .accion-btn svg{
-    width:18px;
-    height:18px;
+
+    width:12px;
+    height:12px;
+
 }
+
 /* Enlaces */
 
 .accion-btn-links{
+
     color:#2563eb;
+
 }
 
 .accion-btn-links:hover:not(:disabled){
+
     background:#dbeafe;
+
 }
 
 /* PDF */
 
 .accion-btn-pdf{
+
     color:#dc2626;
+
 }
 
 .accion-btn-pdf:hover:not(:disabled){
+
     background:#fee2e2;
+
 }
+
 /* Deshabilitado */
 
 .accion-btn:disabled{
 
     opacity:.35;
     cursor:not-allowed;
+
 }
 
 /* ==========================================================
