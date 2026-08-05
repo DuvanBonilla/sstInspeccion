@@ -21,10 +21,12 @@
 const {
   validarInspeccion,
   uploadEvidenceToOneDrive,
-  guardarInspeccionEnDB
+  guardarInspeccionEnDB,
 } = require("../models/inspeccion.model");
 const { resolverFechaEvidencia } = require("../utils/fechaEvidencia");
-
+const {
+    obtenerLinksInspeccion
+} = require("../models/inspeccion.model");
 
 // Convierte payload multipart/json en un objeto utilizable por el modelo.
 function leerPayload(req) {
@@ -167,7 +169,40 @@ async function enviarExtintorOneDrive(req, res) {
   }
 }
 
+async function obtenerLinks(req, res) {
+
+    try {
+
+        const { id } = req.params;
+
+        const data = await obtenerLinksInspeccion(id);
+
+        if (!data) {
+            return res.status(404).json({
+                ok: false,
+                message: "Inspección no encontrada"
+            });
+        }
+
+        return res.json({
+            ok: true,
+            ...data
+        });
+
+    } catch (err) {
+
+        console.error(err);
+
+        return res.status(500).json({
+            ok: false,
+            message: err.message
+        });
+
+    }
+
+}
 // Exportación del controlador para que pueda ser usado en app.js
 module.exports = {
-  enviarExtintorOneDrive
+  enviarExtintorOneDrive,
+  obtenerLinks
 };
