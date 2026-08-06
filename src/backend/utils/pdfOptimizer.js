@@ -509,6 +509,8 @@ async function ejecutarGhostscript(
     settings
 ) {
 
+    console.log("Ghostscript executable:", PDF_OPTIMIZER_CONFIG.ghostscriptExecutable);
+
     const startedAt = Date.now();
 
     const args = [
