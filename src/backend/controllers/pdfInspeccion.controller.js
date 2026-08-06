@@ -1209,7 +1209,7 @@ async function subirPdfAOneDrive(pdfBuffer, inspeccionId, sedeOperacion = null) 
 // Decide el correo destino según la sede (con fallback manual/GRAPH_EMAIL_TO_TEST).
 function resolverCorreoDestino(sedeOperacion, correoManual) {
   const sede = (sedeOperacion || "").toLowerCase().trim();
-  if (sede.includes("santa marta")) return "ticscargoban@gmail.com";
+  if (sede.includes("santa marta")) return "jmmontenegro201@gmail.com";
   if (sede.includes("urab")) return "cargobanolp@cargoban.com.co";
   return correoManual || process.env.GRAPH_EMAIL_TO_TEST;
 }

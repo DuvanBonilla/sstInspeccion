@@ -45,6 +45,7 @@ import { createCamillasManager } from "/js/camillas.js";
 import { createSenalizacionesManager } from "/js/senalizaciones.js";
 import { createEquiposTecnologicosManager } from "/js/equiposTecnologicos.js";
 import { createBotiquinesManager } from "/js/botiquines.js";
+import { optimizarImagen } from "./imageOptimizer.js";
 
 document.addEventListener("DOMContentLoaded", () => {
   let currentStep = 1;
@@ -340,44 +341,119 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
+  /**
+ * Optimiza una imagen y la agrega al FormData.
+ */
+  async function anexarArchivoOptimizado(
+    fd,
+    fieldName,
+    file
+  ) {
+
+    const archivo = await optimizarImagen(file);
+
+    fd.append(fieldName, archivo);
+
+    fd.append(
+      `${fieldName}-lastmod`,
+      archivo.lastModified
+    );
+
+  }
   // Anexa todas las fotos seleccionadas en un bloque de evidencias (data-role="{rolePrefix}-input")
   // como campos "{fieldPrefix}-{itemIndex}-{photoIndex}" (+ su "-lastmod").
-  function anexarEvidenciasMultiples(fd, card, rolePrefix, fieldPrefix, itemIndex) {
-    card.querySelectorAll(`[data-role="${rolePrefix}-input"]`).forEach((input, photoIndex) => {
-      const f = input.files[0];
-      if (!f) return;
-      fd.append(`${fieldPrefix}-${itemIndex}-${photoIndex}`, f);
-      fd.append(`${fieldPrefix}-${itemIndex}-${photoIndex}-lastmod`, f.lastModified);
-    });
+  async function anexarEvidenciasMultiples(
+    fd,
+    card,
+    rolePrefix,
+    fieldPrefix,
+    itemIndex
+  ) {
+
+    for (const [photoIndex, input] of card
+      .querySelectorAll(`[data-role="${rolePrefix}-input"]`)
+      .entries()) {
+
+      const file = input.files[0];
+
+      if (!file) {
+        continue;
+      }
+
+      await anexarArchivoOptimizado(
+        fd,
+        `${fieldPrefix}-${itemIndex}-${photoIndex}`,
+        file
+      );
+
+    }
+
   }
 
-  function construirFormData(inspeccionId, numInspeccion) {
+  async function construirFormData(inspeccionId, numInspeccion) {
+
     const fd = new FormData();
+
     const p = payload(inspeccionId);
-    if (numInspeccion != null) p.numInspeccion = numInspeccion;
+
+    if (numInspeccion != null) {
+      p.numInspeccion = numInspeccion;
+    }
+
     fd.append("payload", JSON.stringify(p));
 
-    document.querySelectorAll("[data-extintor-index]").forEach((card, index) => {
-      anexarEvidenciasMultiples(fd, card, "evidencia", "evidencia", index);
-    });
+    const configuraciones = [
+      {
+        selector: "[data-extintor-index]",
+        role: "evidencia",
+        field: "evidencia",
+      },
+      {
+        selector: "[data-camilla-index]",
+        role: "camilla-evidencia",
+        field: "evidencia-camilla",
+      },
+      {
+        selector: "[data-senalizacion-index]",
+        role: "senalizacion-evidencia",
+        field: "evidencia-senalizacion",
+      },
+      {
+        selector: "[data-equipo-tecnologico-index]",
+        role: "equipo-tecnologico-evidencia",
+        field: "equipo-tecnologico-evidencia",
+      },
+      {
+        selector: "[data-botiquin-index]",
+        role: "botiquin-evidencia",
+        field: "botiquin-evidencia",
+      },
+    ];
 
-    document.querySelectorAll("[data-camilla-index]").forEach((card, index) => {
-      anexarEvidenciasMultiples(fd, card, "camilla-evidencia", "evidencia-camilla", index);
-    });
+    for (const configuracion of configuraciones) {
 
-    document.querySelectorAll("[data-senalizacion-index]").forEach((card, index) => {
-      anexarEvidenciasMultiples(fd, card, "senalizacion-evidencia", "evidencia-senalizacion", index);
-    });
+      const cards = document.querySelectorAll(configuracion.selector);
 
-    document.querySelectorAll("[data-equipo-tecnologico-index]").forEach((card, index) => {
-      anexarEvidenciasMultiples(fd, card, "equipo-tecnologico-evidencia", "equipo-tecnologico-evidencia", index);
-    });
+      let index = 0;
 
-    document.querySelectorAll("[data-botiquin-index]").forEach((card, index) => {
-      anexarEvidenciasMultiples(fd, card, "botiquin-evidencia", "botiquin-evidencia", index);
-    });
+      for (const card of cards) {
+
+        await anexarEvidenciasMultiples(
+          fd,
+          card,
+          configuracion.role,
+          configuracion.field,
+          index
+        );
+
+        index++;
+
+      }
+
+    }
 
     return fd;
+
   }
 
 
@@ -411,7 +487,15 @@ document.addEventListener("DOMContentLoaded", () => {
       // Guarda la inspección (Neon + evidencias en OneDrive). El Inspector queda
       // aprobado automáticamente; se devuelven los links de Jefe y COPASST.
       // El PDF y el correo ya no se envían aquí: se generan solo cuando las 3 aprobaciones están completas.
-      const respuestaOneDrive = await fetch("/enviar-onedrive-extintor", { method: "POST", body: construirFormData(inspeccionId) });
+      const formData = await construirFormData(inspeccionId);
+
+      const respuestaOneDrive = await fetch(
+        "/enviar-onedrive-extintor",
+        {
+          method: "POST",
+          body: formData
+        }
+      );
       const datosOneDrive = await leerRespuesta(respuestaOneDrive);
 
       if (!respuestaOneDrive.ok) {
