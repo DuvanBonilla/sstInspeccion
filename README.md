@@ -162,66 +162,34 @@ Se ejecuta con `npm start`. Asegúrate de que las variables de entorno estén co
 
 # Estructura del proyecto
 
-Proyecto
+SSTINSPECCION/
 │
-├── src
-   │
-   ├── backend
-   │   │
-   │   ├── controllers
-   │   │   ├── aprobaciones.controller.js
-   │   │   ├── estadisticas.controller.js
-   │   │   ├── inspeccion.controller.js
-   │   │   └── pdfInspeccion.controller.js
-   │   │
-   │   ├── db
-   │   │   ├── migrate.js
-   │   │   └── pool.js
-   │   │
-   │   ├── models
-   │   │   ├── aprobaciones.model.js
-   │   │   ├── botiquines.model.js
-   │   │   ├── camillas.model.js
-   │   │   ├── equiposTecnologicos.model.js
-   │   │   ├── extintores.model.js
-   │   │   ├── inspeccion.model.js
-   │   │   └── senalizaciones.model.js
-   │   │
-   │   ├── utils
-   │   │   └── fechaEvidencia.js
-   │   │
-   │   └── app.js
-   │
-   └── views
-       │
-       ├── css
-       │   ├── aprobar.css
-       │   ├── estadisticas.css
-       │   ├── home.css
-       │   └── inspeccion-sst.css
-       │
-       ├── html
-       │   ├── aprobar.html
-       │   ├── estadisticas.html
-       │   ├── index.html
-       │   └── inspeccion-sst.html
-       │
-       ├── img
-       │   ├── Cargo.png
-       │   ├── favicon.ico
-       │   └── Imagen1.jpg
-       │
-       └── js
-           ├── aprobar.js
-           ├── botiquines.js
-           ├── camillas.js
-           ├── equiposTecnologicos.js
-           ├── estadisticas.js
-           ├── extintores.js
-           ├── inspeccion-sst.js
-           ├── modal-envio.js
-           ├── senalizaciones.js
-           └── shared.js
+├── .claude/
+│   └── launch.json
+│
+├── node_modules/
+│
+├── src/
+│   │
+│   ├── backend/
+│   │   ├── controllers/
+│   │   ├── db/
+│   │   ├── models/
+│   │   └── utils/
+│   │
+│   ├── app.js
+│   │
+│   └── views/
+│       ├── css/
+│       ├── html/
+│       ├── img/
+│       └── js/
+│
+├── .env
+├── .gitignore
+├── package-lock.json
+├── package.json
+└── README.md
 
 # Flujo general del sistema
 
