@@ -32,6 +32,8 @@ const {
   resolverCorreoDestino,
   construirHtmlCorreo
 } = require("./pdfInspeccion.controller");
+const { optimizarPdf } = require("../utils/pdfOptimizer");
+const { recuperarLinksAprobacion } = require("../controllers/inspeccion.controller");
 
 // GET /api/aprobaciones/:token
 async function obtenerResumenAprobacion(req, res) {
@@ -201,8 +203,13 @@ async function construirEvidenciasDesdeOneDrive(items) {
 
 // Regenera el PDF (con las 3 aprobaciones reales), lo archiva en OneDrive y envía el correo final.
 async function finalizarInspeccion(inspeccionId) {
+
   const completa = await obtenerInspeccionCompleta(inspeccionId);
-  if (!completa) throw new Error(`Inspección ${inspeccionId} no encontrada`);
+
+  if (!completa) {
+    throw new Error(`Inspección ${inspeccionId} no encontrada`);
+  }
+
   const row = completa.inspeccion;
 
   const [ext, cam, sen, eqp, bot] = await Promise.all([
@@ -236,9 +243,16 @@ async function finalizarInspeccion(inspeccionId) {
     copasst: { nombre: row.aprobacion_copasst_nombre }
   };
 
-  const pdfBuffer = await crearPdfInspeccionExtintor(
+  // ==========================================================
+  // 1. Generar el PDF con PDFKit
+  // ==========================================================
+  const pdfGenerado = await crearPdfInspeccionExtintor(
     data,
-    ext.evidenciasPorIndex, cam.evidenciasPorIndex, sen.evidenciasPorIndex, eqp.evidenciasPorIndex, bot.evidenciasPorIndex,
+    ext.evidenciasPorIndex,
+    cam.evidenciasPorIndex,
+    sen.evidenciasPorIndex,
+    eqp.evidenciasPorIndex,
+    bot.evidenciasPorIndex,
     {},
     {
       aprobaciones,
@@ -252,10 +266,31 @@ async function finalizarInspeccion(inspeccionId) {
     }
   );
 
-  const webUrl = await subirPdfAOneDrive(pdfBuffer, row.inspeccion_id, row.sede_operacion);
+  // ==========================================================
+  // 2. Optimizar el PDF
+  // Si Ghostscript falla, automáticamente devolverá pdfGenerado.
+  // ==========================================================
+  const pdfFinal = await optimizarPdf(pdfGenerado, {
+    profile: "inspection",
+    fileName: `${row.inspeccion_id}.pdf`
+  });
 
+  // ==========================================================
+  // 3. Subir el PDF optimizado a OneDrive
+  // ==========================================================
+  const webUrl = await subirPdfAOneDrive(
+    pdfFinal,
+    row.inspeccion_id,
+    row.sede_operacion
+  );
+
+  // ==========================================================
+  // 4. Enviar correo con el mismo PDF optimizado
+  // ==========================================================
   const correoDestino = resolverCorreoDestino(row.sede_operacion, null);
+
   if (correoDestino) {
+
     const html = construirHtmlCorreo({
       inspeccionId: row.inspeccion_id,
       numInspeccion: Number(row.num_inspeccion),
@@ -273,16 +308,25 @@ async function finalizarInspeccion(inspeccionId) {
       to: correoDestino,
       subject: `Inspección SST aprobada N.° ${row.num_inspeccion} – ${row.inspeccion_id}`,
       html,
-      pdfBuffer,
+      pdfBuffer: pdfFinal,
       nombre: `${row.inspeccion_id}.pdf`
     });
+
   }
 
-  await marcarInspeccionEnviada(row.inspeccion_id, webUrl);
+  // ==========================================================
+  // 5. Marcar la inspección como enviada
+  // ==========================================================
+  await marcarInspeccionEnviada(
+    row.inspeccion_id,
+    webUrl
+  );
+
 }
 
 module.exports = {
   obtenerResumenAprobacion,
   previsualizarAprobacion,
-  registrarAprobacion
+  registrarAprobacion,
+ 
 };

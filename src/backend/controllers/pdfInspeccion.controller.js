@@ -24,9 +24,13 @@
     de un envío exitoso a OneDrive; también puede llamarse de forma independiente.
   - No depende de extintor.model.js; trabaja directamente sobre el payload recibido.
 */
+
+
+
 const path = require("node:path");
 const PDFDocument = require("pdfkit");
 const { extraerFechaExif, formatearFechaMs } = require("../utils/fechaEvidencia");
+const { optimizarPdf } = require("../utils/pdfOptimizer");
 
 const LOGO_URL = "https://sstinspeccion.onrender.com/img/Cargo.png";
 
@@ -207,8 +211,8 @@ function dibujarIdInspeccion(doc, general, y) {
   if (!id) return;
   const num = general.numInspeccion != null ? `Inspección N.° ${general.numInspeccion}  ·  ` : "";
   doc.font("Helvetica").fontSize(7).fillColor("#9ca3af")
-     .text(`${num}${id}`, 25, y + 4, { width: 545, align: "right" })
-     .fillColor("black");
+    .text(`${num}${id}`, 25, y + 4, { width: 545, align: "right" })
+    .fillColor("black");
 }
 
 // Ajusta y centra una imagen dentro de una caja (x,y,width,height). Si falla, muestra un aviso.
@@ -234,8 +238,8 @@ function dibujarEvidenciasEnCaja(doc, files, x, y, width, height, opts = {}) {
 
   if (lista.length === 0) {
     doc.font("Helvetica").fontSize(fontSize).fillColor(colorVacio)
-       .text(textoVacio, x + 3, y + 5, { width: width - 6 })
-       .fillColor("black");
+      .text(textoVacio, x + 3, y + 5, { width: width - 6 })
+      .fillColor("black");
     return;
   }
 
@@ -325,19 +329,19 @@ async function crearPdfInspeccionExtintor(data, evidenciasPorIndex = new Map(), 
   // salvo que ya vengan precalculadas (regeneración post-aprobación).
   const [exifExtintores, exifCamillas, exifSenalizaciones, exifEquipos, exifBotiquines] = fechasPrecomputadas
     ? [
-        fechasPrecomputadas.extintores || new Map(),
-        fechasPrecomputadas.camillas || new Map(),
-        fechasPrecomputadas.senalizaciones || new Map(),
-        fechasPrecomputadas.equipos || new Map(),
-        fechasPrecomputadas.botiquines || new Map()
-      ]
+      fechasPrecomputadas.extintores || new Map(),
+      fechasPrecomputadas.camillas || new Map(),
+      fechasPrecomputadas.senalizaciones || new Map(),
+      fechasPrecomputadas.equipos || new Map(),
+      fechasPrecomputadas.botiquines || new Map()
+    ]
     : await Promise.all([
-        extraerFechasArchivos(evidenciasPorIndex,               body, "evidencia"),
-        extraerFechasArchivos(evidenciasCamillaPorIndex,        body, "evidencia-camilla"),
-        extraerFechasArchivos(evidenciasSenalizacionPorIndex,   body, "evidencia-senalizacion"),
-        extraerFechasArchivos(evidenciasEquipoTecnologicoPorIndex, body, "equipo-tecnologico-evidencia"),
-        extraerFechasArchivos(evidenciasBotiquinPorIndex,       body, "botiquin-evidencia"),
-      ]);
+      extraerFechasArchivos(evidenciasPorIndex, body, "evidencia"),
+      extraerFechasArchivos(evidenciasCamillaPorIndex, body, "evidencia-camilla"),
+      extraerFechasArchivos(evidenciasSenalizacionPorIndex, body, "evidencia-senalizacion"),
+      extraerFechasArchivos(evidenciasEquipoTecnologicoPorIndex, body, "equipo-tecnologico-evidencia"),
+      extraerFechasArchivos(evidenciasBotiquinPorIndex, body, "botiquin-evidencia"),
+    ]);
 
   // Crear PDF con PDFKit
   return new Promise((resolve, reject) => {
@@ -433,19 +437,19 @@ async function crearPdfInspeccionExtintor(data, evidenciasPorIndex = new Map(), 
         ["PRÓXIMA RECARGA:", `Mes: ${extintor.mesRecarga || ""}   Año: ${extintor.anioRecarga || ""}`]
       ];
 
-datosExtintor.forEach(([label, valor]) => {
-    doc.rect(25, y, 545, 22).stroke();
-    
-    // Texto combinado: etiqueta en negrita, valor normal
-    doc.font("Helvetica-Bold")
-       .fontSize(9)
-       .text(label, 30, y + 6, { continued: true, width: 535 })
-       .font("Helvetica")
-       .fontSize(9)
-       .text(valor, { continued: false, width: 535 });
-    
-    y += 22;
-});
+      datosExtintor.forEach(([label, valor]) => {
+        doc.rect(25, y, 545, 22).stroke();
+
+        // Texto combinado: etiqueta en negrita, valor normal
+        doc.font("Helvetica-Bold")
+          .fontSize(9)
+          .text(label, 30, y + 6, { continued: true, width: 535 })
+          .font("Helvetica")
+          .fontSize(9)
+          .text(valor, { continued: false, width: 535 });
+
+        y += 22;
+      });
       // ===== DETALLE CONDICIONES =====
       doc.rect(25, y, 545, 40).stroke();
       doc.font("Helvetica-Bold").fontSize(9).text("DETALLE DE LAS CONDICIONES DEL EXTINTOR.", 25, y + 5, { width: 545, align: "center" });
@@ -463,15 +467,15 @@ datosExtintor.forEach(([label, valor]) => {
       y += 25;
 
       const elementos = [
-        ["Acceso",            condiciones.acceso || "",        "Presión",              condiciones.presion || ""],
-        ["Visibilidad",       condiciones.visibilidad || "",   "Pin de seguridad",     condiciones.pin || ""],
-        ["Señalización",      condiciones.senalizacion || "",  "Manguera",             condiciones.manguera || ""],
-        ["Pared altura\n1.50m", condiciones.paredAltura || "","Boquilla",             condiciones.boquilla || ""],
-        ["Piso base",         condiciones.piso || "",          "Corneta",              condiciones.corneta || ""],
-        ["Limpieza",          condiciones.limpieza || "",      "Pintura",              condiciones.pintura || ""],
-        ["Rotulo",            condiciones.rotulo || "",        "Manija de transporte", condiciones.manija || ""],
-        ["Cilindro",          condiciones.cilindro || "",      "Sello de garantía",    condiciones.sello || ""],
-        ["Manómetro",         condiciones.manometro || "",     "Llave spanner",        condiciones.llaveSpanner || ""]
+        ["Acceso", condiciones.acceso || "", "Presión", condiciones.presion || ""],
+        ["Visibilidad", condiciones.visibilidad || "", "Pin de seguridad", condiciones.pin || ""],
+        ["Señalización", condiciones.senalizacion || "", "Manguera", condiciones.manguera || ""],
+        ["Pared altura\n1.50m", condiciones.paredAltura || "", "Boquilla", condiciones.boquilla || ""],
+        ["Piso base", condiciones.piso || "", "Corneta", condiciones.corneta || ""],
+        ["Limpieza", condiciones.limpieza || "", "Pintura", condiciones.pintura || ""],
+        ["Rotulo", condiciones.rotulo || "", "Manija de transporte", condiciones.manija || ""],
+        ["Cilindro", condiciones.cilindro || "", "Sello de garantía", condiciones.sello || ""],
+        ["Manómetro", condiciones.manometro || "", "Llave spanner", condiciones.llaveSpanner || ""]
       ];
 
       const rowHeight = 24;
@@ -775,7 +779,7 @@ function renderPaginaSenalizacion(doc, general, senalizacion, idx, evidenciasSen
 
 function renderPaginaEquiposTecnologicos(doc, general, equiposTecnologicos, evidenciasEquipoPorIndex = new Map(), exifEquipos = new Map()) {
   let y = 25;
-  
+
   doc.rect(25, y, 545, 70).stroke();
   doc.rect(25, y, 150, 70).stroke();
   doc.image(path.resolve(__dirname, "../../views/img/Cargo.png"), 27, y + 3, { fit: [146, 64], align: "center", valign: "center" });
@@ -830,7 +834,7 @@ function renderPaginaEquiposTecnologicos(doc, general, equiposTecnologicos, evid
   y += 20;
 
   const rowHeight = 18;
-  
+
   // Renderizar filas de equipos tecnológicos
   if (equiposTecnologicos && equiposTecnologicos.length > 0) {
     equiposTecnologicos.forEach((equipo) => {
@@ -843,14 +847,14 @@ function renderPaginaEquiposTecnologicos(doc, general, equiposTecnologicos, evid
         equipo.mantenimiento || "",
         equipo.afectacionServicio || ""
       ];
-      
+
       fila.forEach((valor, i) => {
         doc.rect(xx, y, columnas[i], rowHeight).stroke();
         doc.font("Helvetica").fontSize(7).text(valor, xx + 2, y + 5, { width: columnas[i] - 4 });
         xx += columnas[i];
       });
       y += rowHeight;
-      
+
       if (y > 750) {
         doc.addPage();
         y = 25;
@@ -870,7 +874,7 @@ function renderPaginaEquiposTecnologicos(doc, general, equiposTecnologicos, evid
   doc.rect(25, y, 545, 20).stroke();
   doc.font("Helvetica-Bold").fontSize(9).text("OBSERVACIONES DETALLADAS", 25, y + 6, { width: 545, align: "center" });
   y += 20;
-  
+
   // Calcular altura de observaciones
   let observacionesText = "";
   if (equiposTecnologicos && equiposTecnologicos.length > 0) {
@@ -880,7 +884,7 @@ function renderPaginaEquiposTecnologicos(doc, general, equiposTecnologicos, evid
   } else {
     observacionesText = "Sin observaciones registradas.";
   }
-  
+
   doc.rect(25, y, 545, 130).stroke();
   doc.font("Helvetica").fontSize(8).text(observacionesText, 30, y + 5, { width: 535 });
   y += 130;
@@ -1064,7 +1068,7 @@ function renderPaginaBotiquin(doc, general, botiquin, idx, evidenciasBotiquinPor
         item?.fechaVencimiento || "NA",
         item?.planIntervencion || "",
         item?.fechaIntervencion || (item?.planIntervencion === "Ninguna" ? "-" : ""),
-        item?.cumplimiento     || (item?.planIntervencion === "Ninguna" ? "-" : ""),
+        item?.cumplimiento || (item?.planIntervencion === "Ninguna" ? "-" : ""),
         item?.afectacionServicio || (item?.planIntervencion === "Ninguna" ? "-" : "")
       ];
 
@@ -1165,7 +1169,30 @@ async function generarPdfPrueba(req, res) {
     const evidenciasSenalizacionPorIndex = extraerEvidenciasPorIndex(req.files, "evidencia-senalizacion");
     const evidenciasEquipoTecnologicoPorIndex = extraerEvidenciasPorIndex(req.files, "equipo-tecnologico-evidencia");
     const evidenciasBotiquinPorIndex = extraerEvidenciasPorIndex(req.files, "botiquin-evidencia");
-    const pdfBuffer = await crearPdfInspeccionExtintor(data, evidenciasPorIndex, evidenciasCamillaPorIndex, evidenciasSenalizacionPorIndex, evidenciasEquipoTecnologicoPorIndex, evidenciasBotiquinPorIndex, req.body);
+    const pdfGenerado = await crearPdfInspeccionExtintor(
+      data,
+      evidenciasPorIndex,
+      evidenciasCamillaPorIndex,
+      evidenciasSenalizacionPorIndex,
+      evidenciasEquipoTecnologicoPorIndex,
+      evidenciasBotiquinPorIndex,
+      req.body
+    );
+
+    const nombrePdf = `${data?.inspeccionId || "inspeccion-sst"}.pdf`;
+
+    const pdfFinal = await optimizarPdf(pdfGenerado, {
+      profile: "inspection",
+      fileName: nombrePdf
+    });
+
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="${nombrePdf}"`
+    );
+
+    return res.status(200).send(pdfFinal);
 
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader("Content-Disposition", 'attachment; filename="inspeccion-sst.pdf"');
@@ -1209,7 +1236,7 @@ async function subirPdfAOneDrive(pdfBuffer, inspeccionId, sedeOperacion = null) 
 // Decide el correo destino según la sede (con fallback manual/GRAPH_EMAIL_TO_TEST).
 function resolverCorreoDestino(sedeOperacion, correoManual) {
   const sede = (sedeOperacion || "").toLowerCase().trim();
-  if (sede.includes("santa marta")) return "ticscargoban@gmail.com";
+  if (sede.includes("santa marta")) return "jmmontenegro201@gmail.com";
   if (sede.includes("urab")) return "cargobanolp@cargoban.com.co";
   return correoManual || process.env.GRAPH_EMAIL_TO_TEST;
 }
@@ -1331,23 +1358,79 @@ async function enviarPdfPruebaCorreo(req, res) {
     const data = leerPayload(req);
     const payloadData = data?.payload || data;
 
-    const correoDestino = resolverCorreoDestino(payloadData?.sedeOperacion, data?.correoDestino);
+    const correoDestino = resolverCorreoDestino(
+      payloadData?.sedeOperacion,
+      data?.correoDestino
+    );
 
     if (!correoDestino) {
-      return res.status(400).json({ ok: false, errores: ["No se pudo determinar el destinatario. Verifique la sede o defina GRAPH_EMAIL_TO_TEST en .env"] });
+      return res.status(400).json({
+        ok: false,
+        errores: [
+          "No se pudo determinar el destinatario. " +
+          "Verifique la sede o defina GRAPH_EMAIL_TO_TEST en .env"
+        ]
+      });
     }
 
-    const evidenciasPorIndex = extraerEvidenciasPorIndex(req.files, "evidencia");
-    const evidenciasCamillaPorIndex = extraerEvidenciasPorIndex(req.files, "evidencia-camilla");
-    const evidenciasSenalizacionPorIndex = extraerEvidenciasPorIndex(req.files, "evidencia-senalizacion");
-    const evidenciasEquipoTecnologicoPorIndex = extraerEvidenciasPorIndex(req.files, "equipo-tecnologico-evidencia");
-    const evidenciasBotiquinPorIndex = extraerEvidenciasPorIndex(req.files, "botiquin-evidencia");
-    const pdfBuffer = await crearPdfInspeccionExtintor(payloadData, evidenciasPorIndex, evidenciasCamillaPorIndex, evidenciasSenalizacionPorIndex, evidenciasEquipoTecnologicoPorIndex, evidenciasBotiquinPorIndex, req.body);
+    const evidenciasPorIndex = extraerEvidenciasPorIndex(
+      req.files,
+      "evidencia"
+    );
 
-    const nombrePdf = `${payloadData?.inspeccionId || "inspeccion-sst"}.pdf`;
-    const numInspeccionCorreo = payloadData?.numInspeccion ?? null;
+    const evidenciasCamillaPorIndex = extraerEvidenciasPorIndex(
+      req.files,
+      "evidencia-camilla"
+    );
 
-    const webUrl = await subirPdfAOneDrive(pdfBuffer, payloadData?.inspeccionId, payloadData?.sedeOperacion);
+    const evidenciasSenalizacionPorIndex = extraerEvidenciasPorIndex(
+      req.files,
+      "evidencia-senalizacion"
+    );
+
+    const evidenciasEquipoTecnologicoPorIndex =
+      extraerEvidenciasPorIndex(
+        req.files,
+        "equipo-tecnologico-evidencia"
+      );
+
+    const evidenciasBotiquinPorIndex =
+      extraerEvidenciasPorIndex(
+        req.files,
+        "botiquin-evidencia"
+      );
+
+    // 1. Generar PDF con PDFKit.
+    const pdfGenerado = await crearPdfInspeccionExtintor(
+      payloadData,
+      evidenciasPorIndex,
+      evidenciasCamillaPorIndex,
+      evidenciasSenalizacionPorIndex,
+      evidenciasEquipoTecnologicoPorIndex,
+      evidenciasBotiquinPorIndex,
+      req.body
+    );
+
+    const nombrePdf =
+      `${payloadData?.inspeccionId || "inspeccion-sst"}.pdf`;
+
+    // 2. Optimizar una sola vez con Ghostscript.
+    // Si falla, optimizarPdf devuelve automáticamente el original.
+    const pdfFinal = await optimizarPdf(pdfGenerado, {
+      profile: "inspection",
+      fileName: nombrePdf
+    });
+
+    const numInspeccionCorreo =
+      payloadData?.numInspeccion ?? null;
+
+    // 3. Subir el PDF final a OneDrive.
+    const webUrl = await subirPdfAOneDrive(
+      pdfFinal,
+      payloadData?.inspeccionId,
+      payloadData?.sedeOperacion
+    );
+
     const htmlFinal = construirHtmlCorreo({
       inspeccionId: payloadData?.inspeccionId,
       numInspeccion: numInspeccionCorreo,
@@ -1360,20 +1443,36 @@ async function enviarPdfPruebaCorreo(req, res) {
       webUrl
     });
 
-    const subjectNum = numInspeccionCorreo != null ? `N.° ${numInspeccionCorreo} – ` : "";
+    const subjectNum =
+      numInspeccionCorreo != null
+        ? `N.° ${numInspeccionCorreo} – `
+        : "";
 
+    // 4. Adjuntar el mismo PDF final al correo.
     await enviarCorreoPorGraph({
       to: correoDestino,
-      subject: `Inspección SST ${subjectNum}${payloadData?.inspeccionId || ""}`,
+      subject:
+        `Inspección SST ${subjectNum}` +
+        `${payloadData?.inspeccionId || ""}`,
       html: htmlFinal,
-      pdfBuffer,
+      pdfBuffer: pdfFinal,
       nombre: nombrePdf
     });
 
-    return res.status(200).json({ ok: true, mensaje: `Correo enviado a ${correoDestino}` });
+    return res.status(200).json({
+      ok: true,
+      mensaje: `Correo enviado a ${correoDestino}`
+    });
   } catch (error) {
-    const mensaje = error instanceof Error ? error.message : "Error enviando correo";
-    return res.status(500).json({ ok: false, errores: [mensaje] });
+    const mensaje =
+      error instanceof Error
+        ? error.message
+        : "Error enviando correo";
+
+    return res.status(500).json({
+      ok: false,
+      errores: [mensaje]
+    });
   }
 }
 // ===== Exports =====

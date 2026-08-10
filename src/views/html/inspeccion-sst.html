@@ -129,7 +129,7 @@
             <option value="Gerencia">Gerencia</option>
           </select>
         </div>
-        <div class="field"><label for="jefeResponsable">Nombre jefe /o del area a inspeccionar</label><input
+        <div class="field"><label for="jefeResponsable">Nombre jefe /o del área a inspeccionar</label><input
             id="jefeResponsable" type="text" /></div>
         <div class="field">
           <label for="cargoJefe">Cargo jefe</label>
@@ -181,7 +181,7 @@
     <!-- CAMILLAS -->
     <section class="section step-panel hidden" data-step-panel="3">
       <div class="section-head">
-        <h2>3. Datos de Camilla</h2>
+        <h2>3. Datos de camillas</h2>
         <div class="section-note">Agregue una o varias camillas con sus condiciones y evidencia.</div>
       </div>
       <div id="camillas-container" class="extintores-container"></div>
@@ -285,7 +285,7 @@
           <dd id="resumen-cargo-jefe"></dd>
         </div>
         <div>
-          <dt>Responsable inspección</dt>
+          <dt>Responsable de la inspección</dt>
           <dd id="resumen-responsable"></dd>
         </div>
         <div>
@@ -330,52 +330,42 @@
         <p class="exito-titulo">¡Inspección guardada!</p>
         <p id="envio-num-inspeccion" class="envio-num-inspeccion hidden"></p>
         <p id="envio-inspeccion-id" class="envio-id-chip"></p>
-        <p class="exito-sub">El Inspector (quien diligenció el formulario) ya quedó aprobado automáticamente. Comparte
-          estos links con Jefe de Área y COPASST para que aprueben. El correo con el PDF se envía automáticamente cuando
+        <p class="exito-sub">El inspector (quien diligenció el formulario) ya quedó aprobado automáticamente. Comparte
+          estos enlaces con el Jefe de Área y el COPASST para que aprueben. El correo con el PDF se envía automáticamente cuando
           las 3 aprobaciones estén completas.</p>
 
         <div id="envio-links" class="envio-links">
 
           <div class="envio-link-item">
-            <span class="envio-link-label">Jefe de Área</span>
+            <span id="bloque-jefe" class="envio-link-label">Jefe de Área</span>
 
             <div class="envio-link-row">
               <input type="text" id="link-jefe" class="envio-link-input" readonly />
 
-              <button type="button" class="envio-link-share" data-share-target="link-jefe">
-                Compartir
+              <button type="button" class="envio-link-copy" data-copy-target="link-jefe">
+                Copiar
               </button>
-
-              <div class="envio-share-menu hidden" data-menu-target="link-jefe">
-                <button type="button" class="envio-share-option" data-share-method="copy"
-                  data-share-input="link-jefe">Copiar link</button>
-              </div>
             </div>
           </div>
 
           <div class="envio-link-item">
-            <span class="envio-link-label">Brigadista</span>
+            <span id="bloque-copasst" class="envio-link-label">Brigadista</span>
 
             <div class="envio-link-row">
               <input type="text" id="link-copasst" class="envio-link-input" readonly />
 
-              <button type="button" class="envio-link-share" data-share-target="link-copasst">
-                Compartir
+              <button type="button" class="envio-link-copy" data-copy-target="link-copasst">
+                Copiar
               </button>
-
-              <div class="envio-share-menu hidden" data-menu-target="link-copasst">
-                <button type="button" class="envio-share-option" data-share-method="copy"
-                  data-share-input="link-copasst">Copiar link</button>
-              </div>
             </div>
           </div>
-
+          <div class="exito-acciones">
+            <button id="btn-modal-inicio" class="exito-btn exito-btn--primary">Ir al inicio</button>
+            <button id="btn-modal-nueva" class="exito-btn exito-btn--link">Iniciar nueva inspección</button>
+          </div>
         </div>
 
-        <div class="exito-acciones">
-          <button id="btn-modal-inicio" class="exito-btn exito-btn--primary">Ir al inicio</button>
-          <button id="btn-modal-nueva" class="exito-btn exito-btn--link">Iniciar nueva inspección</button>
-        </div>
+
       </div>
 
       <!-- Estado de error -->
@@ -414,8 +404,8 @@
       </div>
     </div>
   </div>
-
-  <script type="module" defer src="/js/inspeccion-sst.js"></script>
+  <script src="../js/modal-envio.js"></script>
+  <script type="module" defer src="../js/inspeccion-sst.js"></script>
 </body>
 
 </html>

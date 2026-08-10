@@ -175,7 +175,14 @@ function validarInspeccion(payload) {
   // se exige el mínimo de 1 ítem por sección. Fuera de eso, cualquier ítem
   // que sí venga (omitido o no, Urabá o no) se valida igual que siempre —
   // omitir una sección es dejarla en cero ítems, no aceptar datos incompletos.
-  const seccionMinimoOpcional = sedeOperacion.toLowerCase().includes("urab");
+  const SEDES_PERMITEN_OMITIR = [
+    "urab",
+    "santa marta"
+  ];
+
+  const seccionMinimoOpcional = SEDES_PERMITEN_OMITIR.some(sede =>
+    sedeOperacion.toLowerCase().includes(sede)
+  );
 
   if (!seccionMinimoOpcional) {
     // Validaciones de existencia mínima de cada sección.
@@ -592,6 +599,7 @@ function construirFiltrosInspecciones({ fechaDesde, fechaHasta, sedeOperacion, e
 }
 
 async function obtenerResumenEstadisticas(filtros = {}) {
+
   const { whereSql, valores } = construirFiltrosInspecciones(filtros);
 
   const resumenSql = `
@@ -639,14 +647,14 @@ async function listarInspeccionesConFiltros(filtros = {}, paginacion = {}) {
   const sortOrder = paginacion.sortOrder === "desc" ? "DESC" : "ASC";
 
   const columnasOrdenables = {
-  numero: "i.num_inspeccion",
-  codigo: "i.inspeccion_id",
-  registro: "i.created_at",
-  sedeOperacion: "i.sede_operacion",
-  area: "i.area_trabajo",
-  responsable: "i.responsable_inspeccion",
-  estado: "i.estado",
-  items: `
+    numero: "i.num_inspeccion",
+    codigo: "i.inspeccion_id",
+    registro: "i.created_at",
+    sedeOperacion: "i.sede_operacion",
+    area: "i.area_trabajo",
+    responsable: "i.responsable_inspeccion",
+    estado: "i.estado",
+    items: `
     (
       COALESCE(ext.cantidad,0) +
       COALESCE(cam.cantidad,0) +
@@ -716,6 +724,60 @@ async function listarInspeccionesConFiltros(filtros = {}, paginacion = {}) {
   };
 }
 
+async function obtenerLinksInspeccion(inspeccionId) {
+
+  const { rows } = await query(
+    `SELECT
+      inspeccion_id,
+      num_inspeccion,
+
+      token_inspector,
+      token_jefe,
+      token_copasst,
+
+      aprobacion_inspector_nombre,
+      aprobacion_jefe_nombre,
+      aprobacion_copasst_nombre
+
+     FROM inspecciones
+     WHERE inspeccion_id = $1`,
+    [inspeccionId]
+  );
+
+  if (!rows.length) {
+    return null;
+  }
+
+  const inspeccion = rows[0];
+
+  const baseUrl = process.env.APP_URL || "http://localhost:3000";
+
+  // Enlaces para compartir
+  const links = {};
+
+  // El jefe solo aparece si aún no ha aprobado
+  if (!inspeccion.aprobacion_jefe_nombre) {
+    links.jefe = `${baseUrl}/aprobar/${inspeccion.token_jefe}`;
+  }
+
+  // El COPASST solo aparece si aún no ha aprobado
+  if (!inspeccion.aprobacion_copasst_nombre) {
+    links.copasst = `${baseUrl}/aprobar/${inspeccion.token_copasst}`;
+  }
+
+  return {
+    inspeccionId: inspeccion.inspeccion_id,
+    numInspeccion: inspeccion.num_inspeccion,
+
+    // Token exclusivo para generar el PDF
+    previewToken: inspeccion.token_inspector,
+
+    // Enlaces que se muestran al usuario
+    links
+  };
+
+}
+
 // Exporta funciones y constantes para uso en el controlador.
 module.exports = {
   CAMPOS_CONDICION,
@@ -725,5 +787,6 @@ module.exports = {
   guardarInspeccionEnDB,
   obtenerInspeccionCompleta,
   obtenerResumenEstadisticas,
-  listarInspeccionesConFiltros
+  listarInspeccionesConFiltros,
+  obtenerLinksInspeccion
 };

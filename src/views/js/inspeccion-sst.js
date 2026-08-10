@@ -45,6 +45,7 @@ import { createCamillasManager } from "/js/camillas.js";
 import { createSenalizacionesManager } from "/js/senalizaciones.js";
 import { createEquiposTecnologicosManager } from "/js/equiposTecnologicos.js";
 import { createBotiquinesManager } from "/js/botiquines.js";
+import { optimizarImagen } from "./imageOptimizer.js";
 
 document.addEventListener("DOMContentLoaded", () => {
   let currentStep = 1;
@@ -81,8 +82,11 @@ document.addEventListener("DOMContentLoaded", () => {
   // para esa inspección). Fuera de Urabá el botón no aparece.
   function esSedeUrabana() {
     const sede = document.getElementById("sedeOperacion")?.value || "";
-    return sede.toLowerCase().includes("urab");
-    
+    return [
+      "urab",
+      "santa marta"
+    ].some(x => sede.toLowerCase().includes(x));
+
   }
 
   const SECCIONES_OMITIBLES = [
@@ -189,7 +193,7 @@ document.addEventListener("DOMContentLoaded", () => {
     } else if (summaryExistente) {
       summaryExistente.remove();
     }
- 
+
     if (numeroPaso === 7 && !tieneItemsInspeccion()) {
       const msg = document.getElementById("msg");
       if (msg) {
@@ -201,7 +205,7 @@ document.addEventListener("DOMContentLoaded", () => {
       }
       return false;
     }
- 
+
     return valido;
   }
 
@@ -252,7 +256,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const senalizaciones = seccionesOmitidas.senalizaciones ? [] : senalizacionesManager.leer();
     const equiposTecnologicosData = seccionesOmitidas.equiposTecnologicos ? [] : equiposTecnologicosManager.leer();
     const botiquinesData = seccionesOmitidas.botiquines ? [] : botiquinesManager.leer();
- 
+
     return {
       inspeccionId: inspeccionId || generarInspeccionId(),
       fecha: document.getElementById("fecha").value,
@@ -275,7 +279,7 @@ document.addEventListener("DOMContentLoaded", () => {
       extintor: extintores[0] || null
     };
   }
- 
+
   function contarItemsInspeccion() {
     return (
       (seccionesOmitidas.extintores ? 0 : extintoresManager.leer().length) +
@@ -285,11 +289,11 @@ document.addEventListener("DOMContentLoaded", () => {
       (seccionesOmitidas.equiposTecnologicos ? 0 : equiposTecnologicosManager.leer().length)
     );
   }
- 
+
   function tieneItemsInspeccion() {
     return contarItemsInspeccion() > 0;
   }
- 
+
   // Resumen del paso 7: datos generales + qué secciones se hicieron y cuáles no
   // (omitidas o simplemente vacías). Se recalcula cada vez que se entra al paso.
   function renderResumenFinal() {
@@ -315,11 +319,11 @@ document.addEventListener("DOMContentLoaded", () => {
         <span>${n > 0 ? `Hecho (${n})` : "No se hizo"}</span>
       </div>
     `).join("");
- 
+
     const totalItems = contarItemsInspeccion();
     const msg = document.getElementById("msg");
     const btnEnviar = document.getElementById("btn-onedrive");
- 
+
     if (totalItems === 0) {
       if (msg) {
         msg.textContent = "No puede enviar este informe porque no se ha registrado ningún ítem en la inspección.";
@@ -337,138 +341,121 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
+  /**
+ * Optimiza una imagen y la agrega al FormData.
+ */
+  async function anexarArchivoOptimizado(
+    fd,
+    fieldName,
+    file
+  ) {
+
+    const archivo = await optimizarImagen(file);
+
+    fd.append(fieldName, archivo);
+
+    fd.append(
+      `${fieldName}-lastmod`,
+      archivo.lastModified
+    );
+
+  }
   // Anexa todas las fotos seleccionadas en un bloque de evidencias (data-role="{rolePrefix}-input")
   // como campos "{fieldPrefix}-{itemIndex}-{photoIndex}" (+ su "-lastmod").
-  function anexarEvidenciasMultiples(fd, card, rolePrefix, fieldPrefix, itemIndex) {
-    card.querySelectorAll(`[data-role="${rolePrefix}-input"]`).forEach((input, photoIndex) => {
-      const f = input.files[0];
-      if (!f) return;
-      fd.append(`${fieldPrefix}-${itemIndex}-${photoIndex}`, f);
-      fd.append(`${fieldPrefix}-${itemIndex}-${photoIndex}-lastmod`, f.lastModified);
-    });
+  async function anexarEvidenciasMultiples(
+    fd,
+    card,
+    rolePrefix,
+    fieldPrefix,
+    itemIndex
+  ) {
+
+    for (const [photoIndex, input] of card
+      .querySelectorAll(`[data-role="${rolePrefix}-input"]`)
+      .entries()) {
+
+      const file = input.files[0];
+
+      if (!file) {
+        continue;
+      }
+
+      await anexarArchivoOptimizado(
+        fd,
+        `${fieldPrefix}-${itemIndex}-${photoIndex}`,
+        file
+      );
+
+    }
+
   }
 
-  function construirFormData(inspeccionId, numInspeccion) {
+  async function construirFormData(inspeccionId, numInspeccion) {
+
     const fd = new FormData();
+
     const p = payload(inspeccionId);
-    if (numInspeccion != null) p.numInspeccion = numInspeccion;
+
+    if (numInspeccion != null) {
+      p.numInspeccion = numInspeccion;
+    }
+
     fd.append("payload", JSON.stringify(p));
 
-    document.querySelectorAll("[data-extintor-index]").forEach((card, index) => {
-      anexarEvidenciasMultiples(fd, card, "evidencia", "evidencia", index);
-    });
+    const configuraciones = [
+      {
+        selector: "[data-extintor-index]",
+        role: "evidencia",
+        field: "evidencia",
+      },
+      {
+        selector: "[data-camilla-index]",
+        role: "camilla-evidencia",
+        field: "evidencia-camilla",
+      },
+      {
+        selector: "[data-senalizacion-index]",
+        role: "senalizacion-evidencia",
+        field: "evidencia-senalizacion",
+      },
+      {
+        selector: "[data-equipo-tecnologico-index]",
+        role: "equipo-tecnologico-evidencia",
+        field: "equipo-tecnologico-evidencia",
+      },
+      {
+        selector: "[data-botiquin-index]",
+        role: "botiquin-evidencia",
+        field: "botiquin-evidencia",
+      },
+    ];
 
-    document.querySelectorAll("[data-camilla-index]").forEach((card, index) => {
-      anexarEvidenciasMultiples(fd, card, "camilla-evidencia", "evidencia-camilla", index);
-    });
+    for (const configuracion of configuraciones) {
 
-    document.querySelectorAll("[data-senalizacion-index]").forEach((card, index) => {
-      anexarEvidenciasMultiples(fd, card, "senalizacion-evidencia", "evidencia-senalizacion", index);
-    });
+      const cards = document.querySelectorAll(configuracion.selector);
 
-    document.querySelectorAll("[data-equipo-tecnologico-index]").forEach((card, index) => {
-      anexarEvidenciasMultiples(fd, card, "equipo-tecnologico-evidencia", "equipo-tecnologico-evidencia", index);
-    });
+      let index = 0;
 
-    document.querySelectorAll("[data-botiquin-index]").forEach((card, index) => {
-      anexarEvidenciasMultiples(fd, card, "botiquin-evidencia", "botiquin-evidencia", index);
-    });
+      for (const card of cards) {
+
+        await anexarEvidenciasMultiples(
+          fd,
+          card,
+          configuracion.role,
+          configuracion.field,
+          index
+        );
+
+        index++;
+
+      }
+
+    }
 
     return fd;
+
   }
 
-  function mostrarModal(estado, inspeccionId = null, numInspeccion = null, links = null) {
-    const modal = document.getElementById("envio-modal");
-    document.getElementById("envio-estado-cargando").classList.toggle("hidden", estado !== "cargando");
-    document.getElementById("envio-estado-exito").classList.toggle("hidden", estado !== "exito");
-    document.getElementById("envio-estado-error").classList.toggle("hidden", estado !== "error");
-    if (estado === "exito" && inspeccionId) {
-      document.getElementById("envio-inspeccion-id").textContent = inspeccionId;
-      const numEl = document.getElementById("envio-num-inspeccion");
-      if (numEl) {
-        if (numInspeccion != null) {
-          numEl.textContent = `Inspección N.° ${numInspeccion}`;
-          numEl.classList.remove("hidden");
-        } else {
-          numEl.classList.add("hidden");
-        }
-      }
-      if (links) {
-        const inputJefe = document.getElementById("link-jefe");
-        const inputCopasst = document.getElementById("link-copasst");
-        if (inputJefe) inputJefe.value = links.jefe || "";
-        if (inputCopasst) inputCopasst.value = links.copasst || "";
-      }
-    }
-    modal.classList.add("visible");
-  }
-
-  // Copia el valor de un input de link al portapapeles y da feedback visual en el botón.
-  function copiarLink(boton) {
-    const targetId = boton.getAttribute("data-copy-target");
-    const input = document.getElementById(targetId);
-    if (!input || !input.value) return;
-
-    navigator.clipboard.writeText(input.value).then(() => {
-      const textoOriginal = boton.textContent;
-      boton.textContent = "Copiado";
-      boton.classList.add("copiado");
-      setTimeout(() => {
-        boton.textContent = textoOriginal;
-        boton.classList.remove("copiado");
-      }, 1500);
-    });
-  }
-
-  function abrirMenuCompartir(boton) {
-    const targetId = boton.getAttribute("data-share-target");
-    const menu = document.querySelector(`[data-menu-target="${targetId}"]`);
-    if (!menu) return;
-    
-    menu.classList.toggle("hidden");
-    
-    // Cerrar menú si haces click afuera
-    if (!menu.classList.contains("hidden")) {
-      const cerrarMenu = (e) => {
-        if (!menu.contains(e.target) && e.target !== boton) {
-          menu.classList.add("hidden");
-          document.removeEventListener("click", cerrarMenu);
-        }
-      };
-      setTimeout(() => document.addEventListener("click", cerrarMenu), 0);
-    }
-  }
-
-  async function compartirPor(metodo, inputId) {
-    const input = document.getElementById(inputId);
-    if (!input || !input.value) return;
-
-    const url = input.value;
-    const texto = "Enlace de aprobación de inspección SST";
-
-    try {
-      if (metodo === "whatsapp") {
-        const mensaje = encodeURIComponent(`${texto}: ${url}`);
-        window.open(`https://wa.me/?text=${mensaje}`, "_blank");
-      } else if (metodo === "telegram") {
-        const mensaje = encodeURIComponent(`${texto}: ${url}`);
-        window.open(`https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent(texto)}`, "_blank");
-      } else if (metodo === "email") {
-        const asunto = encodeURIComponent("Enlace de aprobación - Inspección SST");
-        const cuerpo = encodeURIComponent(`${texto}:\n${url}`);
-        window.location.href = `mailto:?subject=${asunto}&body=${cuerpo}`;
-      } else if (metodo === "copy") {
-        await navigator.clipboard.writeText(url);
-        alert("Enlace copiado al portapapeles");
-      }
-    } catch (error) {
-      console.error(`Error compartiendo por ${metodo}:`, error);
-    }
-  }
-
-  function cerrarModal() {
-    document.getElementById("envio-modal").classList.remove("visible");
-  }
 
   function mostrarModalCancelar() {
     document.getElementById("cancelar-modal").classList.add("visible");
@@ -480,7 +467,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   async function enviarOneDrive() {
     if (!validarPaso(currentStep)) return;
- 
+
     if (!tieneItemsInspeccion()) {
       const msg = document.getElementById("msg");
       if (msg) {
@@ -488,10 +475,11 @@ document.addEventListener("DOMContentLoaded", () => {
       }
       return;
     }
- 
+
     const btnEnviar = document.getElementById("btn-onedrive");
     btnEnviar.disabled = true;
     mostrarModal("cargando");
+
 
     try {
       const inspeccionId = generarInspeccionId();
@@ -499,7 +487,15 @@ document.addEventListener("DOMContentLoaded", () => {
       // Guarda la inspección (Neon + evidencias en OneDrive). El Inspector queda
       // aprobado automáticamente; se devuelven los links de Jefe y COPASST.
       // El PDF y el correo ya no se envían aquí: se generan solo cuando las 3 aprobaciones están completas.
-      const respuestaOneDrive = await fetch("/enviar-onedrive-extintor", { method: "POST", body: construirFormData(inspeccionId) });
+      const formData = await construirFormData(inspeccionId);
+
+      const respuestaOneDrive = await fetch(
+        "/enviar-onedrive-extintor",
+        {
+          method: "POST",
+          body: formData
+        }
+      );
       const datosOneDrive = await leerRespuesta(respuestaOneDrive);
 
       if (!respuestaOneDrive.ok) {
@@ -514,11 +510,19 @@ document.addEventListener("DOMContentLoaded", () => {
 
       const numInspeccion = datosOneDrive.numInspeccion ?? null;
       mostrarModal("exito", inspeccionId, numInspeccion, datosOneDrive.links);
-    } catch {
+    } catch (err) {
+
+      console.error("===== ERROR COMPLETO =====");
+      console.error(err);
+      console.error(err.stack);
+
       document.getElementById("envio-error-texto").textContent =
-        "No fue posible completar el envío. Verifique su conexión.";
+        err?.message || "No fue posible completar el envío.";
+
       mostrarModal("error");
+
       btnEnviar.disabled = false;
+
     }
   }
 
@@ -573,18 +577,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
   document.querySelectorAll(".envio-link-copy").forEach((boton) => {
     boton.addEventListener("click", () => copiarLink(boton));
-  });
-
-  document.querySelectorAll(".envio-link-share").forEach((boton) => {
-    boton.addEventListener("click", () => abrirMenuCompartir(boton));
-  });
-
-  document.querySelectorAll(".envio-share-option").forEach((opcion) => {
-    opcion.addEventListener("click", () => {
-      const metodo = opcion.getAttribute("data-share-method");
-      const inputId = opcion.getAttribute("data-share-input");
-      compartirPor(metodo, inputId);
-    });
   });
 
   document.getElementById("btn-salir").addEventListener("click", mostrarModalCancelar);
