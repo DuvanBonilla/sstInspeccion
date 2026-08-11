@@ -53,6 +53,10 @@ const trabajadoresManager = createTrabajadoresEppManager({
   generarButton: document.getElementById("btn-generar-trabajadores"),
 
   estadoElement: document.getElementById("trabajadores-estado"),
+
+  agregarButton: document.getElementById("btn-agregar-trabajador"),
+
+  accionesElement: document.getElementById("acciones-trabajadores"),
 });
 
 // =========================================================

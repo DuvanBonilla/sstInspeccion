@@ -28,8 +28,13 @@ export function createTrabajadoresEppManager({
   cantidadInput,
   generarButton,
   estadoElement,
+  agregarButton,
+  accionesElement,
 }) {
   let cantidadActual = 0;
+
+  let siguienteTrabajadorId = 1;
+
   const evidencias = new Map();
 
   // =======================================================
@@ -39,11 +44,15 @@ export function createTrabajadoresEppManager({
   function init() {
     generarButton?.addEventListener("click", generarDesdeInput);
 
+    agregarButton?.addEventListener("click", agregarTrabajador);
+
     container?.addEventListener("input", limpiarErrorCampo);
 
     container?.addEventListener("change", limpiarErrorCampo);
 
     container?.addEventListener("change", manejarCambioEvidencia);
+
+    container?.addEventListener("click", manejarAccionesTrabajador);
   }
 
   function limpiarErrorCampo(event) {
@@ -76,7 +85,7 @@ export function createTrabajadoresEppManager({
     }
 
     // Obtener el índice del trabajador.
-    const trabajadorIndex = Number(tarjeta.dataset.trabajadorIndex);
+    const trabajadorId = Number(tarjeta.dataset.trabajadorId);
 
     // Elemento visual donde mostramos el estado
     // de la evidencia.
@@ -90,7 +99,7 @@ export function createTrabajadoresEppManager({
     // -------------------------------------------------------
 
     if (!archivo) {
-      evidencias.delete(trabajadorIndex);
+      evidencias.delete(trabajadorId);
 
       if (estado) {
         estado.textContent = "Sin evidencia";
@@ -120,7 +129,7 @@ export function createTrabajadoresEppManager({
       // GUARDAR EVIDENCIA OPTIMIZADA
       // -----------------------------------------------------
 
-      evidencias.set(trabajadorIndex, archivoOptimizado);
+      evidencias.set(trabajadorId, archivoOptimizado);
 
       // -----------------------------------------------------
       // ACTUALIZAR ESTADO VISUAL
@@ -136,7 +145,13 @@ export function createTrabajadoresEppManager({
       // LOG TEMPORAL PARA PRUEBAS
       // -----------------------------------------------------
 
-      console.log(`Evidencia trabajador ${trabajadorIndex + 1}:`, {
+      const numeroVisual =
+        Array.from(container.querySelectorAll(".trabajador-card")).indexOf(
+          tarjeta,
+        ) + 1;
+
+      console.log(`Evidencia trabajador ${numeroVisual}:`, {
+        trabajadorId,
         original: archivo.size,
         optimizado: archivoOptimizado.size,
         archivo: archivoOptimizado,
@@ -146,7 +161,7 @@ export function createTrabajadoresEppManager({
 
       // Si falla la optimización, eliminamos cualquier
       // evidencia que pudiera estar asociada anteriormente.
-      evidencias.delete(trabajadorIndex);
+      evidencias.delete(trabajadorId);
 
       // Limpiar input.
       input.value = "";
@@ -178,6 +193,24 @@ export function createTrabajadoresEppManager({
     return `${(bytes / 1024 / 1024).toFixed(2)} MB`;
   }
 
+  function manejarAccionesTrabajador(event) {
+    const botonEliminar = event.target.closest(
+      '[data-action="eliminar-trabajador"]',
+    );
+
+    if (!botonEliminar) {
+      return;
+    }
+
+    const tarjeta = botonEliminar.closest(".trabajador-card");
+
+    if (!tarjeta) {
+      return;
+    }
+
+    eliminarTrabajador(tarjeta);
+  }
+
   // =======================================================
   // GENERAR DESDE INPUT
   // =======================================================
@@ -200,45 +233,144 @@ export function createTrabajadoresEppManager({
   // GENERAR TRABAJADORES
   // =======================================================
 
+  // =======================================================
+  // GENERAR TRABAJADORES
+  // =======================================================
+
   function generar(cantidad) {
+    // Limpiar trabajadores de una generación anterior
     container.innerHTML = "";
+
+    // Limpiar evidencias anteriores
     evidencias.clear();
 
-    cantidadActual = cantidad;
+    // Reiniciar cantidad
+    cantidadActual = 0;
+
+    // Reiniciar identificador interno
+    siguienteTrabajadorId = 1;
+
+    // -------------------------------------------------------
+    // GENERAR TRABAJADORES
+    // -------------------------------------------------------
 
     for (let indice = 0; indice < cantidad; indice++) {
-      const trabajador = crearTrabajador(indice);
-
-      container.appendChild(trabajador);
+      agregarTrabajador();
     }
+
+    // -------------------------------------------------------
+    // ACTUALIZAR NUMERACIÓN
+    // -------------------------------------------------------
+
+    actualizarNumeracion();
+
+    // -------------------------------------------------------
+    // MOSTRAR ESTADO
+    // -------------------------------------------------------
 
     mostrarEstado(
       `${cantidad} ${
         cantidad === 1 ? "trabajador generado" : "trabajadores generados"
       }.`,
     );
+
+    // -------------------------------------------------------
+    // MOSTRAR BOTÓN AGREGAR TRABAJADOR
+    // -------------------------------------------------------
+
+    accionesElement?.classList.remove("hidden");
   }
 
+  function agregarTrabajador() {
+    if (cantidadActual >= 100) {
+      mostrarEstado("La inspección permite un máximo de 100 trabajadores.");
+
+      return;
+    }
+
+    const trabajadorId = siguienteTrabajadorId++;
+
+    const trabajador = crearTrabajador(trabajadorId);
+
+    container.appendChild(trabajador);
+
+    cantidadActual++;
+
+    actualizarNumeracion();
+  }
+
+  function eliminarTrabajador(tarjeta) {
+    const tarjetas = container.querySelectorAll(".trabajador-card");
+
+    if (tarjetas.length <= 1) {
+      mostrarEstado("La inspección debe conservar al menos un trabajador.");
+
+      return;
+    }
+
+    const trabajadorId = Number(tarjeta.dataset.trabajadorId);
+
+    // Eliminar su evidencia optimizada.
+    evidencias.delete(trabajadorId);
+
+    // Eliminar únicamente esta tarjeta.
+    tarjeta.remove();
+
+    cantidadActual--;
+
+    actualizarNumeracion();
+
+    mostrarEstado(
+      `${cantidadActual} ${
+        cantidadActual === 1
+          ? "trabajador registrado"
+          : "trabajadores registrados"
+      }.`,
+    );
+  }
+
+  function actualizarNumeracion() {
+    const tarjetas = container.querySelectorAll(".trabajador-card");
+
+    tarjetas.forEach((tarjeta, indice) => {
+      const numero = tarjeta.querySelector('[data-role="numeroTrabajador"]');
+
+      if (numero) {
+        numero.textContent = `Trabajador ${indice + 1}`;
+      }
+    });
+
+    cantidadActual = tarjetas.length;
+  }
   // =======================================================
   // CREAR TRABAJADOR
   // =======================================================
 
-  function crearTrabajador(indice) {
-    const numero = indice + 1;
-
+  function crearTrabajador(trabajadorId) {
     const card = document.createElement("article");
 
     card.className = "trabajador-card";
 
-    card.dataset.trabajadorIndex = indice;
+    card.dataset.trabajadorId = trabajadorId;
 
     card.innerHTML = `
       <div class="trabajador-card-header">
+      <button
+  type="button"
+  class="btn-eliminar-trabajador"
+  data-action="eliminar-trabajador"
+  title="Eliminar trabajador"
+>
+  Eliminar
+</button>
 
         <div>
-          <span class="trabajador-numero">
-            Trabajador ${numero}
-          </span>
+<span
+  class="trabajador-numero"
+  data-role="numeroTrabajador"
+>
+  Trabajador
+</span>
 
           <h3>
             Información del trabajador
@@ -504,14 +636,10 @@ export function createTrabajadoresEppManager({
     // Recorrer trabajadores
     // -----------------------------------------------------
 
-    for (
-      let trabajadorIndex = 0;
-      trabajadorIndex < tarjetas.length;
-      trabajadorIndex++
-    ) {
-      const tarjeta = tarjetas[trabajadorIndex];
+    for (let trabajadorId = 0; trabajadorId < tarjetas.length; trabajadorId++) {
+      const tarjeta = tarjetas[trabajadorId];
 
-      const numeroTrabajador = trabajadorIndex + 1;
+      const numeroTrabajador = trabajadorId + 1;
 
       // ===================================================
       // DATOS DEL TRABAJADOR
@@ -676,7 +804,7 @@ export function createTrabajadoresEppManager({
   function leer() {
     const tarjetas = container.querySelectorAll(".trabajador-card");
 
-    return Array.from(tarjetas).map((tarjeta, trabajadorIndex) => {
+    return Array.from(tarjetas).map((tarjeta, trabajadorId) => {
       // =================================================
       // ELEMENTOS EPP
       // =================================================
@@ -701,7 +829,9 @@ export function createTrabajadoresEppManager({
       // =================================================
 
       return {
-        indice: trabajadorIndex,
+        trabajadorId: Number(tarjeta.dataset.trabajadorId),
+
+        indice: trabajadorId,
 
         nombre:
           tarjeta.querySelector('[data-role="nombre"]')?.value.trim() || "",
