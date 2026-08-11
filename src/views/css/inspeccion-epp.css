@@ -356,3 +356,53 @@
   }
 
 }
+
+/* =========================================================
+   ACORDEÓN DE TRABAJADORES EPP
+   ========================================================= */
+
+.trabajador-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.trabajador-header-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.trabajador-toggle-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 24px;
+  height: 24px;
+
+  flex-shrink: 0;
+
+  font-size: 12px;
+}
+
+.trabajador-nombre-resumen {
+  margin: 2px 0 0;
+}
+
+.trabajador-card-body {
+  display: block;
+}
+
+.trabajador-card.trabajador-collapsed
+.trabajador-card-body {
+  display: none;
+}
+
+.btn-eliminar-trabajador {
+  flex-shrink: 0;
+}

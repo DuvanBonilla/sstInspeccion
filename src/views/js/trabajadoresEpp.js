@@ -61,6 +61,32 @@ export function createTrabajadoresEppManager({
     if (elemento.matches("input, select, textarea")) {
       elemento.classList.remove("campo-error");
     }
+
+    if (elemento.matches('[data-role="nombre"]')) {
+      actualizarNombreResumen(elemento);
+    }
+  }
+
+  // =======================================================
+  // ACTUALIZAR NOMBRE DEL RESUMEN
+  // =======================================================
+
+  function actualizarNombreResumen(input) {
+    const tarjeta = input.closest(".trabajador-card");
+
+    if (!tarjeta) {
+      return;
+    }
+
+    const resumen = tarjeta.querySelector('[data-role="nombreResumen"]');
+
+    if (!resumen) {
+      return;
+    }
+
+    const nombre = input.value.trim();
+
+    resumen.textContent = nombre || "Sin diligenciar";
   }
 
   // =======================================================
@@ -193,22 +219,64 @@ export function createTrabajadoresEppManager({
     return `${(bytes / 1024 / 1024).toFixed(2)} MB`;
   }
 
+  // =======================================================
+  // MANEJAR ACCIONES DEL TRABAJADOR
+  // =======================================================
+
   function manejarAccionesTrabajador(event) {
+    // -------------------------------------------------------
+    // ELIMINAR
+    // -------------------------------------------------------
+
     const botonEliminar = event.target.closest(
       '[data-action="eliminar-trabajador"]',
     );
 
-    if (!botonEliminar) {
+    if (botonEliminar) {
+      event.stopPropagation();
+
+      const tarjeta = botonEliminar.closest(".trabajador-card");
+
+      if (!tarjeta) {
+        return;
+      }
+
+      eliminarTrabajador(tarjeta);
+
       return;
     }
 
-    const tarjeta = botonEliminar.closest(".trabajador-card");
+    // -------------------------------------------------------
+    // ABRIR / MINIMIZAR
+    // -------------------------------------------------------
+
+    const header = event.target.closest('[data-action="toggle-trabajador"]');
+
+    if (!header) {
+      return;
+    }
+
+    const tarjeta = header.closest(".trabajador-card");
 
     if (!tarjeta) {
       return;
     }
 
-    eliminarTrabajador(tarjeta);
+    // Si está cerrada, abrirla y cerrar las demás.
+    if (tarjeta.classList.contains("trabajador-collapsed")) {
+      abrirTrabajador(tarjeta);
+
+      return;
+    }
+
+    // Si ya está abierta permitimos minimizarla.
+    tarjeta.classList.add("trabajador-collapsed");
+
+    const icono = tarjeta.querySelector('[data-role="toggleIcon"]');
+
+    if (icono) {
+      icono.textContent = "▶";
+    }
   }
 
   // =======================================================
@@ -264,6 +332,9 @@ export function createTrabajadoresEppManager({
 
     actualizarNumeracion();
 
+    const primerTrabajador = container.querySelector(".trabajador-card");
+
+    abrirTrabajador(primerTrabajador);
     // -------------------------------------------------------
     // MOSTRAR ESTADO
     // -------------------------------------------------------
@@ -297,6 +368,8 @@ export function createTrabajadoresEppManager({
     cantidadActual++;
 
     actualizarNumeracion();
+
+    abrirTrabajador(trabajador);
   }
 
   function eliminarTrabajador(tarjeta) {
@@ -342,6 +415,36 @@ export function createTrabajadoresEppManager({
 
     cantidadActual = tarjetas.length;
   }
+
+  // =======================================================
+  // ABRIR TRABAJADOR
+  // =======================================================
+
+  function abrirTrabajador(tarjeta) {
+    if (!tarjeta) {
+      return;
+    }
+
+    const tarjetas = container.querySelectorAll(".trabajador-card");
+
+    tarjetas.forEach((item) => {
+      const icono = item.querySelector('[data-role="toggleIcon"]');
+
+      if (item === tarjeta) {
+        item.classList.remove("trabajador-collapsed");
+
+        if (icono) {
+          icono.textContent = "▼";
+        }
+      } else {
+        item.classList.add("trabajador-collapsed");
+
+        if (icono) {
+          icono.textContent = "▶";
+        }
+      }
+    });
+  }
   // =======================================================
   // CREAR TRABAJADOR
   // =======================================================
@@ -354,190 +457,247 @@ export function createTrabajadoresEppManager({
     card.dataset.trabajadorId = trabajadorId;
 
     card.innerHTML = `
-      <div class="trabajador-card-header">
-      <button
-  type="button"
-  class="btn-eliminar-trabajador"
-  data-action="eliminar-trabajador"
-  title="Eliminar trabajador"
->
-  Eliminar
-</button>
 
-        <div>
-<span
-  class="trabajador-numero"
-  data-role="numeroTrabajador"
->
-  Trabajador
-</span>
+  <!-- =====================================================
+       CABECERA DEL TRABAJADOR
+       Siempre permanece visible
+       ===================================================== -->
 
-          <h3>
-            Información del trabajador
-          </h3>
-        </div>
+  <div
+    class="trabajador-card-header"
+    data-action="toggle-trabajador"
+  >
 
-      </div>
+    <div class="trabajador-header-info">
 
+      <span
+        class="trabajador-toggle-icon"
+        data-role="toggleIcon"
+      >
+        ▶
+      </span>
 
-      <div class="trabajador-datos">
+      <div>
 
-        <div class="field">
+        <span
+          class="trabajador-numero"
+          data-role="numeroTrabajador"
+        >
+          Trabajador
+        </span>
 
-          <label>
-            Nombre y apellido
-          </label>
-
-          <input
-            type="text"
-            data-role="nombre"
-            autocomplete="off"
-          />
-
-        </div>
-
-
-        <div class="field">
-
-          <label>
-            Código
-          </label>
-
-          <input
-            type="text"
-            data-role="codigo"
-            autocomplete="off"
-          />
-
-        </div>
-
-
-        <div class="field">
-
-          <label>
-            Labor / Cargo
-          </label>
-
-          <input
-            type="text"
-            data-role="cargo"
-            autocomplete="off"
-          />
-
-        </div>
+        <h3
+          class="trabajador-nombre-resumen"
+          data-role="nombreResumen"
+        >
+          Sin diligenciar
+        </h3>
 
       </div>
 
-
-      <div class="trabajador-epp">
-
-        <div class="trabajador-subtitulo">
-          Elementos de Protección Personal
-        </div>
-
-        <div class="epp-table-wrap">
-
-          <table class="epp-table">
-
-            <thead>
-
-              <tr>
-                <th>
-                  Elemento EPP
-                </th>
-
-                <th>
-                  Condición
-                </th>
-
-                <th>
-                  Uso
-                </th>
-              </tr>
-
-            </thead>
-
-            <tbody>
-
-              ${ELEMENTOS_EPP.map((elemento, elementoIndex) =>
-                crearFilaEpp(elemento, elementoIndex),
-              ).join("")}
-
-            </tbody>
-
-          </table>
-
-        </div>
-
-      </div>
-
-
-      <div class="trabajador-adicional">
-
-        <div class="field">
-
-          <label>
-            Plan de acción
-          </label>
-
-          <textarea
-            rows="3"
-            data-role="planAccion"
-            placeholder="Describa la acción a realizar si aplica."
-          ></textarea>
-
-        </div>
-
-
-        <div class="field">
-
-          <label>
-            Observaciones
-          </label>
-
-          <textarea
-            rows="3"
-            data-role="observaciones"
-            placeholder="Registre observaciones adicionales."
-          ></textarea>
-
-        </div>
-
-      </div>
-
-
-<div class="trabajador-evidencia">
-
-  <div class="trabajador-subtitulo">
-    Constancia del operario
-  </div>
-
-  <p>
-    Registre una evidencia fotográfica como constancia
-    de que el trabajador fue informado de la inspección.
-  </p>
-
-  <div class="evidencia-control">
-
-    <input
-      type="file"
-      accept="image/jpeg,image/png,image/webp"
-      capture="environment"
-      data-role="evidencia"
-    />
-
-    <div
-      class="evidencia-estado"
-      data-role="evidenciaEstado"
-    >
-      Sin evidencia
     </div>
 
+
+    <button
+      type="button"
+      class="btn-eliminar-trabajador"
+      data-action="eliminar-trabajador"
+      title="Eliminar trabajador"
+    >
+      Eliminar
+    </button>
+
   </div>
 
-</div>
-    `;
 
+  <!-- =====================================================
+       CUERPO DEL TRABAJADOR
+       Esta sección se oculta al minimizar
+       ===================================================== -->
+
+  <div class="trabajador-card-body">
+
+
+    <!-- ===================================================
+         DATOS DEL TRABAJADOR
+         =================================================== -->
+
+    <div class="trabajador-datos">
+
+      <div class="field">
+
+        <label>
+          Nombre y apellido
+        </label>
+
+        <input
+          type="text"
+          data-role="nombre"
+          autocomplete="off"
+        />
+
+      </div>
+
+
+      <div class="field">
+
+        <label>
+          Código
+        </label>
+
+        <input
+          type="text"
+          data-role="codigo"
+          autocomplete="off"
+        />
+
+      </div>
+
+
+      <div class="field">
+
+        <label>
+          Labor / Cargo
+        </label>
+
+        <input
+          type="text"
+          data-role="cargo"
+          autocomplete="off"
+        />
+
+      </div>
+
+    </div>
+
+
+    <!-- ===================================================
+         ELEMENTOS DE PROTECCIÓN PERSONAL
+         =================================================== -->
+
+    <div class="trabajador-epp">
+
+      <div class="trabajador-subtitulo">
+        Elementos de Protección Personal
+      </div>
+
+      <div class="epp-table-wrap">
+
+        <table class="epp-table">
+
+          <thead>
+
+            <tr>
+
+              <th>
+                Elemento EPP
+              </th>
+
+              <th>
+                Condición
+              </th>
+
+              <th>
+                Uso
+              </th>
+
+            </tr>
+
+          </thead>
+
+          <tbody>
+
+            ${ELEMENTOS_EPP.map((elemento, elementoIndex) =>
+              crearFilaEpp(elemento, elementoIndex),
+            ).join("")}
+
+          </tbody>
+
+        </table>
+
+      </div>
+
+    </div>
+
+
+    <!-- ===================================================
+         PLAN DE ACCIÓN Y OBSERVACIONES
+         =================================================== -->
+
+    <div class="trabajador-adicional">
+
+      <div class="field">
+
+        <label>
+          Plan de acción
+        </label>
+
+        <textarea
+          rows="3"
+          data-role="planAccion"
+          placeholder="Describa la acción a realizar si aplica."
+        ></textarea>
+
+      </div>
+
+
+      <div class="field">
+
+        <label>
+          Observaciones
+        </label>
+
+        <textarea
+          rows="3"
+          data-role="observaciones"
+          placeholder="Registre observaciones adicionales."
+        ></textarea>
+
+      </div>
+
+    </div>
+
+
+    <!-- ===================================================
+         CONSTANCIA DEL OPERARIO
+         =================================================== -->
+
+    <div class="trabajador-evidencia">
+
+      <div class="trabajador-subtitulo">
+        Constancia del operario
+      </div>
+
+      <p>
+        Registre una evidencia fotográfica como constancia
+        de que el trabajador fue informado de la inspección.
+      </p>
+
+      <div class="evidencia-control">
+
+        <input
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          capture="environment"
+          data-role="evidencia"
+        />
+
+        <div
+          class="evidencia-estado"
+          data-role="evidenciaEstado"
+        >
+          Sin evidencia
+        </div>
+
+      </div>
+
+    </div>
+
+
+  </div>
+`;
+
+    card.classList.add("trabajador-collapsed");
     return card;
   }
 
