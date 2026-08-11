@@ -774,11 +774,15 @@ export function createTrabajadoresEppManager({
   // VALIDAR TRABAJADORES
   // =======================================================
 
+  // =======================================================
+  // VALIDAR TRABAJADORES
+  // =======================================================
+
   function validar() {
     const tarjetas = container.querySelectorAll(".trabajador-card");
 
     // -----------------------------------------------------
-    // Debe existir al menos un trabajador
+    // DEBE EXISTIR AL MENOS UN TRABAJADOR
     // -----------------------------------------------------
 
     if (tarjetas.length === 0) {
@@ -793,13 +797,19 @@ export function createTrabajadoresEppManager({
     }
 
     // -----------------------------------------------------
-    // Recorrer trabajadores
+    // RECORRER TRABAJADORES
     // -----------------------------------------------------
 
-    for (let trabajadorId = 0; trabajadorId < tarjetas.length; trabajadorId++) {
-      const tarjeta = tarjetas[trabajadorId];
+    for (
+      let trabajadorIndex = 0;
+      trabajadorIndex < tarjetas.length;
+      trabajadorIndex++
+    ) {
+      const tarjeta = tarjetas[trabajadorIndex];
 
-      const numeroTrabajador = trabajadorId + 1;
+      const numeroTrabajador = trabajadorIndex + 1;
+
+      const trabajadorId = Number(tarjeta.dataset.trabajadorId);
 
       // ===================================================
       // DATOS DEL TRABAJADOR
@@ -812,6 +822,8 @@ export function createTrabajadoresEppManager({
       const cargo = tarjeta.querySelector('[data-role="cargo"]');
 
       if (!nombre?.value.trim()) {
+        abrirTrabajador(tarjeta);
+
         return marcarError(
           nombre,
           `Trabajador ${numeroTrabajador}: ingrese el nombre y apellido.`,
@@ -819,6 +831,8 @@ export function createTrabajadoresEppManager({
       }
 
       if (!codigo?.value.trim()) {
+        abrirTrabajador(tarjeta);
+
         return marcarError(
           codigo,
           `Trabajador ${numeroTrabajador}: ingrese el código.`,
@@ -826,6 +840,8 @@ export function createTrabajadoresEppManager({
       }
 
       if (!cargo?.value.trim()) {
+        abrirTrabajador(tarjeta);
+
         return marcarError(
           cargo,
           `Trabajador ${numeroTrabajador}: ingrese la labor o cargo.`,
@@ -856,10 +872,12 @@ export function createTrabajadoresEppManager({
         const uso = fila.querySelector('[data-role="uso"]');
 
         // -------------------------------------------------
-        // Condición obligatoria
+        // CONDICIÓN OBLIGATORIA
         // -------------------------------------------------
 
         if (!condicion?.value) {
+          abrirTrabajador(tarjeta);
+
           return marcarError(
             condicion,
             `Trabajador ${numeroTrabajador}: seleccione la condición de "${nombreElemento}".`,
@@ -867,10 +885,12 @@ export function createTrabajadoresEppManager({
         }
 
         // -------------------------------------------------
-        // Uso obligatorio
+        // USO OBLIGATORIO
         // -------------------------------------------------
 
         if (!uso?.value) {
+          abrirTrabajador(tarjeta);
+
           return marcarError(
             uso,
             `Trabajador ${numeroTrabajador}: seleccione el uso de "${nombreElemento}".`,
@@ -878,7 +898,7 @@ export function createTrabajadoresEppManager({
         }
 
         // -------------------------------------------------
-        // Detectar novedad
+        // DETECTAR NOVEDAD
         // -------------------------------------------------
 
         if (
@@ -898,9 +918,32 @@ export function createTrabajadoresEppManager({
       const planAccion = tarjeta.querySelector('[data-role="planAccion"]');
 
       if (requierePlanAccion && !planAccion?.value.trim()) {
+        abrirTrabajador(tarjeta);
+
         return marcarError(
           planAccion,
           `Trabajador ${numeroTrabajador}: debe registrar un plan de acción porque existen elementos calificados como Malo o Regular.`,
+        );
+      }
+
+      // ===================================================
+      // EVIDENCIA FOTOGRÁFICA
+      // ===================================================
+
+      const inputEvidencia = tarjeta.querySelector('[data-role="evidencia"]');
+
+      // La validación se realiza contra el Map de archivos
+      // optimizados, no contra input.files.
+      //
+      // Esto garantiza que la fotografía fue procesada
+      // correctamente antes de continuar.
+
+      if (!evidencias.has(trabajadorId)) {
+        abrirTrabajador(tarjeta);
+
+        return marcarError(
+          inputEvidencia,
+          `Trabajador ${numeroTrabajador}: registre la evidencia fotográfica de constancia del operario.`,
         );
       }
     }
@@ -984,6 +1027,34 @@ export function createTrabajadoresEppManager({
         };
       });
 
+      // =======================================================
+      // OBTENER EVIDENCIAS
+      // =======================================================
+
+      function obtenerEvidencias() {
+        const tarjetas = container.querySelectorAll(".trabajador-card");
+
+        return Array.from(tarjetas)
+          .map((tarjeta, indice) => {
+            const trabajadorId = Number(tarjeta.dataset.trabajadorId);
+
+            const archivo = evidencias.get(trabajadorId);
+
+            if (!archivo) {
+              return null;
+            }
+
+            return {
+              trabajadorId,
+
+              indice,
+
+              archivo,
+            };
+          })
+          .filter(Boolean);
+      }
+
       // =================================================
       // TRABAJADOR
       // =================================================
@@ -1014,6 +1085,34 @@ export function createTrabajadoresEppManager({
   }
 
   // =======================================================
+  // OBTENER EVIDENCIAS
+  // =======================================================
+
+  function obtenerEvidencias() {
+    const tarjetas = container.querySelectorAll(".trabajador-card");
+
+    return Array.from(tarjetas)
+      .map((tarjeta, indice) => {
+        const trabajadorId = Number(tarjeta.dataset.trabajadorId);
+
+        const archivo = evidencias.get(trabajadorId);
+
+        if (!archivo) {
+          return null;
+        }
+
+        return {
+          trabajadorId,
+
+          indice,
+
+          archivo,
+        };
+      })
+      .filter(Boolean);
+  }
+
+  // =======================================================
   // API PÚBLICA
   // =======================================================
 
@@ -1025,6 +1124,8 @@ export function createTrabajadoresEppManager({
     validar,
 
     leer,
+
+    obtenerEvidencias,
 
     getCantidad() {
       return cantidadActual;
