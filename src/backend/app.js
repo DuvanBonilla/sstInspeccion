@@ -26,18 +26,43 @@ const path = require("node:path");
 require("dotenv").config();
 
 // Diagnóstico temporal: confirma qué variables de entorno llegaron al proceso.
-console.log("[ENV CHECK]", Object.fromEntries(
-  ["MS_TENANT_ID", "MS_CLIENT_ID", "MS_CLIENT_SECRET", "ONEDRIVE_USER_ID",
-   "ONEDRIVE_EXCEL_PATH", "GRAPH_EMAIL_TO_TEST", "DATABASE_URL"]
-    .map((k) => [k, Boolean(process.env[k])])
-));
+console.log(
+  "[ENV CHECK]",
+  Object.fromEntries(
+    [
+      "MS_TENANT_ID",
+      "MS_CLIENT_ID",
+      "MS_CLIENT_SECRET",
+      "ONEDRIVE_USER_ID",
+      "ONEDRIVE_EXCEL_PATH",
+      "GRAPH_EMAIL_TO_TEST",
+      "DATABASE_URL",
+    ].map((k) => [k, Boolean(process.env[k])]),
+  ),
+);
 
 const express = require("express");
 const multer = require("multer");
-const { enviarExtintorOneDrive, obtenerLinks } = require("./controllers/inspeccion.controller");
-const { generarPdfPrueba, enviarPdfPruebaCorreo,  } = require("./controllers/pdfInspeccion.controller");
-const { obtenerResumenAprobacion, registrarAprobacion, previsualizarAprobacion } = require("./controllers/aprobaciones.controller");
-const { obtenerResumen, listarInspecciones } = require("./controllers/estadisticas.controller");
+const {
+  enviarExtintorOneDrive,
+  obtenerLinks,
+} = require("./controllers/inspeccion.controller");
+const {
+  generarPdfPrueba,
+  enviarPdfPruebaCorreo,
+} = require("./controllers/pdfInspeccion.controller");
+const {
+  obtenerResumenAprobacion,
+  registrarAprobacion,
+  previsualizarAprobacion,
+} = require("./controllers/aprobaciones.controller");
+const {
+  obtenerResumen,
+  listarInspecciones,
+} = require("./controllers/estadisticas.controller");
+const {
+  enviarInspeccionEpp,
+} = require("./controllers/inspeccionEpp.controller");
 
 const app = express();
 app.set("trust proxy", true); // para que req.protocol refleje https detrás del proxy de Render
@@ -46,8 +71,14 @@ const upload = multer({ storage: multer.memoryStorage() });
 
 // Sirve archivos estaticos del frontend (HTML, CSS, JS) desde src/views/ (hermano de backend/).
 const VIEWS_DIR = path.resolve(__dirname, "..", "views");
-const FLATPICKR_DIR = path.resolve(__dirname,"..","..","node_modules","flatpickr","dist");
-
+const FLATPICKR_DIR = path.resolve(
+  __dirname,
+  "..",
+  "..",
+  "node_modules",
+  "flatpickr",
+  "dist",
+);
 
 app.use(express.static(VIEWS_DIR));
 app.use("/flatpickr", express.static(FLATPICKR_DIR));
@@ -74,13 +105,11 @@ app.get("/estadisticas", (req, res) => {
   res.sendFile(path.resolve(VIEWS_DIR, "html", "estadisticas.html"));
 });
 
-  app.get(
-    "/api/inspecciones/:id/links",
-    obtenerLinks
-);
+
 
 app.post("/enviar-onedrive-extintor", upload.any(), enviarExtintorOneDrive);
 
+app.post("/enviar-inspeccion-epp", upload.any(), enviarInspeccionEpp);
 
 app.post("/pdf-prueba", upload.any(), generarPdfPrueba);
 app.post("/enviar-pdf-prueba-correo", upload.any(), enviarPdfPruebaCorreo);

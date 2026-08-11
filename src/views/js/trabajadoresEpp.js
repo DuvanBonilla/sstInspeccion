@@ -5,7 +5,7 @@ const ELEMENTOS_EPP = [
   "Dotación",
   "Botas de seguridad",
   "Casco",
-  "Teflete",
+  "Tafilete",
   "Guantes patio",
   "Guantes fríos",
   "Guantes de vaqueta",

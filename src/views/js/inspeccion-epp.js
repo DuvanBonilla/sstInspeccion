@@ -86,6 +86,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
   trabajadoresManager.init();
 
+  inicializarEnvioEpp();
+
   actualizarPaso();
 });
 
@@ -164,9 +166,11 @@ function navegarAPaso(destino) {
   if (destino === 3) {
     construirResumenGeneral();
 
-    construirResumenGeneral();
-
     construirResumenTrabajadores();
+
+    verificarInspeccionEpp();
+
+    verificarFormDataEpp();
   }
 
   pasoActual = destino;
@@ -298,34 +302,25 @@ function construirResumenGeneral() {
 // =========================================================
 
 function construirResumenTrabajadores() {
+  const trabajadores = trabajadoresManager.leer();
 
-  const trabajadores =
-    trabajadoresManager.leer();
-
-  const evidencias =
-    trabajadoresManager.obtenerEvidencias();
-
+  const evidencias = trabajadoresManager.obtenerEvidencias();
 
   // -------------------------------------------------------
   // CONTENEDOR
   // -------------------------------------------------------
 
-  const container =
-    document.getElementById(
-      "resumen-trabajadores"
-    );
+  const container = document.getElementById("resumen-trabajadores");
 
   if (!container) {
     return;
   }
-
 
   // -------------------------------------------------------
   // LIMPIAR RESUMEN ANTERIOR
   // -------------------------------------------------------
 
   container.innerHTML = "";
-
 
   // -------------------------------------------------------
   // CALCULAR TOTALES
@@ -335,55 +330,38 @@ function construirResumenTrabajadores() {
 
   let trabajadoresConNovedades = 0;
 
+  trabajadores.forEach((trabajador) => {
+    const novedades = trabajador.elementos.filter(
+      (elemento) =>
+        elemento.condicion === "M" ||
+        elemento.condicion === "R" ||
+        elemento.uso === "M" ||
+        elemento.uso === "R",
+    );
 
-  trabajadores.forEach(
-    (trabajador) => {
+    if (novedades.length > 0) {
+      trabajadoresConNovedades++;
+    }
 
-      const novedades =
-        trabajador.elementos.filter(
-          (elemento) =>
-            elemento.condicion === "M" ||
-            elemento.condicion === "R" ||
-            elemento.uso === "M" ||
-            elemento.uso === "R"
-        );
+    totalNovedades += novedades.length;
 
+    // ---------------------------------------------------
+    // BUSCAR EVIDENCIA
+    // ---------------------------------------------------
 
-      if (novedades.length > 0) {
-        trabajadoresConNovedades++;
-      }
+    const tieneEvidencia = evidencias.some(
+      (evidencia) => evidencia.trabajadorId === trabajador.trabajadorId,
+    );
 
+    // ---------------------------------------------------
+    // CREAR TARJETA RESUMEN
+    // ---------------------------------------------------
 
-      totalNovedades +=
-        novedades.length;
+    const card = document.createElement("div");
 
+    card.className = "resumen-trabajador-card";
 
-      // ---------------------------------------------------
-      // BUSCAR EVIDENCIA
-      // ---------------------------------------------------
-
-      const tieneEvidencia =
-        evidencias.some(
-          (evidencia) =>
-            evidencia.trabajadorId ===
-            trabajador.trabajadorId
-        );
-
-
-      // ---------------------------------------------------
-      // CREAR TARJETA RESUMEN
-      // ---------------------------------------------------
-
-      const card =
-        document.createElement(
-          "div"
-        );
-
-      card.className =
-        "resumen-trabajador-card";
-
-
-      card.innerHTML = `
+    card.innerHTML = `
 
         <div class="resumen-trabajador-header">
 
@@ -458,11 +436,7 @@ function construirResumenTrabajadores() {
             </span>
 
             <strong>
-              ${
-                trabajador.planAccion
-                  ? "Registrado"
-                  : "No requerido"
-              }
+              ${trabajador.planAccion ? "Registrado" : "No requerido"}
             </strong>
           </div>
 
@@ -473,11 +447,7 @@ function construirResumenTrabajadores() {
             </span>
 
             <strong>
-              ${
-                tieneEvidencia
-                  ? "Registrada"
-                  : "Sin evidencia"
-              }
+              ${tieneEvidencia ? "Registrada" : "Sin evidencia"}
             </strong>
           </div>
 
@@ -485,40 +455,23 @@ function construirResumenTrabajadores() {
 
       `;
 
-
-      container.appendChild(
-        card
-      );
-
-    }
-  );
-
+    container.appendChild(card);
+  });
 
   // -------------------------------------------------------
   // TOTALES GENERALES
   // -------------------------------------------------------
 
-  asignarTextoResumen(
-    "resumen-total-trabajadores",
-    trabajadores.length
-  );
+  asignarTextoResumen("resumen-total-trabajadores", trabajadores.length);
 
-  asignarTextoResumen(
-    "resumen-trabajadores-novedad",
-    trabajadoresConNovedades
-  );
+  asignarTextoResumen("resumen-trabajadores-novedad", trabajadoresConNovedades);
 
   asignarTextoResumen(
     "resumen-trabajadores-sin-novedad",
-    trabajadores.length -
-      trabajadoresConNovedades
+    trabajadores.length - trabajadoresConNovedades,
   );
 
-  asignarTextoResumen(
-    "resumen-total-novedades",
-    totalNovedades
-  );
-
+  asignarTextoResumen("resumen-total-novedades", totalNovedades);
 }
 
 // =========================================================
@@ -526,14 +479,206 @@ function construirResumenTrabajadores() {
 // =========================================================
 
 function escaparHtml(valor) {
-
   return String(valor ?? "")
     .replaceAll("&", "&amp;")
     .replaceAll("<", "&lt;")
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#039;");
+}
 
+// =========================================================
+// CONSTRUIR INSPECCIÓN EPP
+// =========================================================
+
+function construirInspeccionEpp() {
+  const trabajadores = trabajadoresManager.leer();
+
+  const informacionGeneral = {
+    fecha: obtenerValor("fecha"),
+
+    sede: obtenerValor("sedeOperacion"),
+
+    area: obtenerValor("areaTrabajo"),
+
+    jefeArea: obtenerValor("jefeResponsable"),
+
+    cargoJefe: obtenerValor("cargoJefe"),
+
+    responsableInspeccion: obtenerValor("responsableInspeccion"),
+
+    cargoResponsable: obtenerValor("cargoResponsable"),
+  };
+
+  return {
+    tipoInspeccion: "EPP",
+
+    informacionGeneral,
+
+    trabajadores,
+  };
+}
+
+// =========================================================
+// CONSTRUIR FORMDATA EPP
+// =========================================================
+
+function construirFormDataEpp() {
+  const inspeccion = construirInspeccionEpp();
+
+  const evidencias = trabajadoresManager.obtenerEvidencias();
+
+  const formData = new FormData();
+
+  // -------------------------------------------------------
+  // PAYLOAD JSON
+  // -------------------------------------------------------
+
+  formData.append("payload", JSON.stringify(inspeccion));
+
+  // -------------------------------------------------------
+  // EVIDENCIAS DE TRABAJADORES
+  // -------------------------------------------------------
+
+  evidencias.forEach((evidencia) => {
+    /*
+      El backend trabaja con la posición actual del trabajador:
+
+      evidencia_trabajador_0
+      evidencia_trabajador_1
+      evidencia_trabajador_2
+      ...
+    */
+
+    const indice = evidencia.indice;
+
+    const archivo = evidencia.archivo;
+
+    if (!archivo) {
+      return;
+    }
+
+    const nombreCampo = `evidencia_trabajador_${indice}`;
+
+    formData.append(nombreCampo, archivo, archivo.name);
+
+    // Fecha original/modificación como respaldo del EXIF.
+    formData.append(
+      `${nombreCampo}_lastmod`,
+      String(archivo.lastModified || ""),
+    );
+  });
+
+  return formData;
+}
+
+// =========================================================
+// ENVIAR INSPECCIÓN EPP
+// =========================================================
+
+async function enviarInspeccionEpp() {
+  try {
+    const formData = construirFormDataEpp();
+
+    console.log("📤 Enviando inspección EPP...");
+
+    const respuesta = await fetch("/enviar-inspeccion-epp", {
+      method: "POST",
+      body: formData,
+    });
+
+    const data = await respuesta.json();
+
+    console.log("📥 Respuesta servidor EPP:", data);
+
+    if (!respuesta.ok || !data.ok) {
+      throw new Error(
+        data.mensaje || "No fue posible registrar la inspección EPP.",
+      );
+    }
+
+    console.log("✅ Inspección EPP registrada:", data);
+
+    return data;
+  } catch (error) {
+    console.error("❌ Error enviando inspección EPP:", error);
+
+    throw error;
+  }
+}
+
+// =========================================================
+// INICIALIZAR ENVÍO EPP
+// =========================================================
+
+function inicializarEnvioEpp() {
+  const btnEnviar = document.getElementById("btn-enviar-inspeccion-epp");
+
+  if (!btnEnviar) {
+    return;
+  }
+
+  btnEnviar.addEventListener("click", async () => {
+    try {
+      btnEnviar.disabled = true;
+      btnEnviar.textContent = "Enviando...";
+
+      const resultado = await enviarInspeccionEpp();
+
+      console.log("🎉 ENVÍO EPP COMPLETADO:", resultado);
+
+      btnEnviar.textContent = "Inspección enviada";
+    } catch (error) {
+      console.error("❌ No fue posible completar el envío EPP:", error);
+
+      btnEnviar.disabled = false;
+      btnEnviar.textContent = "Enviar inspección";
+    }
+  });
+}
+// =========================================================
+// VERIFICAR FORMDATA EPP
+// Temporal durante el desarrollo
+// =========================================================
+
+function verificarFormDataEpp() {
+  const formData = construirFormDataEpp();
+
+  console.log("========== FORMDATA EPP ==========");
+
+  for (const [clave, valor] of formData.entries()) {
+    if (valor instanceof File) {
+      console.log(clave, {
+        nombre: valor.name,
+        tipo: valor.type,
+        tamaño: valor.size,
+        lastModified: valor.lastModified,
+      });
+    } else {
+      console.log(clave, valor);
+    }
+  }
+
+  console.log("==================================");
+}
+
+// =========================================================
+// VERIFICAR DATOS FINALES EPP
+// Temporal durante el desarrollo
+// =========================================================
+
+function verificarInspeccionEpp() {
+  const inspeccion = construirInspeccionEpp();
+
+  const evidencias = trabajadoresManager.obtenerEvidencias();
+
+  console.log("======================================");
+
+  console.log("INSPECCIÓN EPP FINAL:", inspeccion);
+
+  console.log("EVIDENCIAS EPP:", evidencias);
+
+  console.log("======================================");
 }
 
 function obtenerValor(id) {

@@ -368,8 +368,6 @@
           </div>
         </dl>
 
-        </dl>
-
 <!-- =================================================
      RESUMEN GENERAL DE TRABAJADORES
 ================================================== -->
@@ -451,21 +449,31 @@
   class="resumen-secciones"
 ></div>
 
-        <h3 class="resumen-secciones-titulo">Trabajadores inspeccionados</h3>
+<!-- =================================================
+     ACCIONES FINALES
+================================================== -->
 
-        <div id="resumen-trabajadores" class="resumen-secciones"></div>
+<div class="step-actions no-pdf">
+  <button
+    type="button"
+    class="nav-btn"
+    data-step-target="2"
+  >
+    Anterior
+  </button>
 
-        <div class="step-actions no-pdf">
-          <button type="button" class="nav-btn" data-step-target="2">
-            Anterior
-          </button>
-        </div>
+  <div class="step-actions-right">
+    <button
+      id="btn-enviar-inspeccion-epp"
+      type="button"
+      class="nav-btn nav-primary"
+    >
+      Enviar inspección
+    </button>
+  </div>
+</div>
 
-        <!--
-        Todavía NO colocamos Enviar.
-        Primero construiremos trabajadores y posteriormente
-        conectaremos el backend.
-      --></section>
+</section>
     </main>
 
     <!-- =====================================================
