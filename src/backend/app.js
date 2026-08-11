@@ -62,6 +62,10 @@ app.get("/inspeccion-sst", (req, res) => {
   res.sendFile(path.resolve(VIEWS_DIR, "html", "inspeccion-sst.html"));
 });
 
+app.get("/inspeccion-epp", (req, res) => {
+  res.sendFile(path.resolve(VIEWS_DIR, "html", "inspeccion-epp.html"));
+});
+
 app.get("/aprobar/:token", (req, res) => {
   res.sendFile(path.resolve(VIEWS_DIR, "html", "aprobar.html"));
 });

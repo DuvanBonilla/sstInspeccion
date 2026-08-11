@@ -1,0 +1,358 @@
+/*
+ * inspeccion-epp.css
+ *
+ * Estilos exclusivos del formulario de Inspección EPP.
+ * La infraestructura visual general se reutiliza desde
+ * inspeccion-sst.css.
+ */
+
+
+/* =========================================================
+   CONFIGURACIÓN DE TRABAJADORES
+========================================================= */
+
+.trabajadores-config {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+
+  gap: 32px;
+
+  padding: 20px;
+
+  margin-top: 18px;
+
+  border: 1px solid var(--line);
+  border-radius: 12px;
+
+  background: #f8fafc;
+}
+
+
+.trabajadores-config-info {
+  flex: 1;
+}
+
+
+.trabajadores-config-info h3 {
+  margin: 0 0 6px;
+
+  color: var(--navy);
+
+  font-size: 16px;
+  font-weight: 800;
+}
+
+
+.trabajadores-config-info p {
+  margin: 0;
+
+  color: var(--muted);
+
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+
+/* =========================================================
+   CONTROL CANTIDAD
+========================================================= */
+
+.trabajadores-config-control {
+  display: flex;
+  align-items: flex-end;
+
+  gap: 12px;
+}
+
+
+.trabajadores-config-control .field {
+  min-width: 190px;
+}
+
+
+.trabajadores-config-control input {
+  width: 100%;
+}
+
+
+/* =========================================================
+   CONTENEDOR
+========================================================= */
+
+.trabajadores-container {
+  display: flex;
+  flex-direction: column;
+
+  gap: 18px;
+
+  margin-top: 22px;
+}
+
+
+/* =========================================================
+   ESTADO
+========================================================= */
+
+.trabajadores-estado {
+  margin-top: 16px;
+
+  padding: 12px 14px;
+
+  border-radius: 8px;
+
+  font-size: 13px;
+  font-weight: 600;
+
+  background: #eff6ff;
+  color: #1d4ed8;
+
+  border: 1px solid #bfdbfe;
+}
+
+
+/* =========================================================
+   RESPONSIVE
+========================================================= */
+
+@media (max-width: 768px) {
+
+  .trabajadores-config {
+    flex-direction: column;
+    align-items: stretch;
+
+    gap: 18px;
+  }
+
+
+  .trabajadores-config-control {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+
+  .trabajadores-config-control .field {
+    min-width: 0;
+    width: 100%;
+  }
+
+
+  .trabajadores-config-control .add-btn {
+    width: 100%;
+  }
+
+}
+
+/* =========================================================
+   TARJETA TRABAJADOR
+========================================================= */
+
+.trabajador-card {
+  overflow: hidden;
+
+  border: 1px solid var(--line);
+  border-radius: 14px;
+
+  background: #ffffff;
+
+  box-shadow:
+    0 4px 14px rgba(15, 23, 42, 0.05);
+}
+
+
+.trabajador-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  padding: 18px 20px;
+
+  border-bottom: 1px solid var(--line);
+
+  background: #f8fafc;
+}
+
+
+.trabajador-numero {
+  display: block;
+
+  margin-bottom: 3px;
+
+  color: var(--primary);
+
+  font-size: 11px;
+  font-weight: 800;
+
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+
+.trabajador-card-header h3 {
+  margin: 0;
+
+  color: var(--navy);
+
+  font-size: 16px;
+}
+
+
+/* =========================================================
+   DATOS DEL TRABAJADOR
+========================================================= */
+
+.trabajador-datos {
+  display: grid;
+
+  grid-template-columns:
+    2fr 1fr 1.5fr;
+
+  gap: 16px;
+
+  padding: 20px;
+}
+
+
+/* =========================================================
+   EPP
+========================================================= */
+
+.trabajador-epp {
+  padding: 0 20px 20px;
+}
+
+
+.trabajador-subtitulo {
+  margin-bottom: 12px;
+
+  color: var(--navy);
+
+  font-size: 14px;
+  font-weight: 800;
+}
+
+
+.epp-table-wrap {
+  overflow-x: auto;
+
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+
+
+.epp-table {
+  width: 100%;
+
+  border-collapse: collapse;
+}
+
+
+.epp-table th,
+.epp-table td {
+  padding: 10px 12px;
+
+  border-bottom: 1px solid var(--line);
+
+  text-align: center;
+}
+
+
+.epp-table th {
+  background: #f8fafc;
+
+  color: var(--navy);
+
+  font-size: 12px;
+  font-weight: 800;
+}
+
+
+.epp-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+
+.epp-table th:first-child,
+.epp-table td:first-child {
+  text-align: left;
+}
+
+
+.epp-nombre {
+  color: var(--text);
+
+  font-size: 13px;
+  font-weight: 600;
+}
+
+
+.epp-calificacion {
+  width: 90px;
+
+  padding: 7px 8px;
+}
+
+
+/* =========================================================
+   PLAN / OBSERVACIONES
+========================================================= */
+
+.trabajador-adicional {
+  display: grid;
+
+  grid-template-columns:
+    repeat(2, minmax(0, 1fr));
+
+  gap: 16px;
+
+  padding: 20px;
+
+  border-top: 1px solid var(--line);
+}
+
+
+.trabajador-adicional textarea {
+  width: 100%;
+
+  resize: vertical;
+}
+
+
+/* =========================================================
+   CONSTANCIA
+========================================================= */
+
+.trabajador-evidencia {
+  padding: 18px 20px;
+
+  border-top: 1px solid var(--line);
+
+  background: #f8fafc;
+}
+
+
+.trabajador-evidencia p {
+  margin: 0;
+
+  color: var(--muted);
+
+  font-size: 12px;
+}
+
+
+/* =========================================================
+   RESPONSIVE TRABAJADOR
+========================================================= */
+
+@media (max-width: 768px) {
+
+  .trabajador-datos {
+    grid-template-columns: 1fr;
+  }
+
+
+  .trabajador-adicional {
+    grid-template-columns: 1fr;
+  }
+
+}
