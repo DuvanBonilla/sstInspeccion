@@ -1,9 +1,3 @@
-/**
- * trabajadoresEpp.js
- *
- * Gestiona dinámicamente los trabajadores incluidos
- * dentro de una inspección EPP.
- */
 
 import { optimizarImagen } from "./imageOptimizer.js";
 
@@ -37,9 +31,7 @@ export function createTrabajadoresEppManager({
 
   const evidencias = new Map();
 
-  // =======================================================
-  // INICIALIZACIÓN
-  // =======================================================
+
 
   function init() {
     generarButton?.addEventListener("click", generarDesdeInput);
@@ -67,9 +59,7 @@ export function createTrabajadoresEppManager({
     }
   }
 
-  // =======================================================
-  // ACTUALIZAR NOMBRE DEL RESUMEN
-  // =======================================================
+
 
   function actualizarNombreResumen(input) {
     const tarjeta = input.closest(".trabajador-card");
@@ -89,40 +79,31 @@ export function createTrabajadoresEppManager({
     resumen.textContent = nombre || "Sin diligenciar";
   }
 
-  // =======================================================
-  // MANEJAR EVIDENCIA DEL TRABAJADOR
-  // =======================================================
+
 
   async function manejarCambioEvidencia(event) {
     const input = event.target;
 
-    // Solo procesar cambios provenientes del input
-    // de evidencia fotográfica.
+
     if (!input.matches('[data-role="evidencia"]')) {
       return;
     }
 
-    // Obtener la tarjeta del trabajador al que
-    // pertenece esta evidencia.
     const tarjeta = input.closest(".trabajador-card");
 
     if (!tarjeta) {
       return;
     }
 
-    // Obtener el índice del trabajador.
+
     const trabajadorId = Number(tarjeta.dataset.trabajadorId);
 
-    // Elemento visual donde mostramos el estado
-    // de la evidencia.
     const estado = tarjeta.querySelector('[data-role="evidenciaEstado"]');
 
-    // Obtener el archivo seleccionado.
+
     const archivo = input.files?.[0];
 
-    // -------------------------------------------------------
-    // SI EL USUARIO QUITA / CANCELA LA EVIDENCIA
-    // -------------------------------------------------------
+
 
     if (!archivo) {
       evidencias.delete(trabajadorId);

@@ -164,9 +164,9 @@ function navegarAPaso(destino) {
   if (destino === 3) {
     construirResumenGeneral();
 
-    const trabajadores = trabajadoresManager.leer();
+    construirResumenGeneral();
 
-    console.log("Trabajadores EPP:", trabajadores);
+    construirResumenTrabajadores();
   }
 
   pasoActual = destino;
@@ -291,6 +291,249 @@ function construirResumenGeneral() {
     "resumen-cargo-responsable",
     obtenerValor("cargoResponsable"),
   );
+}
+
+// =========================================================
+// RESUMEN TRABAJADORES EPP
+// =========================================================
+
+function construirResumenTrabajadores() {
+
+  const trabajadores =
+    trabajadoresManager.leer();
+
+  const evidencias =
+    trabajadoresManager.obtenerEvidencias();
+
+
+  // -------------------------------------------------------
+  // CONTENEDOR
+  // -------------------------------------------------------
+
+  const container =
+    document.getElementById(
+      "resumen-trabajadores"
+    );
+
+  if (!container) {
+    return;
+  }
+
+
+  // -------------------------------------------------------
+  // LIMPIAR RESUMEN ANTERIOR
+  // -------------------------------------------------------
+
+  container.innerHTML = "";
+
+
+  // -------------------------------------------------------
+  // CALCULAR TOTALES
+  // -------------------------------------------------------
+
+  let totalNovedades = 0;
+
+  let trabajadoresConNovedades = 0;
+
+
+  trabajadores.forEach(
+    (trabajador) => {
+
+      const novedades =
+        trabajador.elementos.filter(
+          (elemento) =>
+            elemento.condicion === "M" ||
+            elemento.condicion === "R" ||
+            elemento.uso === "M" ||
+            elemento.uso === "R"
+        );
+
+
+      if (novedades.length > 0) {
+        trabajadoresConNovedades++;
+      }
+
+
+      totalNovedades +=
+        novedades.length;
+
+
+      // ---------------------------------------------------
+      // BUSCAR EVIDENCIA
+      // ---------------------------------------------------
+
+      const tieneEvidencia =
+        evidencias.some(
+          (evidencia) =>
+            evidencia.trabajadorId ===
+            trabajador.trabajadorId
+        );
+
+
+      // ---------------------------------------------------
+      // CREAR TARJETA RESUMEN
+      // ---------------------------------------------------
+
+      const card =
+        document.createElement(
+          "div"
+        );
+
+      card.className =
+        "resumen-trabajador-card";
+
+
+      card.innerHTML = `
+
+        <div class="resumen-trabajador-header">
+
+          <div>
+
+            <strong>
+              Trabajador ${trabajador.indice + 1}
+            </strong>
+
+            <span class="resumen-trabajador-nombre">
+              ${escaparHtml(trabajador.nombre)}
+            </span>
+
+          </div>
+
+          <span class="resumen-estado">
+            Completo
+          </span>
+
+        </div>
+
+
+        <div class="resumen-trabajador-grid">
+
+          <div>
+            <span class="resumen-label">
+              Código
+            </span>
+
+            <strong>
+              ${escaparHtml(trabajador.codigo)}
+            </strong>
+          </div>
+
+
+          <div>
+            <span class="resumen-label">
+              Labor / Cargo
+            </span>
+
+            <strong>
+              ${escaparHtml(trabajador.cargo)}
+            </strong>
+          </div>
+
+
+          <div>
+            <span class="resumen-label">
+              EPP evaluados
+            </span>
+
+            <strong>
+              ${trabajador.elementos.length}
+            </strong>
+          </div>
+
+
+          <div>
+            <span class="resumen-label">
+              Novedades
+            </span>
+
+            <strong>
+              ${novedades.length}
+            </strong>
+          </div>
+
+
+          <div>
+            <span class="resumen-label">
+              Plan de acción
+            </span>
+
+            <strong>
+              ${
+                trabajador.planAccion
+                  ? "Registrado"
+                  : "No requerido"
+              }
+            </strong>
+          </div>
+
+
+          <div>
+            <span class="resumen-label">
+              Evidencia
+            </span>
+
+            <strong>
+              ${
+                tieneEvidencia
+                  ? "Registrada"
+                  : "Sin evidencia"
+              }
+            </strong>
+          </div>
+
+        </div>
+
+      `;
+
+
+      container.appendChild(
+        card
+      );
+
+    }
+  );
+
+
+  // -------------------------------------------------------
+  // TOTALES GENERALES
+  // -------------------------------------------------------
+
+  asignarTextoResumen(
+    "resumen-total-trabajadores",
+    trabajadores.length
+  );
+
+  asignarTextoResumen(
+    "resumen-trabajadores-novedad",
+    trabajadoresConNovedades
+  );
+
+  asignarTextoResumen(
+    "resumen-trabajadores-sin-novedad",
+    trabajadores.length -
+      trabajadoresConNovedades
+  );
+
+  asignarTextoResumen(
+    "resumen-total-novedades",
+    totalNovedades
+  );
+
+}
+
+// =========================================================
+// ESCAPAR TEXTO PARA HTML
+// =========================================================
+
+function escaparHtml(valor) {
+
+  return String(valor ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+
 }
 
 function obtenerValor(id) {

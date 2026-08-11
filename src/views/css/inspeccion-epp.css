@@ -406,3 +406,286 @@
 .btn-eliminar-trabajador {
   flex-shrink: 0;
 }
+
+/* =========================================================
+   RESUMEN FINAL EPP
+========================================================= */
+
+.resumen-epp-totales {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+
+  margin: 16px 0 24px;
+}
+
+
+/* =========================================================
+   INDICADORES DEL RESUMEN
+========================================================= */
+
+.resumen-epp-indicador {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+
+  min-height: 86px;
+
+  padding: 16px 18px;
+
+  border: 1px solid var(--line);
+  border-radius: 12px;
+
+  background: #f8fafc;
+}
+
+
+.resumen-epp-indicador-label {
+  margin-bottom: 6px;
+
+  color: var(--muted);
+
+  font-size: 12px;
+  font-weight: 600;
+}
+
+
+.resumen-epp-indicador-valor {
+  color: var(--navy);
+
+  font-size: 24px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+
+/* =========================================================
+   CONTENEDOR DE TRABAJADORES
+========================================================= */
+
+#resumen-trabajadores {
+  display: flex;
+  flex-direction: column;
+
+  gap: 12px;
+
+  margin-top: 14px;
+}
+
+
+/* =========================================================
+   TARJETA RESUMEN TRABAJADOR
+========================================================= */
+
+.resumen-trabajador-card {
+  overflow: hidden;
+
+  border: 1px solid var(--line);
+  border-radius: 12px;
+
+  background: #ffffff;
+
+  box-shadow:
+    0 2px 8px rgba(15, 23, 42, 0.04);
+}
+
+
+/* =========================================================
+   CABECERA DEL TRABAJADOR
+========================================================= */
+
+.resumen-trabajador-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  gap: 16px;
+
+  padding: 14px 18px;
+
+  border-bottom: 1px solid var(--line);
+
+  background: #f8fafc;
+}
+
+
+.resumen-trabajador-header > div {
+  display: flex;
+  align-items: center;
+
+  gap: 10px;
+
+  min-width: 0;
+}
+
+
+.resumen-trabajador-header strong {
+  flex-shrink: 0;
+
+  color: var(--primary);
+
+  font-size: 11px;
+  font-weight: 800;
+
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+
+.resumen-trabajador-nombre {
+  overflow: hidden;
+
+  color: var(--navy);
+
+  font-size: 15px;
+  font-weight: 800;
+
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+
+/* =========================================================
+   ESTADO
+========================================================= */
+
+.resumen-estado {
+  flex-shrink: 0;
+
+  padding: 5px 10px;
+
+  border-radius: 999px;
+
+  background: #ecfdf5;
+  color: #047857;
+
+  font-size: 11px;
+  font-weight: 800;
+
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+
+/* =========================================================
+   DATOS RESUMIDOS DEL TRABAJADOR
+========================================================= */
+
+.resumen-trabajador-grid {
+  display: grid;
+
+  grid-template-columns:
+    repeat(6, minmax(0, 1fr));
+
+  gap: 0;
+
+  padding: 16px 18px;
+}
+
+
+.resumen-trabajador-grid > div {
+  min-width: 0;
+
+  padding: 0 14px;
+
+  border-right: 1px solid var(--line);
+}
+
+
+.resumen-trabajador-grid > div:first-child {
+  padding-left: 0;
+}
+
+
+.resumen-trabajador-grid > div:last-child {
+  padding-right: 0;
+  border-right: 0;
+}
+
+
+.resumen-label {
+  display: block;
+
+  margin-bottom: 5px;
+
+  color: var(--muted);
+
+  font-size: 11px;
+  font-weight: 600;
+}
+
+
+.resumen-trabajador-grid strong {
+  display: block;
+
+  overflow: hidden;
+
+  color: var(--navy);
+
+  font-size: 13px;
+  font-weight: 700;
+
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+
+/* =========================================================
+   RESPONSIVE RESUMEN
+========================================================= */
+
+@media (max-width: 1000px) {
+
+  .resumen-epp-totales {
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr));
+  }
+
+
+  .resumen-trabajador-grid {
+    grid-template-columns:
+      repeat(3, minmax(0, 1fr));
+
+    row-gap: 18px;
+  }
+
+
+  .resumen-trabajador-grid > div {
+    border-right: 0;
+    padding: 0;
+  }
+
+}
+
+
+@media (max-width: 600px) {
+
+  .resumen-epp-totales {
+    grid-template-columns: 1fr;
+  }
+
+
+  .resumen-trabajador-header {
+    align-items: flex-start;
+  }
+
+
+  .resumen-trabajador-header > div {
+    flex-direction: column;
+    align-items: flex-start;
+
+    gap: 3px;
+  }
+
+
+  .resumen-trabajador-grid {
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr));
+  }
+
+
+  .resumen-trabajador-nombre {
+    white-space: normal;
+  }
+
+}
