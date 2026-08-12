@@ -39,7 +39,11 @@ const {
   resolverCorreoDestino,
   construirHtmlCorreo,
 } = require("./pdfInspeccion.controller");
-const { crearPdfInspeccionEpp } = require("./pdfInspeccionEpp.controller");
+const {
+  crearPdfInspeccionEpp,
+  resolverCorreoDestinoEpp,
+  construirHtmlCorreoEpp,
+} = require("./pdfInspeccionEpp.controller");
 const { optimizarPdf } = require("../utils/pdfOptimizer");
 const {
   recuperarLinksAprobacion,
@@ -561,7 +565,19 @@ async function construirEvidenciasEppDesdeOneDrive(trabajadores) {
 }
 
 // Regenera el PDF (con las 3 aprobaciones reales), lo archiva en OneDrive y envía el correo final.
+// =========================================================
+// FINALIZAR INSPECCIÓN
+//
+// IMPORTANTE:
+// Esta función solamente es llamada cuando guardarAprobacion()
+// confirma que Inspector + Jefe + COPASST ya aprobaron.
+// =========================================================
+
 async function finalizarInspeccion(inspeccionId) {
+  // =======================================================
+  // 1. OBTENER INSPECCIÓN COMPLETA
+  // =======================================================
+
   const completa = await obtenerInspeccionCompleta(inspeccionId);
 
   if (!completa) {
@@ -570,110 +586,408 @@ async function finalizarInspeccion(inspeccionId) {
 
   const row = completa.inspeccion;
 
-  const [ext, cam, sen, eqp, bot] = await Promise.all([
-    construirEvidenciasDesdeOneDrive(completa.extintores),
-    construirEvidenciasDesdeOneDrive(completa.camillas),
-    construirEvidenciasDesdeOneDrive(completa.senalizaciones),
-    construirEvidenciasDesdeOneDrive(completa.equiposTecnologicos),
-    construirEvidenciasDesdeOneDrive(completa.botiquines),
-  ]);
+  // =======================================================
+  // 2. IDENTIFICAR TIPO
+  // =======================================================
 
-  const data = {
-    inspeccionId: row.inspeccion_id,
-    numInspeccion: Number(row.num_inspeccion),
-    fecha: row.fecha,
-    sedeOperacion: row.sede_operacion,
-    areaTrabajo: row.area_trabajo,
-    jefeResponsable: row.jefe_responsable,
-    cargoJefe: row.cargo_jefe,
-    responsableInspeccion: row.responsable_inspeccion,
-    cargoResponsable: row.cargo_responsable,
-    extintores: completa.extintores,
-    camillas: completa.camillas,
-    senalizaciones: completa.senalizaciones,
-    equiposTecnologicos: completa.equiposTecnologicos,
-    botiquines: completa.botiquines,
-  };
+  const tipoInspeccion = String(row.tipo_inspeccion || "SST").toUpperCase();
 
-  const aprobaciones = {
-    inspector: { nombre: row.aprobacion_inspector_nombre },
-    jefe: { nombre: row.aprobacion_jefe_nombre },
-    copasst: { nombre: row.aprobacion_copasst_nombre },
-  };
-
-  // ==========================================================
-  // 1. Generar el PDF con PDFKit
-  // ==========================================================
-  const pdfGenerado = await crearPdfInspeccionExtintor(
-    data,
-    ext.evidenciasPorIndex,
-    cam.evidenciasPorIndex,
-    sen.evidenciasPorIndex,
-    eqp.evidenciasPorIndex,
-    bot.evidenciasPorIndex,
-    {},
-    {
-      aprobaciones,
-      fechasPrecomputadas: {
-        extintores: ext.fechas,
-        camillas: cam.fechas,
-        senalizaciones: sen.fechas,
-        equipos: eqp.fechas,
-        botiquines: bot.fechas,
-      },
-    },
+  console.log(
+    `[aprobaciones] Finalizando inspección ${row.inspeccion_id} - Tipo: ${tipoInspeccion}`,
   );
 
-  // ==========================================================
-  // 2. Optimizar el PDF
-  // Si Ghostscript falla, automáticamente devolverá pdfGenerado.
-  // ==========================================================
+  // =======================================================
+  // 3. APROBACIONES
+  // =======================================================
+
+  const aprobaciones = {
+    inspector: {
+      nombre: row.aprobacion_inspector_nombre,
+    },
+
+    jefe: {
+      nombre: row.aprobacion_jefe_nombre,
+    },
+
+    copasst: {
+      nombre: row.aprobacion_copasst_nombre,
+    },
+  };
+
+  // =======================================================
+  // 4. SEGURIDAD ADICIONAL
+  //
+  // guardarAprobacion() ya valida las 3 aprobaciones.
+  // Esta validación evita que finalizarInspeccion()
+  // genere un PDF final si fuese llamada manualmente.
+  // =======================================================
+
+  const aprobacionesCompletas = Boolean(
+    row.aprobacion_inspector_nombre &&
+    row.aprobacion_jefe_nombre &&
+    row.aprobacion_copasst_nombre,
+  );
+
+  if (!aprobacionesCompletas) {
+    throw new Error(
+      `La inspección ${row.inspeccion_id} todavía no tiene las 3 aprobaciones.`,
+    );
+  }
+
+  // =======================================================
+  // 5. GENERAR PDF SEGÚN TIPO
+  // =======================================================
+
+  let pdfGenerado;
+
+  // Guardaremos los trabajadores EPP aquí porque después
+  // los necesitaremos para construir el correo EPP.
+  let trabajadoresEpp = [];
+
+  // =======================================================
+  // EPP
+  // =======================================================
+
+  if (tipoInspeccion === "EPP") {
+    trabajadoresEpp = Array.isArray(completa.trabajadores)
+      ? completa.trabajadores
+      : [];
+
+    console.log(
+      `[EPP] Generando PDF final con ${trabajadoresEpp.length} trabajadores`,
+    );
+
+    // -----------------------------------------------------
+    // EVIDENCIAS DE LOS TRABAJADORES
+    // -----------------------------------------------------
+
+    const evidenciasPorTrabajador =
+      await construirEvidenciasEppDesdeOneDrive(trabajadoresEpp);
+
+    // -----------------------------------------------------
+    // INFORMACIÓN GENERAL EPP
+    // -----------------------------------------------------
+
+    const general = {
+      inspeccionId: row.inspeccion_id,
+
+      numInspeccion: Number(row.num_inspeccion),
+
+      fecha: row.fecha,
+
+      sedeOperacion: row.sede_operacion,
+
+      areaTrabajo: row.area_trabajo,
+
+      jefeResponsable: row.jefe_responsable,
+
+      cargoJefe: row.cargo_jefe,
+
+      responsableInspeccion: row.responsable_inspeccion,
+
+      cargoResponsable: row.cargo_responsable,
+    };
+
+    // -----------------------------------------------------
+    // PDF FINAL EPP
+    // -----------------------------------------------------
+
+    pdfGenerado = await crearPdfInspeccionEpp(
+      {
+        general,
+        trabajadores: trabajadoresEpp,
+      },
+
+      evidenciasPorTrabajador,
+
+      {
+        aprobaciones,
+      },
+    );
+
+    console.log(`[EPP] PDF final generado: ${row.inspeccion_id}`);
+  }
+
+  // =======================================================
+  // SST
+  // =======================================================
+  else {
+    // -----------------------------------------------------
+    // DESCARGAR EVIDENCIAS SST
+    // -----------------------------------------------------
+
+    const [ext, cam, sen, eqp, bot] = await Promise.all([
+      construirEvidenciasDesdeOneDrive(completa.extintores),
+
+      construirEvidenciasDesdeOneDrive(completa.camillas),
+
+      construirEvidenciasDesdeOneDrive(completa.senalizaciones),
+
+      construirEvidenciasDesdeOneDrive(completa.equiposTecnologicos),
+
+      construirEvidenciasDesdeOneDrive(completa.botiquines),
+    ]);
+
+    // -----------------------------------------------------
+    // DATOS SST
+    // -----------------------------------------------------
+
+    const data = {
+      inspeccionId: row.inspeccion_id,
+
+      numInspeccion: Number(row.num_inspeccion),
+
+      fecha: row.fecha,
+
+      sedeOperacion: row.sede_operacion,
+
+      areaTrabajo: row.area_trabajo,
+
+      jefeResponsable: row.jefe_responsable,
+
+      cargoJefe: row.cargo_jefe,
+
+      responsableInspeccion: row.responsable_inspeccion,
+
+      cargoResponsable: row.cargo_responsable,
+
+      extintores: completa.extintores,
+
+      camillas: completa.camillas,
+
+      senalizaciones: completa.senalizaciones,
+
+      equiposTecnologicos: completa.equiposTecnologicos,
+
+      botiquines: completa.botiquines,
+    };
+
+    // -----------------------------------------------------
+    // PDF FINAL SST
+    // -----------------------------------------------------
+
+    pdfGenerado = await crearPdfInspeccionExtintor(
+      data,
+
+      ext.evidenciasPorIndex,
+
+      cam.evidenciasPorIndex,
+
+      sen.evidenciasPorIndex,
+
+      eqp.evidenciasPorIndex,
+
+      bot.evidenciasPorIndex,
+
+      {},
+
+      {
+        aprobaciones,
+
+        fechasPrecomputadas: {
+          extintores: ext.fechas,
+
+          camillas: cam.fechas,
+
+          senalizaciones: sen.fechas,
+
+          equipos: eqp.fechas,
+
+          botiquines: bot.fechas,
+        },
+      },
+    );
+
+    console.log(`[SST] PDF final generado: ${row.inspeccion_id}`);
+  }
+
+  // =======================================================
+  // 6. OPTIMIZAR PDF
+  // =======================================================
+
+  console.log(
+    `[PDF ${tipoInspeccion}] Tamaño ANTES de optimizar:`,
+    `${(pdfGenerado.length / 1024 / 1024).toFixed(2)} MB`,
+  );
+
   const pdfFinal = await optimizarPdf(pdfGenerado, {
     profile: "inspection",
     fileName: `${row.inspeccion_id}.pdf`,
   });
 
-  // ==========================================================
-  // 3. Subir el PDF optimizado a OneDrive
-  // ==========================================================
+  console.log(
+    `[PDF ${tipoInspeccion}] Tamaño DESPUÉS de optimizar:`,
+    `${(pdfFinal.length / 1024 / 1024).toFixed(2)} MB`,
+  );
+
+  // =======================================================
+  // 7. SUBIR PDF FINAL A ONEDRIVE
+  // =======================================================
+
   const webUrl = await subirPdfAOneDrive(
     pdfFinal,
     row.inspeccion_id,
     row.sede_operacion,
   );
 
-  // ==========================================================
-  // 4. Enviar correo con el mismo PDF optimizado
-  // ==========================================================
-  const correoDestino = resolverCorreoDestino(row.sede_operacion, null);
+  // =======================================================
+  // 8. RESOLVER CORREO DESTINO
+  // =======================================================
+
+  const correoDestino =
+    tipoInspeccion === "EPP"
+      ? resolverCorreoDestinoEpp(row.sede_operacion, null)
+      : resolverCorreoDestino(row.sede_operacion, null);
+
+  // =======================================================
+  // 9. CONSTRUIR Y ENVIAR CORREO
+  // =======================================================
 
   if (correoDestino) {
-    const html = construirHtmlCorreo({
-      inspeccionId: row.inspeccion_id,
-      numInspeccion: Number(row.num_inspeccion),
-      fecha: row.fecha,
-      sedeOperacion: row.sede_operacion,
-      areaTrabajo: row.area_trabajo,
-      jefeResponsable: row.jefe_responsable,
-      responsableInspeccion: row.responsable_inspeccion,
-      cargoResponsable: row.cargo_responsable,
-      webUrl,
-      titulo: "Inspección aprobada",
-    });
+    let html;
+
+    // =====================================================
+    // CORREO EPP
+    // =====================================================
+
+    if (tipoInspeccion === "EPP") {
+      // ---------------------------------------------------
+      // CALCULAR RESUMEN EPP
+      // ---------------------------------------------------
+
+      let trabajadoresConNovedad = 0;
+      let totalNovedades = 0;
+
+      for (const trabajador of trabajadoresEpp) {
+        const elementos = Array.isArray(trabajador.elementos)
+          ? trabajador.elementos
+          : [];
+
+        let tieneNovedad = false;
+
+        for (const elemento of elementos) {
+          const condicion = String(elemento.condicion || "").toUpperCase();
+
+          const uso = String(elemento.uso || "").toUpperCase();
+
+          /*
+           * Consideramos novedad cualquier resultado
+           * diferente de B (Bueno) o NA (No aplica).
+           *
+           * M = Malo
+           * R = Regular
+           */
+
+          const novedadCondicion = condicion === "M" || condicion === "R";
+
+          const novedadUso = uso === "M" || uso === "R";
+
+          if (novedadCondicion || novedadUso) {
+            totalNovedades++;
+            tieneNovedad = true;
+          }
+        }
+
+        if (tieneNovedad) {
+          trabajadoresConNovedad++;
+        }
+      }
+
+      const totalTrabajadores = trabajadoresEpp.length;
+
+      const trabajadoresSinNovedad = totalTrabajadores - trabajadoresConNovedad;
+
+      // ---------------------------------------------------
+      // HTML EPP
+      // ---------------------------------------------------
+
+      html = construirHtmlCorreoEpp({
+        inspeccionId: row.inspeccion_id,
+
+        numInspeccion: Number(row.num_inspeccion),
+
+        fecha: row.fecha,
+
+        sedeOperacion: row.sede_operacion,
+
+        areaTrabajo: row.area_trabajo,
+
+        responsableInspeccion: row.responsable_inspeccion,
+
+        totalTrabajadores,
+
+        trabajadoresConNovedad,
+
+        trabajadoresSinNovedad,
+
+        totalNovedades,
+
+        aprobaciones,
+
+        webUrl,
+      });
+    }
+
+    // =====================================================
+    // CORREO SST
+    // =====================================================
+    else {
+      html = construirHtmlCorreo({
+        inspeccionId: row.inspeccion_id,
+
+        numInspeccion: Number(row.num_inspeccion),
+
+        fecha: row.fecha,
+
+        sedeOperacion: row.sede_operacion,
+
+        areaTrabajo: row.area_trabajo,
+
+        jefeResponsable: row.jefe_responsable,
+
+        responsableInspeccion: row.responsable_inspeccion,
+
+        cargoResponsable: row.cargo_responsable,
+
+        webUrl,
+
+        titulo: "Inspección SST aprobada",
+      });
+    }
+
+    // =====================================================
+    // ENVÍO GRAPH
+    // =====================================================
 
     await enviarCorreoPorGraph({
       to: correoDestino,
-      subject: `Inspección SST aprobada N.° ${row.num_inspeccion} – ${row.inspeccion_id}`,
+
+      subject: `Inspección ${tipoInspeccion} aprobada N.° ${row.num_inspeccion} – ${row.inspeccion_id}`,
+
       html,
+
       pdfBuffer: pdfFinal,
+
       nombre: `${row.inspeccion_id}.pdf`,
     });
   }
 
-  // ==========================================================
-  // 5. Marcar la inspección como enviada
-  // ==========================================================
+  // =======================================================
+  // 10. MARCAR COMO ENVIADA
+  //
+  // Solo ocurre después de:
+  // - 3 aprobaciones
+  // - PDF generado
+  // - PDF optimizado
+  // - PDF subido a OneDrive
+  // - correo procesado
+  // =======================================================
+
   await marcarInspeccionEnviada(row.inspeccion_id, webUrl);
+
+  console.log(
+    `[aprobaciones] Inspección ${row.inspeccion_id} finalizada y marcada como ENVIADA`,
+  );
 }
 
 module.exports = {
