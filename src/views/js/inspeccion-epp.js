@@ -39,6 +39,8 @@ const fecha = document.getElementById("fecha");
 
 const btnSalir = document.getElementById("btn-salir");
 
+const btnLogoInicio = document.getElementById("btn-logo-inicio");
+
 const cancelarModal = document.getElementById("cancelar-modal");
 
 const btnCancelarNo = document.getElementById("btn-cancelar-no");
@@ -89,6 +91,8 @@ document.addEventListener("DOMContentLoaded", () => {
   inicializarEnvioEpp();
 
   actualizarPaso();
+
+  inicializarAccionesModalExito();
 });
 
 // =========================================================
@@ -110,6 +114,18 @@ function inicializarFecha() {
   });
 }
 
+function inicializarAccionesModalExito() {
+  const btnInicio = document.getElementById("btn-modal-inicio");
+  const btnNueva = document.getElementById("btn-modal-nueva");
+
+  btnInicio?.addEventListener("click", () => {
+    window.location.href = "/";
+  });
+
+  btnNueva?.addEventListener("click", () => {
+    window.location.href = "/inspeccion-epp";
+  });
+}
 // =========================================================
 // NAVEGACIÓN
 // =========================================================
@@ -630,6 +646,27 @@ async function enviarInspeccionEpp() {
 // =========================================================
 // INICIALIZAR ENVÍO EPP
 // =========================================================
+// =========================================================
+// CONSTRUIR LINKS DE APROBACIÓN EPP
+// =========================================================
+
+function construirLinksAprobacionEpp(tokens) {
+  if (!tokens) {
+    return null;
+  }
+
+  const baseUrl = window.location.origin;
+
+  return {
+    jefe: tokens.jefe ? `${baseUrl}/aprobar/${tokens.jefe}` : null,
+
+    copasst: tokens.copasst ? `${baseUrl}/aprobar/${tokens.copasst}` : null,
+  };
+}
+
+// =========================================================
+// INICIALIZAR ENVÍO EPP
+// =========================================================
 
 function inicializarEnvioEpp() {
   const btnEnviar = document.getElementById("btn-enviar-inspeccion-epp");
@@ -640,16 +677,62 @@ function inicializarEnvioEpp() {
 
   btnEnviar.addEventListener("click", async () => {
     try {
+      // ---------------------------------------------------
+      // BLOQUEAR BOTÓN
+      // ---------------------------------------------------
+
       btnEnviar.disabled = true;
       btnEnviar.textContent = "Enviando...";
+
+      // ---------------------------------------------------
+      // MOSTRAR MODAL DE CARGA
+      // ---------------------------------------------------
+
+      if (typeof window.mostrarModal === "function") {
+        window.mostrarModal("cargando");
+      }
+
+      // ---------------------------------------------------
+      // ENVIAR INSPECCIÓN
+      // ---------------------------------------------------
 
       const resultado = await enviarInspeccionEpp();
 
       console.log("🎉 ENVÍO EPP COMPLETADO:", resultado);
 
+      // ---------------------------------------------------
+      // CONSTRUIR LINKS DE APROBACIÓN
+      // ---------------------------------------------------
+
+      const links = construirLinksAprobacionEpp(resultado.tokens);
+
+      console.log("🔗 Links aprobación EPP:", links);
+
+      // ---------------------------------------------------
+      // MOSTRAR MODAL DE ÉXITO
+      // ---------------------------------------------------
+
+      if (typeof window.mostrarModal === "function") {
+        window.mostrarModal(
+          "exito",
+          resultado.inspeccionId,
+          resultado.numInspeccion,
+          links,
+          "crear",
+        );
+      }
+
       btnEnviar.textContent = "Inspección enviada";
     } catch (error) {
       console.error("❌ No fue posible completar el envío EPP:", error);
+
+      // ---------------------------------------------------
+      // MODAL ERROR
+      // ---------------------------------------------------
+
+      if (typeof window.mostrarModal === "function") {
+        window.mostrarModal("error");
+      }
 
       btnEnviar.disabled = false;
       btnEnviar.textContent = "Enviar inspección";
@@ -726,31 +809,42 @@ function asignarTextoResumen(id, valor) {
 // =========================================================
 
 function inicializarSalida() {
+  // Botón de salida de la esquina superior derecha
   btnSalir?.addEventListener("click", abrirModalSalida);
 
+  // Logo de Cargoban de la esquina superior izquierda
+  btnLogoInicio?.addEventListener("click", abrirModalSalida);
+
+  // Continuar trabajando
   btnCancelarNo?.addEventListener("click", cerrarModalSalida);
 
+  // Confirmar salida
   btnCancelarSi?.addEventListener("click", () => {
     window.location.href = "/";
   });
 
+  // Cerrar pulsando fuera del cuadro
   cancelarModal?.addEventListener("click", (event) => {
     if (event.target === cancelarModal) {
       cerrarModalSalida();
     }
   });
 
+  // Cerrar con ESC
   document.addEventListener("keydown", (event) => {
-    if (event.key === "Escape" && cancelarModal?.classList.contains("open")) {
+    if (
+      event.key === "Escape" &&
+      cancelarModal?.classList.contains("visible")
+    ) {
       cerrarModalSalida();
     }
   });
 }
 
 function abrirModalSalida() {
-  cancelarModal?.classList.add("open");
+  cancelarModal?.classList.add("visible");
 }
 
 function cerrarModalSalida() {
-  cancelarModal?.classList.remove("open");
+  cancelarModal?.classList.remove("visible");
 }

@@ -42,25 +42,22 @@
 
         <nav class="progress" aria-label="Progreso del formulario">
           <div class="step-indicator active" data-step-indicator="1">
-            <span class="step-badge"> 1 </span>
-
-            <span class="step-label"> Info. General </span>
+            <span class="step-badge">1</span>
+            <span class="step-label">Info. General</span>
           </div>
 
           <div class="step-line"></div>
 
           <div class="step-indicator" data-step-indicator="2">
-            <span class="step-badge"> 2 </span>
-
-            <span class="step-label"> Inspección EPP </span>
+            <span class="step-badge">2</span>
+            <span class="step-label">Inspección EPP</span>
           </div>
 
           <div class="step-line"></div>
 
           <div class="step-indicator" data-step-indicator="3">
-            <span class="step-badge"> 3 </span>
-
-            <span class="step-label"> Finalizar </span>
+            <span class="step-badge">3</span>
+            <span class="step-label">Finalizar</span>
           </div>
         </nav>
 
@@ -237,8 +234,8 @@
         </div>
 
         <!-- =================================================
-     CONFIGURACIÓN DE TRABAJADORES
-================================================== -->
+           CONFIGURACIÓN DE TRABAJADORES
+      ================================================== -->
 
         <div class="trabajadores-config">
           <div class="trabajadores-config-info">
@@ -272,14 +269,14 @@
         </div>
 
         <!-- =================================================
-     MENSAJE DE ESTADO
-================================================== -->
+           MENSAJE DE ESTADO
+      ================================================== -->
 
         <div id="trabajadores-estado" class="trabajadores-estado hidden"></div>
 
         <!-- =================================================
-     CONTENEDOR DE TRABAJADORES
-================================================== -->
+           CONTENEDOR DE TRABAJADORES
+      ================================================== -->
 
         <div id="acciones-trabajadores" class="acciones-trabajadores hidden">
           <button id="btn-agregar-trabajador" type="button" class="add-btn">
@@ -327,157 +324,294 @@
         <dl class="resumen-general">
           <div>
             <dt>Fecha</dt>
-
             <dd id="resumen-fecha"></dd>
           </div>
 
           <div>
             <dt>Sede</dt>
-
             <dd id="resumen-sede"></dd>
           </div>
 
           <div>
             <dt>Área de trabajo</dt>
-
             <dd id="resumen-area"></dd>
           </div>
 
           <div>
             <dt>Jefe de área</dt>
-
             <dd id="resumen-jefe"></dd>
           </div>
 
           <div>
             <dt>Cargo jefe</dt>
-
             <dd id="resumen-cargo-jefe"></dd>
           </div>
 
           <div>
             <dt>Responsable de la inspección</dt>
-
             <dd id="resumen-responsable"></dd>
           </div>
 
           <div>
             <dt>Cargo responsable</dt>
-
             <dd id="resumen-cargo-responsable"></dd>
           </div>
         </dl>
 
-<!-- =================================================
-     RESUMEN GENERAL DE TRABAJADORES
-================================================== -->
+        <!-- =================================================
+           RESUMEN GENERAL DE TRABAJADORES
+      ================================================== -->
 
-<h3 class="resumen-secciones-titulo">
-  Resumen de la inspección EPP
-</h3>
+        <h3 class="resumen-secciones-titulo">Resumen de la inspección EPP</h3>
 
-<div class="resumen-epp-totales">
+        <div class="resumen-epp-totales">
+          <div class="resumen-epp-indicador">
+            <span class="resumen-epp-indicador-label">
+              Trabajadores inspeccionados
+            </span>
 
-  <div class="resumen-epp-indicador">
-    <span class="resumen-epp-indicador-label">
-      Trabajadores inspeccionados
-    </span>
+            <strong
+              id="resumen-total-trabajadores"
+              class="resumen-epp-indicador-valor"
+            >
+              0
+            </strong>
+          </div>
 
-    <strong
-      id="resumen-total-trabajadores"
-      class="resumen-epp-indicador-valor"
-    >
-      0
-    </strong>
-  </div>
+          <div class="resumen-epp-indicador">
+            <span class="resumen-epp-indicador-label"> Con novedades </span>
 
+            <strong
+              id="resumen-trabajadores-novedad"
+              class="resumen-epp-indicador-valor"
+            >
+              0
+            </strong>
+          </div>
 
-  <div class="resumen-epp-indicador">
-    <span class="resumen-epp-indicador-label">
-      Con novedades
-    </span>
+          <div class="resumen-epp-indicador">
+            <span class="resumen-epp-indicador-label"> Sin novedades </span>
 
-    <strong
-      id="resumen-trabajadores-novedad"
-      class="resumen-epp-indicador-valor"
-    >
-      0
-    </strong>
-  </div>
+            <strong
+              id="resumen-trabajadores-sin-novedad"
+              class="resumen-epp-indicador-valor"
+            >
+              0
+            </strong>
+          </div>
 
+          <div class="resumen-epp-indicador">
+            <span class="resumen-epp-indicador-label"> Novedades EPP </span>
 
-  <div class="resumen-epp-indicador">
-    <span class="resumen-epp-indicador-label">
-      Sin novedades
-    </span>
+            <strong
+              id="resumen-total-novedades"
+              class="resumen-epp-indicador-valor"
+            >
+              0
+            </strong>
+          </div>
+        </div>
 
-    <strong
-      id="resumen-trabajadores-sin-novedad"
-      class="resumen-epp-indicador-valor"
-    >
-      0
-    </strong>
-  </div>
+        <!-- =================================================
+           RESUMEN INDIVIDUAL DE TRABAJADORES
+      ================================================== -->
 
+        <h3 class="resumen-secciones-titulo">Trabajadores inspeccionados</h3>
 
-  <div class="resumen-epp-indicador">
-    <span class="resumen-epp-indicador-label">
-      Novedades EPP
-    </span>
+        <div id="resumen-trabajadores" class="resumen-secciones"></div>
 
-    <strong
-      id="resumen-total-novedades"
-      class="resumen-epp-indicador-valor"
-    >
-      0
-    </strong>
-  </div>
+        <!-- =================================================
+           ACCIONES FINALES
+      ================================================== -->
 
-</div>
+        <div class="step-actions no-pdf">
+          <button type="button" class="nav-btn" data-step-target="2">
+            Anterior
+          </button>
 
-
-<!-- =================================================
-     RESUMEN INDIVIDUAL DE TRABAJADORES
-================================================== -->
-
-<h3 class="resumen-secciones-titulo">
-  Trabajadores inspeccionados
-</h3>
-
-<div
-  id="resumen-trabajadores"
-  class="resumen-secciones"
-></div>
-
-<!-- =================================================
-     ACCIONES FINALES
-================================================== -->
-
-<div class="step-actions no-pdf">
-  <button
-    type="button"
-    class="nav-btn"
-    data-step-target="2"
-  >
-    Anterior
-  </button>
-
-  <div class="step-actions-right">
-    <button
-      id="btn-enviar-inspeccion-epp"
-      type="button"
-      class="nav-btn nav-primary"
-    >
-      Enviar inspección
-    </button>
-  </div>
-</div>
-
-</section>
+          <div class="step-actions-right">
+            <button
+              id="btn-enviar-inspeccion-epp"
+              type="button"
+              class="nav-btn nav-primary"
+            >
+              Enviar inspección
+            </button>
+          </div>
+        </div>
+      </section>
     </main>
 
     <!-- =====================================================
+       MODAL DE ENVÍO
+       Compartido con SST / modal-envio.js
+  ====================================================== -->
+
+    <div id="envio-modal" class="envio-modal" aria-modal="true" role="dialog">
+      <div class="envio-modal-box cancelar-modal-box">
+        <!-- =================================================
+           ESTADO: CARGANDO
+      ================================================== -->
+
+        <div id="envio-estado-cargando" class="envio-estado">
+          <div class="envio-spinner"></div>
+
+          <p class="envio-titulo">Enviando inspección...</p>
+
+          <p class="envio-sub">Guardando la inspección EPP</p>
+        </div>
+
+        <!-- =================================================
+           ESTADO: ÉXITO
+      ================================================== -->
+
+        <div id="envio-estado-exito" class="envio-estado hidden">
+          <div class="exito-icono-wrap">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="M20 6L9 17l-5-5" />
+            </svg>
+          </div>
+
+          <p class="exito-titulo">¡Inspección guardada!</p>
+
+          <p id="envio-num-inspeccion" class="envio-num-inspeccion hidden"></p>
+
+          <p id="envio-inspeccion-id" class="envio-id-chip"></p>
+
+          <p class="exito-sub">
+            El inspector (quien diligenció el formulario) ya quedó aprobado
+            automáticamente. Comparte estos enlaces con el Jefe de Área y el
+            COPASST para que aprueben. El correo con el PDF se enviará
+            automáticamente cuando las aprobaciones estén completas.
+          </p>
+
+          <!-- ===============================================
+             LINKS DE APROBACIÓN
+        ================================================ -->
+
+          <div id="envio-links" class="envio-links">
+            <!-- JEFE DE ÁREA -->
+
+            <div id="bloque-jefe" class="envio-link-item">
+              <span class="envio-link-label"> Jefe de Área </span>
+
+              <div class="envio-link-row">
+                <input
+                  type="text"
+                  id="link-jefe"
+                  class="envio-link-input"
+                  readonly
+                />
+
+                <button
+                  type="button"
+                  class="envio-link-copy"
+                  data-copy-target="link-jefe"
+                >
+                  Copiar
+                </button>
+              </div>
+            </div>
+
+            <!-- COPASST -->
+
+            <div id="bloque-copasst" class="envio-link-item">
+              <span class="envio-link-label"> COPASST </span>
+
+              <div class="envio-link-row">
+                <input
+                  type="text"
+                  id="link-copasst"
+                  class="envio-link-input"
+                  readonly
+                />
+
+                <button
+                  type="button"
+                  class="envio-link-copy"
+                  data-copy-target="link-copasst"
+                >
+                  Copiar
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- ===============================================
+             ACCIONES DESPUÉS DEL ENVÍO
+        ================================================ -->
+
+          <div class="exito-acciones">
+            <button
+              id="btn-modal-inicio"
+              type="button"
+              class="exito-btn exito-btn--primary"
+            >
+              Ir al inicio
+            </button>
+
+            <button
+              id="btn-modal-nueva"
+              type="button"
+              class="exito-btn exito-btn--link"
+            >
+              Iniciar nueva inspección
+            </button>
+          </div>
+        </div>
+
+        <!-- =================================================
+           ESTADO: ERROR
+      ================================================== -->
+
+        <div id="envio-estado-error" class="envio-estado hidden">
+          <button
+            id="btn-modal-cerrar-error"
+            type="button"
+            class="modal-close"
+            onclick="cerrarModal()"
+            aria-label="Cerrar"
+            title="Cerrar"
+          >
+            ✕
+          </button>
+
+          <div class="envio-icono envio-icono--error">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <circle cx="12" cy="12" r="10" />
+
+              <path d="M15 9l-6 6M9 9l6 6" />
+            </svg>
+          </div>
+
+          <p class="envio-titulo">Ocurrió un error</p>
+
+          <p id="envio-error-texto" class="envio-sub">
+            No fue posible procesar la solicitud.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- =====================================================
        MODAL CONFIRMACIÓN SALIDA
+       Se conserva independiente del modal de envío
   ====================================================== -->
 
     <div
@@ -529,6 +663,15 @@
     <!-- =====================================================
        JAVASCRIPT
   ====================================================== -->
+
+    <!--
+    IMPORTANTE:
+    modal-envio.js debe cargarse antes de inspeccion-epp.js
+    para que window.mostrarModal y las demás funciones
+    compartidas estén disponibles.
+  -->
+
+    <script src="../js/modal-envio.js"></script>
 
     <script type="module" defer src="../js/inspeccion-epp.js"></script>
   </body>
