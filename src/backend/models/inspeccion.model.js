@@ -776,42 +776,94 @@ function construirFiltrosInspecciones({
   sedeOperacion,
   estado,
   q,
+  tipoInspeccion,
 }) {
-  const condiciones = ["1=1"];
+  const condiciones = [];
   const valores = [];
+
+  // =====================================================
+  // TIPO DE INSPECCIÓN
+  // =====================================================
+
+  if (tipoInspeccion) {
+    valores.push(tipoInspeccion);
+
+    condiciones.push(
+      `i.tipo_inspeccion = $${valores.length}`
+    );
+  }
+
+  // =====================================================
+  // FECHA DESDE
+  // =====================================================
 
   if (fechaDesde) {
     valores.push(fechaDesde);
-    condiciones.push(`i.created_at::date >= $${valores.length}`);
+
+    condiciones.push(
+      `i.created_at::date >= $${valores.length}`
+    );
   }
+
+  // =====================================================
+  // FECHA HASTA
+  // =====================================================
 
   if (fechaHasta) {
     valores.push(fechaHasta);
-    condiciones.push(`i.created_at::date <= $${valores.length}`);
+
+    condiciones.push(
+      `i.created_at::date <= $${valores.length}`
+    );
   }
+
+  // =====================================================
+  // SEDE
+  // =====================================================
 
   if (sedeOperacion) {
     valores.push(sedeOperacion);
-    condiciones.push(`i.sede_operacion = $${valores.length}`);
+
+    condiciones.push(
+      `i.sede_operacion = $${valores.length}`
+    );
   }
+
+  // =====================================================
+  // ESTADO
+  // =====================================================
 
   if (estado) {
     valores.push(estado);
-    condiciones.push(`i.estado = $${valores.length}`);
+
+    condiciones.push(
+      `i.estado = $${valores.length}`
+    );
   }
+
+  // =====================================================
+  // BÚSQUEDA GENERAL
+  // =====================================================
 
   if (q) {
     valores.push(`%${q}%`);
-    condiciones.push(`(
-      i.inspeccion_id ILIKE $${valores.length}
-      OR i.responsable_inspeccion ILIKE $${valores.length}
-      OR i.jefe_responsable ILIKE $${valores.length}
-      OR i.area_trabajo ILIKE $${valores.length}
-    )`);
+
+    condiciones.push(`
+      (
+        i.inspeccion_id ILIKE $${valores.length}
+        OR i.responsable_inspeccion ILIKE $${valores.length}
+        OR i.jefe_responsable ILIKE $${valores.length}
+        OR i.area_trabajo ILIKE $${valores.length}
+      )
+    `);
   }
 
   return {
-    whereSql: condiciones.join(" AND "),
+    whereSql:
+      condiciones.length > 0
+        ? condiciones.join(" AND ")
+        : "1=1",
+
     valores,
   };
 }
@@ -944,6 +996,194 @@ async function listarInspeccionesConFiltros(filtros = {}, paginacion = {}) {
   };
 }
 
+async function listarInspeccionesEppConFiltros(
+  filtros = {},
+  paginacion = {},
+) {
+  const page = Math.max(
+    1,
+    Number(paginacion.page) || 1,
+  );
+
+  const pageSize = Math.min(
+    100,
+    Math.max(
+      1,
+      Number(paginacion.pageSize) || 10,
+    ),
+  );
+
+  const offset = (page - 1) * pageSize;
+
+  const sortBy = paginacion.sortBy;
+
+  const sortOrder =
+    paginacion.sortOrder === "desc"
+      ? "DESC"
+      : "ASC";
+
+
+  // =====================================================
+  // COLUMNAS ORDENABLES
+  // =====================================================
+
+  const columnasOrdenables = {
+    numero: "i.num_inspeccion",
+
+    codigo: "i.inspeccion_id",
+
+    registro: "i.created_at",
+
+    sedeOperacion: "i.sede_operacion",
+
+    area: "i.area_trabajo",
+
+    responsable: "i.responsable_inspeccion",
+
+    estado: "i.estado",
+
+    trabajadores:
+      "COALESCE(tra.cantidad, 0)",
+  };
+
+
+  const columnaOrden =
+    columnasOrdenables[sortBy] ||
+    "i.created_at";
+
+
+  // =====================================================
+  // FORZAR TIPO EPP
+  // =====================================================
+
+  const filtrosEpp = {
+    ...filtros,
+
+    tipoInspeccion: "EPP",
+  };
+
+
+  const {
+    whereSql,
+    valores,
+  } = construirFiltrosInspecciones(
+    filtrosEpp,
+  );
+
+
+  // =====================================================
+  // TOTAL
+  // =====================================================
+
+  const totalSql = `
+    SELECT
+      COUNT(*)::int AS total
+
+    FROM inspecciones i
+
+    WHERE ${whereSql}
+  `;
+
+
+  // =====================================================
+  // DATOS
+  // =====================================================
+
+  const datosSql = `
+    SELECT
+      i.inspeccion_id,
+      i.num_inspeccion,
+      i.fecha,
+      i.created_at,
+      i.sede_operacion,
+      i.area_trabajo,
+      i.jefe_responsable,
+      i.responsable_inspeccion,
+      i.estado,
+
+      COALESCE(
+        tra.cantidad,
+        0
+      )::int AS trabajadores
+
+    FROM inspecciones i
+
+    LEFT JOIN (
+      SELECT
+        inspeccion_pk,
+        COUNT(*)::int AS cantidad
+
+      FROM trabajadores_epp
+
+      GROUP BY inspeccion_pk
+    ) tra
+      ON tra.inspeccion_pk = i.id
+
+    WHERE ${whereSql}
+
+    ORDER BY
+      ${columnaOrden}
+      ${sortOrder}
+
+    LIMIT $${valores.length + 1}
+
+    OFFSET $${valores.length + 2}
+  `;
+
+
+  // =====================================================
+  // EJECUTAR CONSULTAS
+  // =====================================================
+
+  const [
+    resTotal,
+    resDatos,
+  ] = await Promise.all([
+
+    query(
+      totalSql,
+      valores,
+    ),
+
+    query(
+      datosSql,
+      [
+        ...valores,
+        pageSize,
+        offset,
+      ],
+    ),
+
+  ]);
+
+
+  const total = Number(
+    resTotal.rows?.[0]?.total || 0,
+  );
+
+
+  // =====================================================
+  // RESPUESTA
+  // =====================================================
+
+  return {
+    total,
+
+    page,
+
+    pageSize,
+
+    totalPages:
+      Math.max(
+        1,
+        Math.ceil(total / pageSize),
+      ),
+
+    items:
+      resDatos.rows || [],
+  };
+}
+
 async function obtenerLinksInspeccion(inspeccionId) {
   const { rows } = await query(
     `SELECT
@@ -1006,5 +1246,6 @@ module.exports = {
   obtenerInspeccionCompleta,
   obtenerResumenEstadisticas,
   listarInspeccionesConFiltros,
+  listarInspeccionesEppConFiltros,
   obtenerLinksInspeccion,
 };

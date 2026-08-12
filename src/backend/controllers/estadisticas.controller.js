@@ -10,7 +10,8 @@
 */
 const {
   obtenerResumenEstadisticas,
-  listarInspeccionesConFiltros
+  listarInspeccionesConFiltros,
+  listarInspeccionesEppConFiltros,
 } = require("../models/inspeccion.model");
 
 function normalizarTextoQuery(valor) {
@@ -24,38 +25,120 @@ function leerFiltros(req) {
     fechaHasta: normalizarTextoQuery(req.query.fechaHasta),
     sedeOperacion: normalizarTextoQuery(req.query.sedeOperacion),
     estado: normalizarTextoQuery(req.query.estado),
-    q: normalizarTextoQuery(req.query.q)
+    q: normalizarTextoQuery(req.query.q),
   };
 }
 
 async function obtenerResumen(req, res) {
   try {
-    const filtros = leerFiltros(req);
+    const filtros = {
+      ...leerFiltros(req),
+      tipoInspeccion: "SST",
+    };
+
     const resumen = await obtenerResumenEstadisticas(filtros);
-    return res.status(200).json({ ok: true, resumen });
+
+    return res.status(200).json({
+      ok: true,
+      resumen,
+    });
   } catch (error) {
-    const mensaje = error instanceof Error ? error.message : "Error consultando estadísticas";
-    return res.status(500).json({ ok: false, errores: [mensaje] });
+    const mensaje =
+      error instanceof Error ? error.message : "Error consultando estadísticas";
+
+    return res.status(500).json({
+      ok: false,
+      errores: [mensaje],
+    });
   }
 }
 
 async function listarInspecciones(req, res) {
   try {
-    const filtros = leerFiltros(req);
-    const page = Number(req.query.page) || 1;
-    const pageSize = Number(req.query.pageSize) || 10;
-    const sortBy = req.query.sortBy || null;
-    const sortOrder = req.query.sortOrder || "asc";
+    const filtros = {
+      ...leerFiltros(req),
 
-    const listado = await listarInspeccionesConFiltros(filtros, { page, pageSize, sortBy, sortOrder });
-    return res.status(200).json({ ok: true, ...listado });
+      // Este endpoint pertenece exclusivamente a SST
+      tipoInspeccion: "SST",
+    };
+
+    const paginacion = {
+      page: req.query.page,
+      pageSize: req.query.pageSize,
+      sortBy: req.query.sortBy,
+      sortOrder: req.query.sortOrder,
+    };
+
+    const resultado = await listarInspeccionesConFiltros(filtros, paginacion);
+
+    return res.json(resultado);
   } catch (error) {
-    const mensaje = error instanceof Error ? error.message : "Error consultando inspecciones";
-    return res.status(500).json({ ok: false, errores: [mensaje] });
+    console.error("Error listando inspecciones SST:", error);
+
+    return res.status(500).json({
+      error: "No fue posible listar las inspecciones SST",
+    });
+  }
+}
+
+// =====================================================
+// RESUMEN ESTADÍSTICAS EPP
+// =====================================================
+
+async function obtenerResumenEpp(req, res) {
+  try {
+    const filtros = {
+      ...leerFiltros(req),
+
+      // Este endpoint pertenece exclusivamente a EPP
+      tipoInspeccion: "EPP",
+    };
+
+    const resumen = await obtenerResumenEstadisticas(filtros);
+
+    return res.json(resumen);
+  } catch (error) {
+    console.error("Error obteniendo resumen de estadísticas EPP:", error);
+
+    return res.status(500).json({
+      error: "No fue posible obtener el resumen de estadísticas EPP",
+    });
+  }
+}
+
+// =====================================================
+// LISTADO ESTADÍSTICAS EPP
+// =====================================================
+
+async function listarInspeccionesEpp(req, res) {
+  try {
+    const filtros = leerFiltros(req);
+
+    const paginacion = {
+      page: req.query.page,
+      pageSize: req.query.pageSize,
+      sortBy: req.query.sortBy,
+      sortOrder: req.query.sortOrder,
+    };
+
+    const resultado = await listarInspeccionesEppConFiltros(
+      filtros,
+      paginacion,
+    );
+
+    return res.json(resultado);
+  } catch (error) {
+    console.error("Error listando inspecciones EPP:", error);
+
+    return res.status(500).json({
+      error: "No fue posible listar las inspecciones EPP",
+    });
   }
 }
 
 module.exports = {
   obtenerResumen,
-  listarInspecciones
+  listarInspecciones,
+  obtenerResumenEpp,
+  listarInspeccionesEpp,
 };

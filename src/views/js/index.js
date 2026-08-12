@@ -3,99 +3,162 @@
  *
  * Controla las interacciones de la página principal.
  *
- * Actualmente:
+ * Funciones:
  * - Actualiza automáticamente el año del footer.
- * - Abre el selector de tipo de inspección.
- * - Cierra el selector.
- * - Permite cerrarlo haciendo clic fuera.
- * - Permite cerrarlo con Escape.
+ * - Abre y cierra el selector de tipo de inspección.
+ * - Abre y cierra el selector de tipo de estadística.
+ * - Permite cerrar los selectores haciendo clic fuera.
+ * - Permite cerrar los selectores con Escape.
  */
-
 
 // =====================================================
 // ELEMENTOS DEL DOM
 // =====================================================
 
-const yearElement =
-  document.getElementById("yr");
+// Footer
+const yearElement = document.getElementById("yr");
 
-const btnSeleccionarInspeccion =
-  document.getElementById("btn-seleccionar-inspeccion");
+// -----------------------------------------------------
+// Selector de inspección
+// -----------------------------------------------------
 
-const modalSeleccionarInspeccion =
-  document.getElementById("modal-seleccionar-inspeccion");
+const btnSeleccionarInspeccion = document.getElementById(
+  "btn-seleccionar-inspeccion",
+);
 
-const btnCerrarSelectorInspeccion =
-  document.getElementById("btn-cerrar-selector-inspeccion");
+const modalSeleccionarInspeccion = document.getElementById(
+  "modal-seleccionar-inspeccion",
+);
 
-const selectorInspeccionBackdrop =
-  document.getElementById("selector-inspeccion-backdrop");
+const btnCerrarSelectorInspeccion = document.getElementById(
+  "btn-cerrar-selector-inspeccion",
+);
 
+const selectorInspeccionBackdrop = document.getElementById(
+  "selector-inspeccion-backdrop",
+);
+
+// -----------------------------------------------------
+// Selector de estadísticas
+// -----------------------------------------------------
+
+const btnSeleccionarEstadistica = document.getElementById(
+  "btn-seleccionar-estadistica",
+);
+
+const modalSeleccionarEstadistica = document.getElementById(
+  "modal-seleccionar-estadistica",
+);
+
+const btnCerrarSelectorEstadistica = document.getElementById(
+  "btn-cerrar-selector-estadistica",
+);
+
+const selectorEstadisticaBackdrop = document.getElementById(
+  "selector-estadistica-backdrop",
+);
 
 // =====================================================
 // AÑO DEL FOOTER
 // =====================================================
 
 if (yearElement) {
-  yearElement.textContent =
-    new Date().getFullYear();
+  yearElement.textContent = new Date().getFullYear();
 }
-
 
 // =====================================================
 // SELECTOR DE INSPECCIÓN
 // =====================================================
 
 function abrirSelectorInspeccion() {
+  if (!modalSeleccionarInspeccion) return;
 
   modalSeleccionarInspeccion.classList.remove("hidden");
 
   document.body.classList.add("modal-open");
-
 }
 
-
 function cerrarSelectorInspeccion() {
+  if (!modalSeleccionarInspeccion) return;
 
   modalSeleccionarInspeccion.classList.add("hidden");
 
   document.body.classList.remove("modal-open");
-
 }
 
+// =====================================================
+// SELECTOR DE ESTADÍSTICAS
+// =====================================================
+
+function abrirSelectorEstadistica() {
+  if (!modalSeleccionarEstadistica) return;
+
+  modalSeleccionarEstadistica.classList.remove("hidden");
+
+  document.body.classList.add("modal-open");
+}
+
+function cerrarSelectorEstadistica() {
+  if (!modalSeleccionarEstadistica) return;
+
+  modalSeleccionarEstadistica.classList.add("hidden");
+
+  document.body.classList.remove("modal-open");
+}
 
 // =====================================================
-// EVENTOS
+// EVENTOS - INSPECCIÓN
 // =====================================================
 
-btnSeleccionarInspeccion?.addEventListener(
-  "click",
-  abrirSelectorInspeccion
-);
-
+btnSeleccionarInspeccion?.addEventListener("click", abrirSelectorInspeccion);
 
 btnCerrarSelectorInspeccion?.addEventListener(
   "click",
-  cerrarSelectorInspeccion
+  cerrarSelectorInspeccion,
 );
 
+selectorInspeccionBackdrop?.addEventListener("click", cerrarSelectorInspeccion);
 
-selectorInspeccionBackdrop?.addEventListener(
+// =====================================================
+// EVENTOS - ESTADÍSTICAS
+// =====================================================
+
+btnSeleccionarEstadistica?.addEventListener("click", abrirSelectorEstadistica);
+
+btnCerrarSelectorEstadistica?.addEventListener(
   "click",
-  cerrarSelectorInspeccion
+  cerrarSelectorEstadistica,
 );
 
+selectorEstadisticaBackdrop?.addEventListener(
+  "click",
+  cerrarSelectorEstadistica,
+);
 
-// Cerrar con tecla Escape
+// =====================================================
+// CERRAR CON TECLA ESCAPE
+// =====================================================
+
 document.addEventListener("keydown", (event) => {
-
-  if (
-    event.key === "Escape" &&
-    !modalSeleccionarInspeccion?.classList.contains("hidden")
-  ) {
-
-    cerrarSelectorInspeccion();
-
+  if (event.key !== "Escape") {
+    return;
   }
 
+  // Cerrar selector de inspección
+  if (
+    modalSeleccionarInspeccion &&
+    !modalSeleccionarInspeccion.classList.contains("hidden")
+  ) {
+    cerrarSelectorInspeccion();
+
+    return;
+  }
+
+  // Cerrar selector de estadísticas
+  if (
+    modalSeleccionarEstadistica &&
+    !modalSeleccionarEstadistica.classList.contains("hidden")
+  ) {
+    cerrarSelectorEstadistica();
+  }
 });

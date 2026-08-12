@@ -59,6 +59,8 @@ const {
 const {
   obtenerResumen,
   listarInspecciones,
+  obtenerResumenEpp,
+  listarInspeccionesEpp,
 } = require("./controllers/estadisticas.controller");
 const {
   enviarInspeccionEpp,
@@ -105,7 +107,9 @@ app.get("/estadisticas", (req, res) => {
   res.sendFile(path.resolve(VIEWS_DIR, "html", "estadisticas.html"));
 });
 
-
+app.get("/estadisticas-epp", (req, res) => {
+  res.sendFile(path.resolve(VIEWS_DIR, "html", "estadisticas-epp.html"));
+});
 
 app.post("/enviar-onedrive-extintor", upload.any(), enviarExtintorOneDrive);
 
@@ -119,6 +123,8 @@ app.get("/api/aprobaciones/:token/preview", previsualizarAprobacion);
 app.post("/api/aprobaciones/:token", registrarAprobacion);
 app.get("/api/estadisticas/resumen", obtenerResumen);
 app.get("/api/estadisticas/inspecciones", listarInspecciones);
+app.get("/api/estadisticas-epp/resumen", obtenerResumenEpp);
+app.get("/api/estadisticas-epp/inspecciones", listarInspeccionesEpp);
 app.get("/api/inspecciones/:id/links", obtenerLinks);
 
 app.listen(PORT, () => {

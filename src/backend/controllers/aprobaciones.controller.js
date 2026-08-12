@@ -805,20 +805,10 @@ async function finalizarInspeccion(inspeccionId) {
   // 6. OPTIMIZAR PDF
   // =======================================================
 
-  console.log(
-    `[PDF ${tipoInspeccion}] Tamaño ANTES de optimizar:`,
-    `${(pdfGenerado.length / 1024 / 1024).toFixed(2)} MB`,
-  );
-
   const pdfFinal = await optimizarPdf(pdfGenerado, {
     profile: "inspection",
     fileName: `${row.inspeccion_id}.pdf`,
   });
-
-  console.log(
-    `[PDF ${tipoInspeccion}] Tamaño DESPUÉS de optimizar:`,
-    `${(pdfFinal.length / 1024 / 1024).toFixed(2)} MB`,
-  );
 
   // =======================================================
   // 7. SUBIR PDF FINAL A ONEDRIVE

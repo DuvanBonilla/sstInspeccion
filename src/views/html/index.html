@@ -4,100 +4,253 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
   <title>Portal de Gestión SST</title>
-  <link rel="icon" type="image/x-icon" href="/img/favicon.ico" />
-  <link rel="stylesheet" href="/css/home.css" />
+
+  <link
+    rel="icon"
+    type="image/x-icon"
+    href="/img/favicon.ico"
+  />
+
+  <link
+    rel="stylesheet"
+    href="/css/home.css"
+  />
 </head>
 
 <body>
 
+  <!-- =====================================================
+       HEADER
+  ====================================================== -->
+
   <header class="home-header">
+
     <div class="home-header-inner">
-      <img src="/img/Cargo.png" alt="Logo Cargoban" class="home-logo" />
+
+      <img
+        src="/img/Cargo.png"
+        alt="Logo Cargoban"
+        class="home-logo"
+      />
+
       <span class="home-header-sep"></span>
-      <span class="home-header-label">Sistema de Gestión SST</span>
+
+      <span class="home-header-label">
+        Sistema de Gestión SST
+      </span>
+
     </div>
+
   </header>
 
+
+  <!-- =====================================================
+       PRESENTACIÓN
+  ====================================================== -->
+
   <div class="home-stage">
-    <p class="home-eyebrow">Portal de Gestión</p>
-    <h1 class="home-title">Inspecciones y Evaluaciones SST</h1>
-    <p class="home-subtitle">Seleccione el formulario que necesita diligenciar.</p>
+
+    <p class="home-eyebrow">
+      Portal de Gestión
+    </p>
+
+    <h1 class="home-title">
+      Inspecciones y Evaluaciones SST
+    </h1>
+
+    <p class="home-subtitle">
+      Seleccione el formulario que necesita diligenciar.
+    </p>
+
   </div>
 
+
+  <!-- =====================================================
+       CONTENIDO PRINCIPAL
+  ====================================================== -->
+
   <main class="home-main">
+
     <div class="cards-grid">
 
       <div class="card card--blue">
+
+        <!-- Icono -->
+
         <div class="card-icon-wrap">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
-            stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round"
-              d="M9 12.75 11.25 15 15 9.75m-3-7.036A11.959 11.959 0 0 1 3.598 6 11.99 11.99 0 0 0 3 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285Z" />
+
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke-width="1.5"
+            stroke="currentColor"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              d="M9 12.75 11.25 15 15 9.75m-3-7.036A11.959 11.959 0 0 1 3.598 6 11.99 11.99 0 0 0 3 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285Z"
+            />
           </svg>
+
         </div>
+
+
+        <!-- Contenido -->
 
         <div class="card-body">
-          <p class="card-process">Proceso: Seguridad y Salud en el Trabajo</p>
-          <h2 class="card-title">Inspección de Extintores,<br>Botiquines y Camillas</h2>
+
+          <p class="card-process">
+            Proceso: Seguridad y Salud en el Trabajo
+          </p>
+
+          <h2 class="card-title">
+            Inspección de Extintores,<br>
+            Botiquines y Camillas
+          </h2>
+
           <ul class="card-features">
+
             <li>
-              <span class="feature-check">&#10003;</span>
+              <span class="feature-check">
+                &#10003;
+              </span>
+
               Registro de evidencias fotográficas
             </li>
+
             <li>
-              <span class="feature-check">&#10003;</span>
+              <span class="feature-check">
+                &#10003;
+              </span>
+
               Inventario detallado de botiquín
             </li>
+
             <li>
-              <span class="feature-check">&#10003;</span>
+              <span class="feature-check">
+                &#10003;
+              </span>
+
               Almacenamiento en OneDrive y correo automático
             </li>
+
           </ul>
+
         </div>
+
+
+        <!-- =================================================
+             ACCIONES
+        ================================================== -->
 
         <div class="card-actions">
-          <button type="button" id="btn-seleccionar-inspeccion" class="card-btn">
-            <span>Iniciar inspección</span>
 
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-              <path fill-rule="evenodd"
+          <!-- INICIAR INSPECCIÓN -->
+
+          <button
+            type="button"
+            id="btn-seleccionar-inspeccion"
+            class="card-btn"
+          >
+
+            <span>
+              Iniciar inspección
+            </span>
+
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 20 20"
+              fill="currentColor"
+              aria-hidden="true"
+            >
+              <path
+                fill-rule="evenodd"
                 d="M3 10a.75.75 0 0 1 .75-.75h10.638L10.23 5.29a.75.75 0 1 1 1.04-1.08l5.5 5.25a.75.75 0 0 1 0 1.08l-5.5 5.25a.75.75 0 1 1-1.04-1.08l4.158-3.96H3.75A.75.75 0 0 1 3 10Z"
-                clip-rule="evenodd" />
+                clip-rule="evenodd"
+              />
             </svg>
+
           </button>
 
-          <a href="/estadisticas" class="card-btn card-btn--stats">
-            <span>Estadísticas</span>
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-              <path fill-rule="evenodd"
+
+          <!-- ESTADÍSTICAS -->
+
+          <button
+            type="button"
+            id="btn-seleccionar-estadistica"
+            class="card-btn card-btn--stats"
+          >
+
+            <span>
+              Estadísticas
+            </span>
+
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 20 20"
+              fill="currentColor"
+              aria-hidden="true"
+            >
+              <path
+                fill-rule="evenodd"
                 d="M3 10a.75.75 0 0 1 .75-.75h10.638L10.23 5.29a.75.75 0 1 1 1.04-1.08l5.5 5.25a.75.75 0 0 1 0 1.08l-5.5 5.25a.75.75 0 1 1-1.04-1.08l4.158-3.96H3.75A.75.75 0 0 1 3 10Z"
-                clip-rule="evenodd" />
+                clip-rule="evenodd"
+              />
             </svg>
-          </a>
+
+          </button>
+
         </div>
+
       </div>
 
     </div>
+
   </main>
 
-  <!-- =====================================================
-     SELECTOR DE TIPO DE INSPECCIÓN
-====================================================== -->
 
-  <div id="modal-seleccionar-inspeccion" class="selector-modal hidden">
+  <!-- =====================================================
+       SELECTOR DE TIPO DE INSPECCIÓN
+  ====================================================== -->
+
+  <div
+    id="modal-seleccionar-inspeccion"
+    class="selector-modal hidden"
+  >
 
     <!-- Fondo -->
-    <div id="selector-inspeccion-backdrop" class="selector-modal-backdrop"></div>
+
+    <div
+      id="selector-inspeccion-backdrop"
+      class="selector-modal-backdrop"
+    ></div>
 
 
     <!-- Ventana -->
-    <div class="selector-modal-content" role="dialog" aria-modal="true" aria-labelledby="selector-inspeccion-title">
 
-      <button type="button" id="btn-cerrar-selector-inspeccion" class="selector-modal-close" aria-label="Cerrar">
+    <div
+      class="selector-modal-content"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="selector-inspeccion-title"
+    >
+
+      <!-- Cerrar -->
+
+      <button
+        type="button"
+        id="btn-cerrar-selector-inspeccion"
+        class="selector-modal-close"
+        aria-label="Cerrar"
+      >
         &times;
       </button>
 
+
+      <!-- Encabezado -->
 
       <div class="selector-modal-header">
 
@@ -116,20 +269,38 @@
       </div>
 
 
+      <!-- Opciones -->
+
       <div class="selector-options">
 
-        <!-- SST -->
-        <a href="/inspeccion-sst" class="selector-option">
+
+        <!-- ===============================================
+             SST
+        ================================================ -->
+
+        <a
+          href="/inspeccion-sst"
+          class="selector-option"
+        >
 
           <div class="selector-option-icon">
 
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
-              stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round"
-                d="M9 12.75 11.25 15 15 9.75m-3-7.036A11.959 11.959 0 0 1 3.598 6 11.99 11.99 0 0 0 3 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285Z" />
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke-width="1.5"
+              stroke="currentColor"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="M9 12.75 11.25 15 15 9.75m-3-7.036A11.959 11.959 0 0 1 3.598 6 11.99 11.99 0 0 0 3 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285Z"
+              />
             </svg>
 
           </div>
+
 
           <div class="selector-option-content">
 
@@ -142,7 +313,8 @@
             </strong>
 
             <small>
-              Extintores, botiquines, camillas, señalización y equipos.
+              Extintores, botiquines, camillas,
+              señalización y equipos.
             </small>
 
           </div>
@@ -150,18 +322,33 @@
         </a>
 
 
-        <!-- EPP -->
-        <a href="/inspeccion-epp" class="selector-option">
+        <!-- ===============================================
+             EPP
+        ================================================ -->
+
+        <a
+          href="/inspeccion-epp"
+          class="selector-option"
+        >
 
           <div class="selector-option-icon">
 
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
-              stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round"
-                d="M12 3c-4.418 0-8 3.582-8 8v2h16v-2c0-4.418-3.582-8-8-8Zm-6 10v3a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2v-3" />
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke-width="1.5"
+              stroke="currentColor"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="M12 3c-4.418 0-8 3.582-8 8v2h16v-2c0-4.418-3.582-8-8-8Zm-6 10v3a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2v-3"
+              />
             </svg>
 
           </div>
+
 
           <div class="selector-option-content">
 
@@ -174,7 +361,8 @@
             </strong>
 
             <small>
-              Inspección individual de elementos de protección personal.
+              Inspección individual de elementos
+              de protección personal.
             </small>
 
           </div>
@@ -187,9 +375,189 @@
 
   </div>
 
+
+  <!-- =====================================================
+       SELECTOR DE TIPO DE ESTADÍSTICA
+  ====================================================== -->
+
+  <div
+    id="modal-seleccionar-estadistica"
+    class="selector-modal hidden"
+  >
+
+    <!-- Fondo -->
+
+    <div
+      id="selector-estadistica-backdrop"
+      class="selector-modal-backdrop"
+    ></div>
+
+
+    <!-- Ventana -->
+
+    <div
+      class="selector-modal-content"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="selector-estadistica-title"
+    >
+
+      <!-- Cerrar -->
+
+      <button
+        type="button"
+        id="btn-cerrar-selector-estadistica"
+        class="selector-modal-close"
+        aria-label="Cerrar"
+      >
+        &times;
+      </button>
+
+
+      <!-- Encabezado -->
+
+      <div class="selector-modal-header">
+
+        <p class="selector-modal-eyebrow">
+          Estadísticas
+        </p>
+
+        <h2 id="selector-estadistica-title">
+          Seleccione el tipo de estadística
+        </h2>
+
+        <p>
+          Seleccione el proceso que desea consultar.
+        </p>
+
+      </div>
+
+
+      <!-- Opciones -->
+
+      <div class="selector-options">
+
+
+        <!-- ===============================================
+             ESTADÍSTICAS SST
+        ================================================ -->
+
+        <a
+          href="/estadisticas"
+          class="selector-option"
+        >
+
+          <div class="selector-option-icon">
+
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke-width="1.5"
+              stroke="currentColor"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="M3 3v18h18M7 16l4-5 4 3 5-7"
+              />
+            </svg>
+
+          </div>
+
+
+          <div class="selector-option-content">
+
+            <span class="selector-option-label">
+              Seguridad y Salud en el Trabajo
+            </span>
+
+            <strong>
+              Estadísticas SST
+            </strong>
+
+            <small>
+              Consulta de inspecciones, estados,
+              sedes e informes SST.
+            </small>
+
+          </div>
+
+        </a>
+
+
+        <!-- ===============================================
+             ESTADÍSTICAS EPP
+        ================================================ -->
+
+        <a
+          href="/estadisticas-epp"
+          class="selector-option"
+        >
+
+          <div class="selector-option-icon">
+
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke-width="1.5"
+              stroke="currentColor"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="M4 19V9m5 10V5m5 14v-7m5 7V3"
+              />
+            </svg>
+
+          </div>
+
+
+          <div class="selector-option-content">
+
+            <span class="selector-option-label">
+              Elementos de Protección Personal
+            </span>
+
+            <strong>
+              Estadísticas EPP
+            </strong>
+
+            <small>
+              Consulta de trabajadores, novedades,
+              estados e informes EPP.
+            </small>
+
+          </div>
+
+        </a>
+
+      </div>
+
+    </div>
+
+  </div>
+
+
+  <!-- =====================================================
+       FOOTER
+  ====================================================== -->
+
   <footer class="home-footer">
-    <p>Cargoban Operador Logístico y Portuario S.A.S &copy; <span id="yr"></span></p>
+
+    <p>
+      Cargoban Operador Logístico y Portuario S.A.S
+      &copy;
+      <span id="yr"></span>
+    </p>
+
   </footer>
+
+
+  <!-- =====================================================
+       JAVASCRIPT
+  ====================================================== -->
 
   <script src="/js/index.js"></script>
 
