@@ -39,6 +39,7 @@ const {
   resolverCorreoDestino,
   construirHtmlCorreo,
 } = require("./pdfInspeccion.controller");
+const { crearPdfInspeccionEpp } = require("./pdfInspeccionEpp.controller");
 const { optimizarPdf } = require("../utils/pdfOptimizer");
 const {
   recuperarLinksAprobacion,
@@ -183,84 +184,250 @@ async function obtenerResumenAprobacion(req, res) {
 
 async function previsualizarAprobacion(req, res) {
   try {
+    // =====================================================
+    // 1. VALIDAR TOKEN
+    // =====================================================
+
     const contexto = await obtenerContextoAprobacion(req.params.token);
+
     if (!contexto) {
-      return res
-        .status(404)
-        .json({ ok: false, errores: ["Link de aprobación no válido"] });
+      return res.status(404).json({
+        ok: false,
+        errores: ["Link de aprobación no válido"],
+      });
     }
+
+    // =====================================================
+    // 2. OBTENER INSPECCIÓN COMPLETA
+    // =====================================================
 
     const { row } = contexto;
+
     const completa = await obtenerInspeccionCompleta(row.inspeccion_id);
+
     if (!completa) {
-      return res
-        .status(404)
-        .json({ ok: false, errores: ["Inspección no encontrada"] });
+      return res.status(404).json({
+        ok: false,
+        errores: ["Inspección no encontrada"],
+      });
     }
 
-    const [ext, cam, sen, eqp, bot] = await Promise.all([
-      construirEvidenciasDesdeOneDrive(completa.extintores),
-      construirEvidenciasDesdeOneDrive(completa.camillas),
-      construirEvidenciasDesdeOneDrive(completa.senalizaciones),
-      construirEvidenciasDesdeOneDrive(completa.equiposTecnologicos),
-      construirEvidenciasDesdeOneDrive(completa.botiquines),
-    ]);
+    // =====================================================
+    // 3. DETECTAR TIPO DE INSPECCIÓN
+    // =====================================================
 
-    const data = {
-      inspeccionId: row.inspeccion_id,
-      numInspeccion: Number(row.num_inspeccion),
-      fecha: row.fecha,
-      sedeOperacion: row.sede_operacion,
-      areaTrabajo: row.area_trabajo,
-      jefeResponsable: row.jefe_responsable,
-      cargoJefe: row.cargo_jefe,
-      responsableInspeccion: row.responsable_inspeccion,
-      cargoResponsable: row.cargo_responsable,
-      extintores: completa.extintores,
-      camillas: completa.camillas,
-      senalizaciones: completa.senalizaciones,
-      equiposTecnologicos: completa.equiposTecnologicos,
-      botiquines: completa.botiquines,
-    };
+    const tipoInspeccion = String(
+      row.tipo_inspeccion || completa?.inspeccion?.tipo_inspeccion || "SST",
+    ).toUpperCase();
 
-    const aprobaciones = {
-      inspector: { nombre: row.aprobacion_inspector_nombre },
-      jefe: { nombre: row.aprobacion_jefe_nombre },
-      copasst: { nombre: row.aprobacion_copasst_nombre },
-    };
-
-    const pdfBuffer = await crearPdfInspeccionExtintor(
-      data,
-      ext.evidenciasPorIndex,
-      cam.evidenciasPorIndex,
-      sen.evidenciasPorIndex,
-      eqp.evidenciasPorIndex,
-      bot.evidenciasPorIndex,
-      {},
-      {
-        aprobaciones,
-        fechasPrecomputadas: {
-          extintores: ext.fechas,
-          camillas: cam.fechas,
-          senalizaciones: sen.fechas,
-          equipos: eqp.fechas,
-          botiquines: bot.fechas,
-        },
-      },
+    console.log(
+      `[aprobaciones] Generando preview ${tipoInspeccion}:`,
+      row.inspeccion_id,
     );
 
+    // =====================================================
+    // 4. APROBACIONES
+    // =====================================================
+
+    const aprobaciones = {
+      inspector: {
+        nombre: row.aprobacion_inspector_nombre,
+      },
+
+      jefe: {
+        nombre: row.aprobacion_jefe_nombre,
+      },
+
+      copasst: {
+        nombre: row.aprobacion_copasst_nombre,
+      },
+    };
+
+    // =====================================================
+    // 5. BUFFER PDF
+    // =====================================================
+
+    let pdfBuffer;
+
+    // =====================================================
+    // EPP
+    // =====================================================
+
+    if (tipoInspeccion === "EPP") {
+      const trabajadores = Array.isArray(completa.trabajadores)
+        ? completa.trabajadores
+        : [];
+
+      console.log(`[EPP] Trabajadores encontrados: ${trabajadores.length}`);
+
+      // ---------------------------------------------------
+      // DESCARGAR EVIDENCIAS
+      // ---------------------------------------------------
+
+      const evidenciasPorTrabajador =
+        await construirEvidenciasEppDesdeOneDrive(trabajadores);
+
+      console.log(
+        `[EPP] Evidencias descargadas: ${evidenciasPorTrabajador.size}`,
+      );
+
+      // ---------------------------------------------------
+      // INFORMACIÓN GENERAL
+      // ---------------------------------------------------
+
+      const general = {
+        inspeccionId: row.inspeccion_id,
+
+        numInspeccion: Number(row.num_inspeccion),
+
+        fecha: row.fecha,
+
+        sedeOperacion: row.sede_operacion,
+
+        areaTrabajo: row.area_trabajo,
+
+        jefeResponsable: row.jefe_responsable,
+
+        cargoJefe: row.cargo_jefe,
+
+        responsableInspeccion: row.responsable_inspeccion,
+
+        cargoResponsable: row.cargo_responsable,
+      };
+
+      // ---------------------------------------------------
+      // GENERAR PDF EPP
+      // ---------------------------------------------------
+
+      pdfBuffer = await crearPdfInspeccionEpp(
+        {
+          general,
+          trabajadores,
+        },
+
+        evidenciasPorTrabajador,
+
+        {
+          aprobaciones,
+        },
+      );
+    }
+
+    // =====================================================
+    // SST
+    // =====================================================
+    else {
+      // ---------------------------------------------------
+      // DESCARGAR EVIDENCIAS SST
+      // ---------------------------------------------------
+
+      const [ext, cam, sen, eqp, bot] = await Promise.all([
+        construirEvidenciasDesdeOneDrive(completa.extintores),
+
+        construirEvidenciasDesdeOneDrive(completa.camillas),
+
+        construirEvidenciasDesdeOneDrive(completa.senalizaciones),
+
+        construirEvidenciasDesdeOneDrive(completa.equiposTecnologicos),
+
+        construirEvidenciasDesdeOneDrive(completa.botiquines),
+      ]);
+
+      // ---------------------------------------------------
+      // DATOS SST
+      // ---------------------------------------------------
+
+      const data = {
+        inspeccionId: row.inspeccion_id,
+
+        numInspeccion: Number(row.num_inspeccion),
+
+        fecha: row.fecha,
+
+        sedeOperacion: row.sede_operacion,
+
+        areaTrabajo: row.area_trabajo,
+
+        jefeResponsable: row.jefe_responsable,
+
+        cargoJefe: row.cargo_jefe,
+
+        responsableInspeccion: row.responsable_inspeccion,
+
+        cargoResponsable: row.cargo_responsable,
+
+        extintores: completa.extintores,
+
+        camillas: completa.camillas,
+
+        senalizaciones: completa.senalizaciones,
+
+        equiposTecnologicos: completa.equiposTecnologicos,
+
+        botiquines: completa.botiquines,
+      };
+
+      // ---------------------------------------------------
+      // GENERAR PDF SST
+      // ---------------------------------------------------
+
+      pdfBuffer = await crearPdfInspeccionExtintor(
+        data,
+
+        ext.evidenciasPorIndex,
+
+        cam.evidenciasPorIndex,
+
+        sen.evidenciasPorIndex,
+
+        eqp.evidenciasPorIndex,
+
+        bot.evidenciasPorIndex,
+
+        {},
+
+        {
+          aprobaciones,
+
+          fechasPrecomputadas: {
+            extintores: ext.fechas,
+
+            camillas: cam.fechas,
+
+            senalizaciones: sen.fechas,
+
+            equipos: eqp.fechas,
+
+            botiquines: bot.fechas,
+          },
+        },
+      );
+    }
+
+    // =====================================================
+    // 6. DEVOLVER PDF
+    // =====================================================
+
     res.setHeader("Content-Type", "application/pdf");
+
     res.setHeader(
       "Content-Disposition",
       `inline; filename="${row.inspeccion_id}.pdf"`,
     );
+
     return res.status(200).send(pdfBuffer);
   } catch (error) {
+    console.error("[aprobaciones] Error generando preview:", error);
+
     const mensaje =
       error instanceof Error
         ? error.message
         : "Error generando preview del PDF";
-    return res.status(500).json({ ok: false, errores: [mensaje] });
+
+    return res.status(500).json({
+      ok: false,
+      errores: [mensaje],
+    });
   }
 }
 
@@ -297,13 +464,11 @@ async function registrarAprobacion(req, res) {
       });
     }
 
-    return res
-      .status(200)
-      .json({
-        ok: true,
-        mensaje: "Aprobación registrada",
-        todasCompletas: resultado.completas,
-      });
+    return res.status(200).json({
+      ok: true,
+      mensaje: "Aprobación registrada",
+      todasCompletas: resultado.completas,
+    });
   } catch (error) {
     const mensaje =
       error instanceof Error
@@ -337,6 +502,62 @@ async function construirEvidenciasDesdeOneDrive(items) {
   );
 
   return { evidenciasPorIndex, fechas };
+}
+
+// =========================================================
+// EVIDENCIAS EPP DESDE ONEDRIVE
+// =========================================================
+
+async function construirEvidenciasEppDesdeOneDrive(trabajadores) {
+  const evidenciasPorTrabajador = new Map();
+
+  await Promise.all(
+    (Array.isArray(trabajadores) ? trabajadores : []).map(
+      async (trabajador, idx) => {
+        const ruta = String(trabajador?.evidenciaRuta || "").trim();
+
+        if (!ruta) {
+          return;
+        }
+
+        try {
+          const buffer = await descargarEvidenciaOneDrive(ruta);
+
+          if (!buffer) {
+            return;
+          }
+
+          const archivo = {
+            buffer,
+          };
+
+          // -------------------------------------------------
+          // Guardar por índice
+          // -------------------------------------------------
+
+          evidenciasPorTrabajador.set(idx, archivo);
+
+          // -------------------------------------------------
+          // También guardar por trabajadorId si existe
+          // -------------------------------------------------
+
+          if (
+            trabajador?.trabajadorId !== undefined &&
+            trabajador?.trabajadorId !== null
+          ) {
+            evidenciasPorTrabajador.set(trabajador.trabajadorId, archivo);
+          }
+        } catch (error) {
+          console.error(
+            `[EPP] Error descargando evidencia trabajador ${idx + 1}:`,
+            error.message,
+          );
+        }
+      },
+    ),
+  );
+
+  return evidenciasPorTrabajador;
 }
 
 // Regenera el PDF (con las 3 aprobaciones reales), lo archiva en OneDrive y envía el correo final.
