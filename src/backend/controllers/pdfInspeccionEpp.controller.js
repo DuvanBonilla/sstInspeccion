@@ -34,6 +34,34 @@ function texto(valor) {
   return String(valor);
 }
 
+function formatearFecha(valor) {
+  if (!valor) {
+    return "";
+  }
+
+  // PostgreSQL puede devolver DATE como objeto Date
+  if (valor instanceof Date) {
+    const dia = String(valor.getUTCDate()).padStart(2, "0");
+    const mes = String(valor.getUTCMonth() + 1).padStart(2, "0");
+    const anio = valor.getUTCFullYear();
+
+    return `${dia}/${mes}/${anio}`;
+  }
+
+  // Si viene como YYYY-MM-DD
+  const fecha = String(valor).split("T")[0];
+
+  const partes = fecha.split("-");
+
+  if (partes.length === 3) {
+    const [anio, mes, dia] = partes;
+
+    return `${dia}/${mes}/${anio}`;
+  }
+
+  return String(valor);
+}
+
 function dibujarIdInspeccion(doc, general, y) {
   const inspeccionId = general?.inspeccionId || "";
 
@@ -453,6 +481,72 @@ function renderTextoBloque(doc, titulo, contenido, y) {
   return y + altoTexto;
 }
 
+function renderPlanAccion(doc, trabajador, y) {
+  const planAccion = texto(trabajador?.planAccion) || "Sin registro.";
+
+  const fechaLimite = trabajador?.fechaPlanAccion
+    ? formatearFecha(trabajador.fechaPlanAccion)
+    : "No aplica";
+
+  // =====================================================
+  // TÍTULO
+  // =====================================================
+
+  doc.rect(MARGEN, y, ANCHO, 22).stroke();
+
+  doc
+    .font("Helvetica-Bold")
+    .fontSize(9)
+    .text("PLAN DE ACCIÓN", MARGEN, y + 6, {
+      width: ANCHO,
+      align: "center",
+    });
+
+  y += 22;
+
+  // =====================================================
+  // CONTENIDO DEL PLAN
+  // =====================================================
+
+  const altoTexto = Math.max(
+    35,
+    doc.heightOfString(planAccion, {
+      width: ANCHO - 10,
+      font: "Helvetica",
+      fontSize: 8,
+    }) + 16,
+  );
+
+  doc.rect(MARGEN, y, ANCHO, altoTexto).stroke();
+
+  doc
+    .font("Helvetica")
+    .fontSize(8)
+    .text(planAccion, MARGEN + 5, y + 7, {
+      width: ANCHO - 10,
+    });
+
+  y += altoTexto;
+
+  // =====================================================
+  // FECHA LÍMITE
+  // =====================================================
+
+  doc.rect(MARGEN, y, ANCHO, 25).stroke();
+
+  doc
+    .font("Helvetica-Bold")
+    .fontSize(8)
+    .text("FECHA LÍMITE:", MARGEN + 5, y + 8);
+
+  doc
+    .font("Helvetica")
+    .fontSize(8)
+    .text(fechaLimite, MARGEN + 85, y + 8);
+
+  return y + 25;
+}
+
 // =======================================================
 // EVIDENCIA
 // =======================================================
@@ -658,7 +752,7 @@ async function crearPdfInspeccionEpp(
 
       y = renderTablaEpp(doc, trabajador, y);
 
-      y = renderTextoBloque(doc, "PLAN DE ACCIÓN", trabajador.planAccion, y);
+      y = renderPlanAccion(doc, trabajador, y);
 
       y = renderTextoBloque(doc, "OBSERVACIONES", trabajador.observaciones, y);
 

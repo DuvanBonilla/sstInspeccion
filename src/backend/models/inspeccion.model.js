@@ -608,6 +608,7 @@ async function obtenerInspeccionCompleta(inspeccionId) {
           cargo: trabajador.cargo || "",
 
           planAccion: trabajador.plan_accion || "",
+          fechaPlanAccion: trabajador.fecha_plan_accion || null,
           observaciones: trabajador.observaciones || "",
 
           evidenciaRuta: trabajador.evidencia_ruta || "",
