@@ -487,11 +487,24 @@ function escaparHtml(valor) {
     .replaceAll("'", "&#039;");
 }
 
+function generarInspeccionId() {
+  const hoy = new Date();
+
+  const fecha =
+    `${hoy.getFullYear()}` +
+    `${String(hoy.getMonth() + 1).padStart(2, "0")}` +
+    `${String(hoy.getDate()).padStart(2, "0")}`;
+
+  const aleatorio = Math.random().toString(36).slice(2, 6).toUpperCase();
+
+  return `INSP-${fecha}-${aleatorio}`;
+}
+
 // =========================================================
 // CONSTRUIR INSPECCIÓN EPP
 // =========================================================
 
-function construirInspeccionEpp() {
+function construirInspeccionEpp(inspeccionId = null) {
   const trabajadores = trabajadoresManager.leer();
 
   const informacionGeneral = {
@@ -513,6 +526,8 @@ function construirInspeccionEpp() {
   return {
     tipoInspeccion: "EPP",
 
+    inspeccionId: inspeccionId,
+
     informacionGeneral,
 
     trabajadores,
@@ -523,8 +538,8 @@ function construirInspeccionEpp() {
 // CONSTRUIR FORMDATA EPP
 // =========================================================
 
-function construirFormDataEpp() {
-  const inspeccion = construirInspeccionEpp();
+function construirFormDataEpp(inspeccionId = null) {
+  const inspeccion = construirInspeccionEpp(inspeccionId);
 
   const evidencias = trabajadoresManager.obtenerEvidencias();
 
@@ -578,8 +593,13 @@ function construirFormDataEpp() {
 
 async function enviarInspeccionEpp() {
   try {
-    const formData = construirFormDataEpp();
+    // Generar el ID una sola vez para este envío
+    const inspeccionId = generarInspeccionId();
 
+    // Construir todo el FormData utilizando el mismo ID
+    const formData = construirFormDataEpp(inspeccionId);
+
+    console.log("🆔 ID inspección EPP:", inspeccionId);
     console.log("📤 Enviando inspección EPP...");
 
     const respuesta = await fetch("/enviar-inspeccion-epp", {

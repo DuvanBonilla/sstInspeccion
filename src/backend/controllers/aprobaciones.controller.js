@@ -23,58 +23,161 @@
     resolverCorreoDestino / construirHtmlCorreo de pdfInspeccion.controller.js.
   - Es registrado en app.js como handler de /api/aprobaciones/:token.
 */
-const { obtenerContextoAprobacion, guardarAprobacion, marcarInspeccionEnviada } = require("../models/aprobaciones.model");
-const { descargarEvidenciaOneDrive, obtenerInspeccionCompleta } = require("../models/inspeccion.model");
+const {
+  obtenerContextoAprobacion,
+  guardarAprobacion,
+  marcarInspeccionEnviada,
+} = require("../models/aprobaciones.model");
+const {
+  descargarEvidenciaOneDrive,
+  obtenerInspeccionCompleta,
+} = require("../models/inspeccion.model");
 const {
   crearPdfInspeccionExtintor,
   subirPdfAOneDrive,
   enviarCorreoPorGraph,
   resolverCorreoDestino,
-  construirHtmlCorreo
+  construirHtmlCorreo,
 } = require("./pdfInspeccion.controller");
 const { optimizarPdf } = require("../utils/pdfOptimizer");
-const { recuperarLinksAprobacion } = require("../controllers/inspeccion.controller");
+const {
+  recuperarLinksAprobacion,
+} = require("../controllers/inspeccion.controller");
 
+// GET /api/aprobaciones/:token
 // GET /api/aprobaciones/:token
 async function obtenerResumenAprobacion(req, res) {
   try {
     const contexto = await obtenerContextoAprobacion(req.params.token);
+
     if (!contexto) {
-      return res.status(404).json({ ok: false, errores: ["Link de aprobación no válido"] });
+      return res.status(404).json({
+        ok: false,
+        errores: ["Link de aprobación no válido"],
+      });
     }
 
     const { row } = contexto;
+
     const completa = await obtenerInspeccionCompleta(row.inspeccion_id);
+
+    if (!completa) {
+      return res.status(404).json({
+        ok: false,
+        errores: ["Inspección no encontrada"],
+      });
+    }
+
+    const tipoInspeccion =
+      row.tipo_inspeccion || completa?.inspeccion?.tipo_inspeccion || "SST";
+
+    /* =====================================================
+       CONTEOS SEGÚN TIPO DE INSPECCIÓN
+    ===================================================== */
+
+    let conteos = {};
+
+    if (tipoInspeccion === "EPP") {
+      const trabajadores = Array.isArray(completa.trabajadores)
+        ? completa.trabajadores
+        : [];
+
+      let totalEvaluaciones = 0;
+      let totalNovedades = 0;
+      let trabajadoresConNovedades = 0;
+
+      for (const trabajador of trabajadores) {
+        const elementos = Array.isArray(trabajador.elementos)
+          ? trabajador.elementos
+          : [];
+
+        totalEvaluaciones += elementos.length;
+
+        const novedadesTrabajador = elementos.filter(
+          (elemento) =>
+            elemento.condicion === "M" ||
+            elemento.condicion === "R" ||
+            elemento.uso === "M" ||
+            elemento.uso === "R",
+        ).length;
+
+        totalNovedades += novedadesTrabajador;
+
+        if (novedadesTrabajador > 0) {
+          trabajadoresConNovedades++;
+        }
+      }
+
+      conteos = {
+        trabajadores: trabajadores.length,
+        evaluaciones: totalEvaluaciones,
+        novedades: totalNovedades,
+        trabajadoresConNovedades,
+        trabajadoresSinNovedades:
+          trabajadores.length - trabajadoresConNovedades,
+      };
+    } else {
+      conteos = {
+        extintores: completa?.extintores?.length || 0,
+        camillas: completa?.camillas?.length || 0,
+        senalizaciones: completa?.senalizaciones?.length || 0,
+        equiposTecnologicos: completa?.equiposTecnologicos?.length || 0,
+        botiquines: completa?.botiquines?.length || 0,
+      };
+    }
+
+    /* =====================================================
+       RESPUESTA
+    ===================================================== */
 
     return res.status(200).json({
       ok: true,
+
       rol: contexto.rol,
       rolLabel: contexto.rolLabel,
       yaAprobado: contexto.yaAprobado,
       nombreAprobador: contexto.nombreAprobador,
+
       inspeccion: {
         inspeccionId: row.inspeccion_id,
         numInspeccion: Number(row.num_inspeccion),
+
+        tipoInspeccion,
+
         fecha: row.fecha,
         sedeOperacion: row.sede_operacion,
         areaTrabajo: row.area_trabajo,
+
         jefeResponsable: row.jefe_responsable,
         cargoJefe: row.cargo_jefe,
+
         responsableInspeccion: row.responsable_inspeccion,
+
         cargoResponsable: row.cargo_responsable,
+
         estado: row.estado,
-        conteos: {
-          extintores: completa?.extintores.length || 0,
-          camillas: completa?.camillas.length || 0,
-          senalizaciones: completa?.senalizaciones.length || 0,
-          equiposTecnologicos: completa?.equiposTecnologicos.length || 0,
-          botiquines: completa?.botiquines.length || 0
-        }
-      }
+
+        conteos,
+
+        /*
+         * Para EPP enviamos también los trabajadores.
+         * Esto permitirá construir posteriormente
+         * el resumen detallado en la pantalla de aprobación.
+         */
+        trabajadores:
+          tipoInspeccion === "EPP" ? completa.trabajadores || [] : [],
+      },
     });
   } catch (error) {
-    const mensaje = error instanceof Error ? error.message : "Error obteniendo la inspección";
-    return res.status(500).json({ ok: false, errores: [mensaje] });
+    console.error("[aprobaciones] Error obteniendo resumen:", error);
+
+    const mensaje =
+      error instanceof Error ? error.message : "Error obteniendo la inspección";
+
+    return res.status(500).json({
+      ok: false,
+      errores: [mensaje],
+    });
   }
 }
 
@@ -82,13 +185,17 @@ async function previsualizarAprobacion(req, res) {
   try {
     const contexto = await obtenerContextoAprobacion(req.params.token);
     if (!contexto) {
-      return res.status(404).json({ ok: false, errores: ["Link de aprobación no válido"] });
+      return res
+        .status(404)
+        .json({ ok: false, errores: ["Link de aprobación no válido"] });
     }
 
     const { row } = contexto;
     const completa = await obtenerInspeccionCompleta(row.inspeccion_id);
     if (!completa) {
-      return res.status(404).json({ ok: false, errores: ["Inspección no encontrada"] });
+      return res
+        .status(404)
+        .json({ ok: false, errores: ["Inspección no encontrada"] });
     }
 
     const [ext, cam, sen, eqp, bot] = await Promise.all([
@@ -96,7 +203,7 @@ async function previsualizarAprobacion(req, res) {
       construirEvidenciasDesdeOneDrive(completa.camillas),
       construirEvidenciasDesdeOneDrive(completa.senalizaciones),
       construirEvidenciasDesdeOneDrive(completa.equiposTecnologicos),
-      construirEvidenciasDesdeOneDrive(completa.botiquines)
+      construirEvidenciasDesdeOneDrive(completa.botiquines),
     ]);
 
     const data = {
@@ -113,13 +220,13 @@ async function previsualizarAprobacion(req, res) {
       camillas: completa.camillas,
       senalizaciones: completa.senalizaciones,
       equiposTecnologicos: completa.equiposTecnologicos,
-      botiquines: completa.botiquines
+      botiquines: completa.botiquines,
     };
 
     const aprobaciones = {
       inspector: { nombre: row.aprobacion_inspector_nombre },
       jefe: { nombre: row.aprobacion_jefe_nombre },
-      copasst: { nombre: row.aprobacion_copasst_nombre }
+      copasst: { nombre: row.aprobacion_copasst_nombre },
     };
 
     const pdfBuffer = await crearPdfInspeccionExtintor(
@@ -137,16 +244,22 @@ async function previsualizarAprobacion(req, res) {
           camillas: cam.fechas,
           senalizaciones: sen.fechas,
           equipos: eqp.fechas,
-          botiquines: bot.fechas
-        }
-      }
+          botiquines: bot.fechas,
+        },
+      },
     );
 
     res.setHeader("Content-Type", "application/pdf");
-    res.setHeader("Content-Disposition", `inline; filename="${row.inspeccion_id}.pdf"`);
+    res.setHeader(
+      "Content-Disposition",
+      `inline; filename="${row.inspeccion_id}.pdf"`,
+    );
     return res.status(200).send(pdfBuffer);
   } catch (error) {
-    const mensaje = error instanceof Error ? error.message : "Error generando preview del PDF";
+    const mensaje =
+      error instanceof Error
+        ? error.message
+        : "Error generando preview del PDF";
     return res.status(500).json({ ok: false, errores: [mensaje] });
   }
 }
@@ -157,27 +270,45 @@ async function registrarAprobacion(req, res) {
     const { nombre } = req.body || {};
 
     if (!nombre || !String(nombre).trim()) {
-      return res.status(400).json({ ok: false, errores: ["El nombre es obligatorio"] });
+      return res
+        .status(400)
+        .json({ ok: false, errores: ["El nombre es obligatorio"] });
     }
     const resultado = await guardarAprobacion(req.params.token, { nombre });
 
     if (!resultado.ok) {
       if (resultado.motivo === "no_encontrado") {
-        return res.status(404).json({ ok: false, errores: ["Link de aprobación no válido"] });
+        return res
+          .status(404)
+          .json({ ok: false, errores: ["Link de aprobación no válido"] });
       }
-      return res.status(409).json({ ok: false, errores: ["Este link ya fue usado para aprobar"] });
+      return res
+        .status(409)
+        .json({ ok: false, errores: ["Este link ya fue usado para aprobar"] });
     }
 
     if (resultado.completas) {
       // No bloquea la respuesta al aprobador: el PDF y el correo se procesan en segundo plano.
       finalizarInspeccion(resultado.inspeccionId).catch((err) => {
-        console.error(`[aprobaciones] error finalizando ${resultado.inspeccionId}:`, err.message);
+        console.error(
+          `[aprobaciones] error finalizando ${resultado.inspeccionId}:`,
+          err.message,
+        );
       });
     }
 
-    return res.status(200).json({ ok: true, mensaje: "Aprobación registrada", todasCompletas: resultado.completas });
+    return res
+      .status(200)
+      .json({
+        ok: true,
+        mensaje: "Aprobación registrada",
+        todasCompletas: resultado.completas,
+      });
   } catch (error) {
-    const mensaje = error instanceof Error ? error.message : "Error registrando la aprobación";
+    const mensaje =
+      error instanceof Error
+        ? error.message
+        : "Error registrando la aprobación";
     return res.status(500).json({ ok: false, errores: [mensaje] });
   }
 }
@@ -188,22 +319,28 @@ async function construirEvidenciasDesdeOneDrive(items) {
   const evidenciasPorIndex = new Map();
   const fechas = new Map();
 
-  await Promise.all((Array.isArray(items) ? items : []).map(async (item, idx) => {
-    const rutas = String(item?.evidenciaRuta || "").split("\n").map((r) => r.trim()).filter(Boolean);
-    if (rutas.length === 0) return;
+  await Promise.all(
+    (Array.isArray(items) ? items : []).map(async (item, idx) => {
+      const rutas = String(item?.evidenciaRuta || "")
+        .split("\n")
+        .map((r) => r.trim())
+        .filter(Boolean);
+      if (rutas.length === 0) return;
 
-    const buffers = await Promise.all(rutas.map((ruta) => descargarEvidenciaOneDrive(ruta)));
-    const archivos = buffers.filter(Boolean).map((buffer) => ({ buffer }));
-    if (archivos.length > 0) evidenciasPorIndex.set(idx, archivos);
-    if (item?.evidenciaFecha) fechas.set(idx, item.evidenciaFecha);
-  }));
+      const buffers = await Promise.all(
+        rutas.map((ruta) => descargarEvidenciaOneDrive(ruta)),
+      );
+      const archivos = buffers.filter(Boolean).map((buffer) => ({ buffer }));
+      if (archivos.length > 0) evidenciasPorIndex.set(idx, archivos);
+      if (item?.evidenciaFecha) fechas.set(idx, item.evidenciaFecha);
+    }),
+  );
 
   return { evidenciasPorIndex, fechas };
 }
 
 // Regenera el PDF (con las 3 aprobaciones reales), lo archiva en OneDrive y envía el correo final.
 async function finalizarInspeccion(inspeccionId) {
-
   const completa = await obtenerInspeccionCompleta(inspeccionId);
 
   if (!completa) {
@@ -217,7 +354,7 @@ async function finalizarInspeccion(inspeccionId) {
     construirEvidenciasDesdeOneDrive(completa.camillas),
     construirEvidenciasDesdeOneDrive(completa.senalizaciones),
     construirEvidenciasDesdeOneDrive(completa.equiposTecnologicos),
-    construirEvidenciasDesdeOneDrive(completa.botiquines)
+    construirEvidenciasDesdeOneDrive(completa.botiquines),
   ]);
 
   const data = {
@@ -234,13 +371,13 @@ async function finalizarInspeccion(inspeccionId) {
     camillas: completa.camillas,
     senalizaciones: completa.senalizaciones,
     equiposTecnologicos: completa.equiposTecnologicos,
-    botiquines: completa.botiquines
+    botiquines: completa.botiquines,
   };
 
   const aprobaciones = {
     inspector: { nombre: row.aprobacion_inspector_nombre },
     jefe: { nombre: row.aprobacion_jefe_nombre },
-    copasst: { nombre: row.aprobacion_copasst_nombre }
+    copasst: { nombre: row.aprobacion_copasst_nombre },
   };
 
   // ==========================================================
@@ -261,9 +398,9 @@ async function finalizarInspeccion(inspeccionId) {
         camillas: cam.fechas,
         senalizaciones: sen.fechas,
         equipos: eqp.fechas,
-        botiquines: bot.fechas
-      }
-    }
+        botiquines: bot.fechas,
+      },
+    },
   );
 
   // ==========================================================
@@ -272,7 +409,7 @@ async function finalizarInspeccion(inspeccionId) {
   // ==========================================================
   const pdfFinal = await optimizarPdf(pdfGenerado, {
     profile: "inspection",
-    fileName: `${row.inspeccion_id}.pdf`
+    fileName: `${row.inspeccion_id}.pdf`,
   });
 
   // ==========================================================
@@ -281,7 +418,7 @@ async function finalizarInspeccion(inspeccionId) {
   const webUrl = await subirPdfAOneDrive(
     pdfFinal,
     row.inspeccion_id,
-    row.sede_operacion
+    row.sede_operacion,
   );
 
   // ==========================================================
@@ -290,7 +427,6 @@ async function finalizarInspeccion(inspeccionId) {
   const correoDestino = resolverCorreoDestino(row.sede_operacion, null);
 
   if (correoDestino) {
-
     const html = construirHtmlCorreo({
       inspeccionId: row.inspeccion_id,
       numInspeccion: Number(row.num_inspeccion),
@@ -301,7 +437,7 @@ async function finalizarInspeccion(inspeccionId) {
       responsableInspeccion: row.responsable_inspeccion,
       cargoResponsable: row.cargo_responsable,
       webUrl,
-      titulo: "Inspección aprobada"
+      titulo: "Inspección aprobada",
     });
 
     await enviarCorreoPorGraph({
@@ -309,24 +445,18 @@ async function finalizarInspeccion(inspeccionId) {
       subject: `Inspección SST aprobada N.° ${row.num_inspeccion} – ${row.inspeccion_id}`,
       html,
       pdfBuffer: pdfFinal,
-      nombre: `${row.inspeccion_id}.pdf`
+      nombre: `${row.inspeccion_id}.pdf`,
     });
-
   }
 
   // ==========================================================
   // 5. Marcar la inspección como enviada
   // ==========================================================
-  await marcarInspeccionEnviada(
-    row.inspeccion_id,
-    webUrl
-  );
-
+  await marcarInspeccionEnviada(row.inspeccion_id, webUrl);
 }
 
 module.exports = {
   obtenerResumenAprobacion,
   previsualizarAprobacion,
   registrarAprobacion,
- 
 };

@@ -38,25 +38,24 @@ let _tokenExpiresAt = 0;
 
 const {
   normalizarExtintores: normalizarExtintoresSeccion,
-  validarExtintores
+  validarExtintores,
 } = require("./extintores.model");
 const {
   normalizarCamillas: normalizarCamillasSeccion,
-  validarCamillas
+  validarCamillas,
 } = require("./camillas.model");
 const {
   normalizarSenalizaciones: normalizarSenalizacionesSeccion,
-  validarSenalizaciones
+  validarSenalizaciones,
 } = require("./senalizaciones.model");
 const {
   normalizarEquiposTecnologicos: normalizarEquiposTecnologicosSeccion,
-  validarEquiposTecnologicos
+  validarEquiposTecnologicos,
 } = require("./equiposTecnologicos.model");
 const {
   normalizarBotiquines: normalizarBotiquinesSeccion,
-  validarBotiquines
+  validarBotiquines,
 } = require("./botiquines.model");
-
 
 // Campos de condición que se esperan en la sección de extintores.
 const CAMPOS_CONDICION = [
@@ -78,7 +77,7 @@ const CAMPOS_CONDICION = [
   "manija",
   "sello",
   "llaveSpanner",
-  "otros"
+  "otros",
 ];
 
 // Normaliza un valor de texto: si no es string, devuelve "", si es string, lo trimmea.
@@ -116,21 +115,22 @@ async function getAccessToken() {
     client_id: clientId,
     client_secret: clientSecret,
     grant_type: "client_credentials",
-    scope: "https://graph.microsoft.com/.default"
+    scope: "https://graph.microsoft.com/.default",
   });
 
   // Realiza la solicitud POST para obtener el token.
   const response = await fetch(tokenUrl, {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body
+    body,
   });
 
   // Lee la respuesta y parsea JSON.
   const data = await response.json();
 
   if (!response.ok || !data.access_token) {
-    const detail = data?.error_description || data?.error || "No se pudo obtener token";
+    const detail =
+      data?.error_description || data?.error || "No se pudo obtener token";
     throw new Error(`Error autenticando en Microsoft Graph: ${detail}`);
   }
 
@@ -157,11 +157,12 @@ function validarInspeccion(payload) {
   if (!fecha) errores.push("Fecha de inspeccion es obligatoria");
   if (!sedeOperacion) errores.push("Sede de operacion es obligatoria");
   if (!areaTrabajo) errores.push("Area de trabajo es obligatoria");
-  if (!jefeResponsable) errores.push("Nombre del jefe responsable es obligatorio");
+  if (!jefeResponsable)
+    errores.push("Nombre del jefe responsable es obligatorio");
   if (!cargoJefe) errores.push("Cargo del jefe es obligatorio");
-  if (!responsableInspeccion) errores.push("Nombre del responsable de inspeccion es obligatorio");
+  if (!responsableInspeccion)
+    errores.push("Nombre del responsable de inspeccion es obligatorio");
   if (!cargoResponsable) errores.push("Cargo del responsable es obligatorio");
-
 
   // Normaliza cada sección del payload para validación.
   const extintores = normalizarExtintoresSeccion(payload);
@@ -175,13 +176,10 @@ function validarInspeccion(payload) {
   // se exige el mínimo de 1 ítem por sección. Fuera de eso, cualquier ítem
   // que sí venga (omitido o no, Urabá o no) se valida igual que siempre —
   // omitir una sección es dejarla en cero ítems, no aceptar datos incompletos.
-  const SEDES_PERMITEN_OMITIR = [
-    "urab",
-    "santa marta"
-  ];
+  const SEDES_PERMITEN_OMITIR = ["urab", "santa marta"];
 
-  const seccionMinimoOpcional = SEDES_PERMITEN_OMITIR.some(sede =>
-    sedeOperacion.toLowerCase().includes(sede)
+  const seccionMinimoOpcional = SEDES_PERMITEN_OMITIR.some((sede) =>
+    sedeOperacion.toLowerCase().includes(sede),
   );
 
   if (!seccionMinimoOpcional) {
@@ -210,8 +208,14 @@ function validarInspeccion(payload) {
   // Valida cada sección y acumula errores.
   const extintoresValidados = validarExtintores(extintores, errores);
   const camillasValidadas = validarCamillas(camillas, errores);
-  const senalizacionesValidadas = validarSenalizaciones(senalizaciones, errores);
-  const equiposTecnologicosValidados = validarEquiposTecnologicos(equiposTecnologicos, errores);
+  const senalizacionesValidadas = validarSenalizaciones(
+    senalizaciones,
+    errores,
+  );
+  const equiposTecnologicosValidados = validarEquiposTecnologicos(
+    equiposTecnologicos,
+    errores,
+  );
   const botiquinesValidados = validarBotiquines(botiquines, errores);
 
   // Retorna errores si los hay, o la data normalizada.
@@ -230,7 +234,7 @@ function validarInspeccion(payload) {
         jefeResponsable,
         cargoJefe,
         responsableInspeccion,
-        cargoResponsable
+        cargoResponsable,
       },
       extintores: extintoresValidados,
       camillas: camillasValidadas,
@@ -240,8 +244,8 @@ function validarInspeccion(payload) {
       equiposTecnologicos: equiposTecnologicosValidados,
       equipoTecnologico: equiposTecnologicosValidados[0] || null,
       botiquines: botiquinesValidados,
-      botiquin: botiquinesValidados[0] || null
-    }
+      botiquin: botiquinesValidados[0] || null,
+    },
   };
 }
 
@@ -254,13 +258,18 @@ function getEvidenceFolderPath() {
   const configuredPath = process.env.ONEDRIVE_EVIDENCIAS_PATH;
 
   if (configuredPath) {
-    return configuredPath.startsWith("/") ? configuredPath : `/${configuredPath}`;
+    return configuredPath.startsWith("/")
+      ? configuredPath
+      : `/${configuredPath}`;
   }
 
   const excelPath = getRequiredEnv("ONEDRIVE_EXCEL_PATH");
-  const normalizedExcelPath = excelPath.startsWith("/") ? excelPath : `/${excelPath}`;
+  const normalizedExcelPath = excelPath.startsWith("/")
+    ? excelPath
+    : `/${excelPath}`;
   const lastSlashIndex = normalizedExcelPath.lastIndexOf("/");
-  const parentPath = lastSlashIndex > 0 ? normalizedExcelPath.slice(0, lastSlashIndex) : "";
+  const parentPath =
+    lastSlashIndex > 0 ? normalizedExcelPath.slice(0, lastSlashIndex) : "";
 
   return `${parentPath}/EVIDENCIAS`;
 }
@@ -274,7 +283,13 @@ function extraerCodigoInspeccion(inspeccionId) {
 // Carga la evidencia del formulario a OneDrive y retorna la ruta creada.
 // Nombre del archivo: {PREFIJO}_{indice}_{codigoInspeccion}.ext (ej: EXT_1_K7X9.jpg).
 // Si se pasa subIndice (item con más de una foto), se agrega al nombre: {PREFIJO}_{indice}_{subIndice}_{codigoInspeccion}.ext.
-async function uploadEvidenceToOneDrive(file, prefijo, indice, inspeccionId, subIndice = null) {
+async function uploadEvidenceToOneDrive(
+  file,
+  prefijo,
+  indice,
+  inspeccionId,
+  subIndice = null,
+) {
   if (!file) {
     return "";
   }
@@ -284,9 +299,10 @@ async function uploadEvidenceToOneDrive(file, prefijo, indice, inspeccionId, sub
   const evidenceFolderPath = getEvidenceFolderPath();
   const extension = pathExtension(file.originalname);
   const codigoInspeccion = extraerCodigoInspeccion(inspeccionId);
-  const fileName = subIndice != null
-    ? `${prefijo}_${indice}_${subIndice}_${codigoInspeccion}${extension}`
-    : `${prefijo}_${indice}_${codigoInspeccion}${extension}`;
+  const fileName =
+    subIndice != null
+      ? `${prefijo}_${indice}_${subIndice}_${codigoInspeccion}${extension}`
+      : `${prefijo}_${indice}_${codigoInspeccion}${extension}`;
   const evidencePath = `${evidenceFolderPath}/${fileName}`;
   const url = `${GRAPH_BASE}/users/${encodeURIComponent(oneDriveUser)}/drive/root:${encodeURI(evidencePath)}:/content?@microsoft.graph.conflictBehavior=replace`;
 
@@ -294,9 +310,9 @@ async function uploadEvidenceToOneDrive(file, prefijo, indice, inspeccionId, sub
     method: "PUT",
     headers: {
       Authorization: `Bearer ${token}`,
-      "Content-Type": file.mimetype || "application/octet-stream"
+      "Content-Type": file.mimetype || "application/octet-stream",
     },
-    body: file.buffer
+    body: file.buffer,
   });
 
   const text = await response.text();
@@ -309,7 +325,8 @@ async function uploadEvidenceToOneDrive(file, prefijo, indice, inspeccionId, sub
   }
 
   if (!response.ok) {
-    const detail = data?.error?.message || data?.raw || "No se pudo subir la evidencia";
+    const detail =
+      data?.error?.message || data?.raw || "No se pudo subir la evidencia";
     throw new Error(`Error OneDrive/Graph al subir evidencia: ${detail}`);
   }
 
@@ -325,11 +342,13 @@ async function descargarEvidenciaOneDrive(evidencePath) {
 
   const oneDriveUser = getRequiredEnv("ONEDRIVE_USER_ID");
   const token = await getAccessToken();
-  const normalizedPath = evidencePath.startsWith("/") ? evidencePath : `/${evidencePath}`;
+  const normalizedPath = evidencePath.startsWith("/")
+    ? evidencePath
+    : `/${evidencePath}`;
   const url = `${GRAPH_BASE}/users/${encodeURIComponent(oneDriveUser)}/drive/root:${encodeURI(normalizedPath)}:/content`;
 
   const response = await fetch(url, {
-    headers: { Authorization: `Bearer ${token}` }
+    headers: { Authorization: `Bearer ${token}` },
   });
 
   if (!response.ok) {
@@ -387,8 +406,8 @@ async function guardarInspeccionEnDB(data) {
         general.responsableInspeccion || "",
         general.cargoResponsable || "",
         general.responsableInspeccion || "",
-        ""
-      ]
+        "",
+      ],
     );
     const inspeccion = rows[0];
     const pk = inspeccion.id;
@@ -397,7 +416,21 @@ async function guardarInspeccionEnDB(data) {
       await client.query(
         `INSERT INTO extintores (inspeccion_pk, idx, numero, ubicacion, tipo, capacidad, mes_recarga, ano_recarga, observaciones, evidencia_ruta, evidencia_archivo, evidencia_fecha, condiciones)
          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)`,
-        [pk, idx, e.numero || "", e.ubicacion || "", e.tipo || "", e.capacidad || "", e.mesRecarga || "", e.anioRecarga || "", e.observaciones || "", e.evidenciaRuta || "", e.evidenciaArchivo || "", e.evidenciaFecha || null, JSON.stringify(e.condiciones || {})]
+        [
+          pk,
+          idx,
+          e.numero || "",
+          e.ubicacion || "",
+          e.tipo || "",
+          e.capacidad || "",
+          e.mesRecarga || "",
+          e.anioRecarga || "",
+          e.observaciones || "",
+          e.evidenciaRuta || "",
+          e.evidenciaArchivo || "",
+          e.evidenciaFecha || null,
+          JSON.stringify(e.condiciones || {}),
+        ],
       );
     }
 
@@ -405,7 +438,18 @@ async function guardarInspeccionEnDB(data) {
       await client.query(
         `INSERT INTO camillas (inspeccion_pk, idx, numero, ubicacion, observaciones, afectacion_productividad, evidencia_ruta, evidencia_archivo, evidencia_fecha, condiciones)
          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
-        [pk, idx, c.numero || "", c.ubicacion || "", c.observaciones || "", c.afectacionProductividad || "", c.evidenciaRuta || "", c.evidenciaArchivo || "", c.evidenciaFecha || null, JSON.stringify(c.condiciones || {})]
+        [
+          pk,
+          idx,
+          c.numero || "",
+          c.ubicacion || "",
+          c.observaciones || "",
+          c.afectacionProductividad || "",
+          c.evidenciaRuta || "",
+          c.evidenciaArchivo || "",
+          c.evidenciaFecha || null,
+          JSON.stringify(c.condiciones || {}),
+        ],
       );
     }
 
@@ -413,7 +457,19 @@ async function guardarInspeccionEnDB(data) {
       await client.query(
         `INSERT INTO senalizaciones (inspeccion_pk, idx, tipo, ubicacion, cantidad, estado, aseo, observaciones, evidencia_ruta, evidencia_archivo, evidencia_fecha)
          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,
-        [pk, idx, s.tipo || "", s.ubicacion || "", s.cantidad || "", s.estado || "", s.aseo || "", s.observaciones || "", s.evidenciaRuta || "", s.evidenciaArchivo || "", s.evidenciaFecha || null]
+        [
+          pk,
+          idx,
+          s.tipo || "",
+          s.ubicacion || "",
+          s.cantidad || "",
+          s.estado || "",
+          s.aseo || "",
+          s.observaciones || "",
+          s.evidenciaRuta || "",
+          s.evidenciaArchivo || "",
+          s.evidenciaFecha || null,
+        ],
       );
     }
 
@@ -421,7 +477,21 @@ async function guardarInspeccionEnDB(data) {
       await client.query(
         `INSERT INTO equipos_tecnologicos (inspeccion_pk, idx, no, equipo_tecnologico, ubicacion, cantidad, estado, mantenimiento, observaciones, afectacion_servicio, evidencia_ruta, evidencia_archivo, evidencia_fecha)
          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)`,
-        [pk, idx, eq.no || "", eq.equipoTecnologico || "", eq.ubicacion || "", eq.cantidad || "", eq.estado || "", eq.mantenimiento || "", eq.observaciones || "", eq.afectacionServicio || "", eq.evidenciaRuta || "", eq.evidenciaArchivo || "", eq.evidenciaFecha || null]
+        [
+          pk,
+          idx,
+          eq.no || "",
+          eq.equipoTecnologico || "",
+          eq.ubicacion || "",
+          eq.cantidad || "",
+          eq.estado || "",
+          eq.mantenimiento || "",
+          eq.observaciones || "",
+          eq.afectacionServicio || "",
+          eq.evidenciaRuta || "",
+          eq.evidenciaArchivo || "",
+          eq.evidenciaFecha || null,
+        ],
       );
     }
 
@@ -429,7 +499,16 @@ async function guardarInspeccionEnDB(data) {
       const { rows: botRows } = await client.query(
         `INSERT INTO botiquines (inspeccion_pk, idx, numero, ubicacion, observacion_general, evidencia_ruta, evidencia_archivo, evidencia_fecha)
          VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id`,
-        [pk, idx, b.numero || "", b.ubicacion || "", b.observacionGeneral || "", b.evidenciaRuta || "", b.evidenciaArchivo || "", b.evidenciaFecha || null]
+        [
+          pk,
+          idx,
+          b.numero || "",
+          b.ubicacion || "",
+          b.observacionGeneral || "",
+          b.evidenciaRuta || "",
+          b.evidenciaArchivo || "",
+          b.evidenciaFecha || null,
+        ],
       );
       const botiquinId = botRows[0].id;
 
@@ -437,7 +516,21 @@ async function guardarInspeccionEnDB(data) {
         await client.query(
           `INSERT INTO botiquin_items (botiquin_id, idx, no, item, cantidad_ideal, cantidad_real, integridad_empaque, fecha_vencimiento, plan_intervencion, fecha_intervencion, cumplimiento, observaciones, afectacion_servicio)
            VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)`,
-          [botiquinId, itemIdx, item.no || "", item.item || "", item.cantidadIdeal || "", item.cantidadReal || "", item.integridadEmpaque || "", item.fechaVencimiento || "", item.planIntervencion || "", item.fechaIntervencion || "", item.cumplimiento || "", item.observaciones || "", item.afectacionServicio || ""]
+          [
+            botiquinId,
+            itemIdx,
+            item.no || "",
+            item.item || "",
+            item.cantidadIdeal || "",
+            item.cantidadReal || "",
+            item.integridadEmpaque || "",
+            item.fechaVencimiento || "",
+            item.planIntervencion || "",
+            item.fechaIntervencion || "",
+            item.cumplimiento || "",
+            item.observaciones || "",
+            item.afectacionServicio || "",
+          ],
         );
       }
     }
@@ -450,8 +543,8 @@ async function guardarInspeccionEnDB(data) {
       tokens: {
         inspector: inspeccion.token_inspector,
         jefe: inspeccion.token_jefe,
-        copasst: inspeccion.token_copasst
-      }
+        copasst: inspeccion.token_copasst,
+      },
     };
   } catch (error) {
     await client.query("ROLLBACK");
@@ -466,47 +559,162 @@ async function guardarInspeccionEnDB(data) {
 // Se usa al completar las 3 firmas, para regenerar el PDF sin depender del
 // request original de envío. Devuelve null si no existe.
 async function obtenerInspeccionCompleta(inspeccionId) {
-  const { rows } = await query(`SELECT * FROM inspecciones WHERE inspeccion_id = $1`, [inspeccionId]);
+  const { rows } = await query(
+    `SELECT * FROM inspecciones WHERE inspeccion_id = $1`,
+    [inspeccionId],
+  );
+
   const inspeccion = rows[0];
-  if (!inspeccion) return null;
+
+  if (!inspeccion) {
+    return null;
+  }
 
   const pk = inspeccion.id;
 
+  /* =====================================================
+     INSPECCIÓN EPP
+  ===================================================== */
+
+  if (inspeccion.tipo_inspeccion === "EPP") {
+    const { rows: trabajadoresRows } = await query(
+      `
+      SELECT *
+      FROM trabajadores_epp
+      WHERE inspeccion_pk = $1
+      ORDER BY idx
+      `,
+      [pk],
+    );
+
+    const trabajadores = await Promise.all(
+      trabajadoresRows.map(async (trabajador) => {
+        const { rows: evaluacionesRows } = await query(
+          `
+          SELECT *
+          FROM evaluaciones_epp
+          WHERE trabajador_epp_id = $1
+          ORDER BY idx
+          `,
+          [trabajador.id],
+        );
+
+        return {
+          id: trabajador.id,
+          idx: trabajador.idx,
+
+          nombre: trabajador.nombre || "",
+          codigo: trabajador.codigo || "",
+          cargo: trabajador.cargo || "",
+
+          planAccion: trabajador.plan_accion || "",
+          observaciones: trabajador.observaciones || "",
+
+          evidenciaRuta: trabajador.evidencia_ruta || "",
+          evidenciaArchivo: trabajador.evidencia_archivo || "",
+          evidenciaFecha: trabajador.evidencia_fecha || null,
+
+          elementos: evaluacionesRows.map((evaluacion) => ({
+            idx: evaluacion.idx,
+            elemento: evaluacion.elemento || "",
+            condicion: evaluacion.condicion || "",
+            uso: evaluacion.uso || "",
+          })),
+        };
+      }),
+    );
+
+    return {
+      inspeccion,
+      tipoInspeccion: "EPP",
+      trabajadores,
+    };
+  }
+
+  /* =====================================================
+     INSPECCIÓN SST
+     Se mantiene el comportamiento actual
+  ===================================================== */
+
   const [extRes, camRes, senRes, eqpRes, botRes] = await Promise.all([
-    query(`SELECT * FROM extintores WHERE inspeccion_pk = $1 ORDER BY idx`, [pk]),
-    query(`SELECT * FROM camillas WHERE inspeccion_pk = $1 ORDER BY idx`, [pk]),
-    query(`SELECT * FROM senalizaciones WHERE inspeccion_pk = $1 ORDER BY idx`, [pk]),
-    query(`SELECT * FROM equipos_tecnologicos WHERE inspeccion_pk = $1 ORDER BY idx`, [pk]),
-    query(`SELECT * FROM botiquines WHERE inspeccion_pk = $1 ORDER BY idx`, [pk])
+    query(
+      `SELECT * FROM extintores
+         WHERE inspeccion_pk = $1
+         ORDER BY idx`,
+      [pk],
+    ),
+
+    query(
+      `SELECT * FROM camillas
+         WHERE inspeccion_pk = $1
+         ORDER BY idx`,
+      [pk],
+    ),
+
+    query(
+      `SELECT * FROM senalizaciones
+         WHERE inspeccion_pk = $1
+         ORDER BY idx`,
+      [pk],
+    ),
+
+    query(
+      `SELECT * FROM equipos_tecnologicos
+         WHERE inspeccion_pk = $1
+         ORDER BY idx`,
+      [pk],
+    ),
+
+    query(
+      `SELECT * FROM botiquines
+         WHERE inspeccion_pk = $1
+         ORDER BY idx`,
+      [pk],
+    ),
   ]);
 
-  const botiquines = await Promise.all(botRes.rows.map(async (b) => {
-    const { rows: items } = await query(`SELECT * FROM botiquin_items WHERE botiquin_id = $1 ORDER BY idx`, [b.id]);
-    return {
-      numero: b.numero || "",
-      ubicacion: b.ubicacion || "",
-      observacionGeneral: b.observacion_general || "",
-      evidenciaRuta: b.evidencia_ruta || "",
-      evidenciaArchivo: b.evidencia_archivo || "",
-      evidenciaFecha: b.evidencia_fecha || null,
-      items: items.map((it) => ({
-        no: it.no || "",
-        item: it.item || "",
-        cantidadIdeal: it.cantidad_ideal || "",
-        cantidadReal: it.cantidad_real || "",
-        integridadEmpaque: it.integridad_empaque || "",
-        fechaVencimiento: it.fecha_vencimiento || "",
-        planIntervencion: it.plan_intervencion || "",
-        fechaIntervencion: it.fecha_intervencion || "",
-        cumplimiento: it.cumplimiento || "",
-        observaciones: it.observaciones || "",
-        afectacionServicio: it.afectacion_servicio || ""
-      }))
-    };
-  }));
+  const botiquines = await Promise.all(
+    botRes.rows.map(async (b) => {
+      const { rows: items } = await query(
+        `
+        SELECT *
+        FROM botiquin_items
+        WHERE botiquin_id = $1
+        ORDER BY idx
+        `,
+        [b.id],
+      );
+
+      return {
+        numero: b.numero || "",
+        ubicacion: b.ubicacion || "",
+        observacionGeneral: b.observacion_general || "",
+        evidenciaRuta: b.evidencia_ruta || "",
+        evidenciaArchivo: b.evidencia_archivo || "",
+        evidenciaFecha: b.evidencia_fecha || null,
+
+        items: items.map((it) => ({
+          no: it.no || "",
+          item: it.item || "",
+          cantidadIdeal: it.cantidad_ideal || "",
+          cantidadReal: it.cantidad_real || "",
+          integridadEmpaque: it.integridad_empaque || "",
+          fechaVencimiento: it.fecha_vencimiento || "",
+          planIntervencion: it.plan_intervencion || "",
+          fechaIntervencion: it.fecha_intervencion || "",
+          cumplimiento: it.cumplimiento || "",
+          observaciones: it.observaciones || "",
+          afectacionServicio: it.afectacion_servicio || "",
+        })),
+      };
+    }),
+  );
 
   return {
     inspeccion,
+
+    tipoInspeccion: "SST",
+
     extintores: extRes.rows.map((e) => ({
       numero: e.numero || "",
       ubicacion: e.ubicacion || "",
@@ -518,8 +726,9 @@ async function obtenerInspeccionCompleta(inspeccionId) {
       evidenciaRuta: e.evidencia_ruta || "",
       evidenciaArchivo: e.evidencia_archivo || "",
       evidenciaFecha: e.evidencia_fecha || null,
-      condiciones: e.condiciones || {}
+      condiciones: e.condiciones || {},
     })),
+
     camillas: camRes.rows.map((c) => ({
       numero: c.numero || "",
       ubicacion: c.ubicacion || "",
@@ -528,8 +737,9 @@ async function obtenerInspeccionCompleta(inspeccionId) {
       evidenciaRuta: c.evidencia_ruta || "",
       evidenciaArchivo: c.evidencia_archivo || "",
       evidenciaFecha: c.evidencia_fecha || null,
-      condiciones: c.condiciones || {}
+      condiciones: c.condiciones || {},
     })),
+
     senalizaciones: senRes.rows.map((s) => ({
       tipo: s.tipo || "",
       ubicacion: s.ubicacion || "",
@@ -539,8 +749,9 @@ async function obtenerInspeccionCompleta(inspeccionId) {
       observaciones: s.observaciones || "",
       evidenciaRuta: s.evidencia_ruta || "",
       evidenciaArchivo: s.evidencia_archivo || "",
-      evidenciaFecha: s.evidencia_fecha || null
+      evidenciaFecha: s.evidencia_fecha || null,
     })),
+
     equiposTecnologicos: eqpRes.rows.map((eq) => ({
       no: eq.no || "",
       equipoTecnologico: eq.equipo_tecnologico || "",
@@ -552,13 +763,20 @@ async function obtenerInspeccionCompleta(inspeccionId) {
       afectacionServicio: eq.afectacion_servicio || "",
       evidenciaRuta: eq.evidencia_ruta || "",
       evidenciaArchivo: eq.evidencia_archivo || "",
-      evidenciaFecha: eq.evidencia_fecha || null
+      evidenciaFecha: eq.evidencia_fecha || null,
     })),
-    botiquines
+
+    botiquines,
   };
 }
 
-function construirFiltrosInspecciones({ fechaDesde, fechaHasta, sedeOperacion, estado, q }) {
+function construirFiltrosInspecciones({
+  fechaDesde,
+  fechaHasta,
+  sedeOperacion,
+  estado,
+  q,
+}) {
   const condiciones = ["1=1"];
   const valores = [];
 
@@ -594,12 +812,11 @@ function construirFiltrosInspecciones({ fechaDesde, fechaHasta, sedeOperacion, e
 
   return {
     whereSql: condiciones.join(" AND "),
-    valores
+    valores,
   };
 }
 
 async function obtenerResumenEstadisticas(filtros = {}) {
-
   const { whereSql, valores } = construirFiltrosInspecciones(filtros);
 
   const resumenSql = `
@@ -626,7 +843,7 @@ async function obtenerResumenEstadisticas(filtros = {}) {
 
   const [resResumen, resSedes] = await Promise.all([
     query(resumenSql, valores),
-    query(sedesSql, valores)
+    query(sedesSql, valores),
   ]);
 
   return {
@@ -635,13 +852,16 @@ async function obtenerResumenEstadisticas(filtros = {}) {
     aprobadas: Number(resResumen.rows?.[0]?.aprobadas || 0),
     enviadas: Number(resResumen.rows?.[0]?.enviadas || 0),
     esteMes: Number(resResumen.rows?.[0]?.este_mes || 0),
-    porSede: resSedes.rows || []
+    porSede: resSedes.rows || [],
   };
 }
 
 async function listarInspeccionesConFiltros(filtros = {}, paginacion = {}) {
   const page = Math.max(1, Number(paginacion.page) || 1);
-  const pageSize = Math.min(100, Math.max(1, Number(paginacion.pageSize) || 10));
+  const pageSize = Math.min(
+    100,
+    Math.max(1, Number(paginacion.pageSize) || 10),
+  );
   const offset = (page - 1) * pageSize;
   const sortBy = paginacion.sortBy;
   const sortOrder = paginacion.sortOrder === "desc" ? "DESC" : "ASC";
@@ -662,7 +882,7 @@ async function listarInspeccionesConFiltros(filtros = {}, paginacion = {}) {
       COALESCE(eqp.cantidad,0) +
       COALESCE(bot.cantidad,0)
     )
-  `
+  `,
   };
 
   const columnaOrden = columnasOrdenables[sortBy] || "i.created_at";
@@ -710,7 +930,7 @@ async function listarInspeccionesConFiltros(filtros = {}, paginacion = {}) {
 
   const [resTotal, resDatos] = await Promise.all([
     query(totalSql, valores),
-    query(datosSql, [...valores, pageSize, offset])
+    query(datosSql, [...valores, pageSize, offset]),
   ]);
 
   const total = Number(resTotal.rows?.[0]?.total || 0);
@@ -720,12 +940,11 @@ async function listarInspeccionesConFiltros(filtros = {}, paginacion = {}) {
     page,
     pageSize,
     totalPages: Math.max(1, Math.ceil(total / pageSize)),
-    items: resDatos.rows || []
+    items: resDatos.rows || [],
   };
 }
 
 async function obtenerLinksInspeccion(inspeccionId) {
-
   const { rows } = await query(
     `SELECT
       inspeccion_id,
@@ -741,7 +960,7 @@ async function obtenerLinksInspeccion(inspeccionId) {
 
      FROM inspecciones
      WHERE inspeccion_id = $1`,
-    [inspeccionId]
+    [inspeccionId],
   );
 
   if (!rows.length) {
@@ -773,9 +992,8 @@ async function obtenerLinksInspeccion(inspeccionId) {
     previewToken: inspeccion.token_inspector,
 
     // Enlaces que se muestran al usuario
-    links
+    links,
   };
-
 }
 
 // Exporta funciones y constantes para uso en el controlador.
@@ -788,5 +1006,5 @@ module.exports = {
   obtenerInspeccionCompleta,
   obtenerResumenEstadisticas,
   listarInspeccionesConFiltros,
-  obtenerLinksInspeccion
+  obtenerLinksInspeccion,
 };
