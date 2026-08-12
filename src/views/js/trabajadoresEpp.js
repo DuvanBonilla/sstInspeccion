@@ -1,4 +1,3 @@
-
 import { optimizarImagen } from "./imageOptimizer.js";
 
 const ELEMENTOS_EPP = [
@@ -31,8 +30,6 @@ export function createTrabajadoresEppManager({
 
   const evidencias = new Map();
 
-
-
   function init() {
     generarButton?.addEventListener("click", generarDesdeInput);
 
@@ -59,8 +56,6 @@ export function createTrabajadoresEppManager({
     }
   }
 
-
-
   function actualizarNombreResumen(input) {
     const tarjeta = input.closest(".trabajador-card");
 
@@ -79,11 +74,8 @@ export function createTrabajadoresEppManager({
     resumen.textContent = nombre || "Sin diligenciar";
   }
 
-
-
   async function manejarCambioEvidencia(event) {
     const input = event.target;
-
 
     if (!input.matches('[data-role="evidencia"]')) {
       return;
@@ -95,15 +87,11 @@ export function createTrabajadoresEppManager({
       return;
     }
 
-
     const trabajadorId = Number(tarjeta.dataset.trabajadorId);
 
     const estado = tarjeta.querySelector('[data-role="evidenciaEstado"]');
 
-
     const archivo = input.files?.[0];
-
-
 
     if (!archivo) {
       evidencias.delete(trabajadorId);
@@ -605,36 +593,48 @@ export function createTrabajadoresEppManager({
          PLAN DE ACCIÓN Y OBSERVACIONES
          =================================================== -->
 
-    <div class="trabajador-adicional">
+<div class="field">
 
-      <div class="field">
+  <label>
+    Plan de acción
+  </label>
 
-        <label>
-          Plan de acción
-        </label>
+  <textarea
+    rows="3"
+    data-role="planAccion"
+    placeholder="Describa la acción a realizar si aplica."
+  ></textarea>
 
-        <textarea
-          rows="3"
-          data-role="planAccion"
-          placeholder="Describa la acción a realizar si aplica."
-        ></textarea>
-
-      </div>
+</div>
 
 
-      <div class="field">
+<div class="field">
 
-        <label>
-          Observaciones
-        </label>
+  <label>
+    Fecha límite del plan de acción
+  </label>
 
-        <textarea
-          rows="3"
-          data-role="observaciones"
-          placeholder="Registre observaciones adicionales."
-        ></textarea>
+  <input
+    type="date"
+    data-role="fechaPlanAccion"
+  />
 
-      </div>
+</div>
+
+
+<div class="field">
+
+  <label>
+    Observaciones
+  </label>
+
+  <textarea
+    rows="3"
+    data-role="observaciones"
+    placeholder="Registre observaciones adicionales."
+  ></textarea>
+
+</div>
 
     </div>
 
@@ -898,15 +898,37 @@ export function createTrabajadoresEppManager({
 
       const planAccion = tarjeta.querySelector('[data-role="planAccion"]');
 
-      if (requierePlanAccion && !planAccion?.value.trim()) {
-        abrirTrabajador(tarjeta);
+      const fechaPlanAccion = tarjeta.querySelector(
+        '[data-role="fechaPlanAccion"]',
+      );
 
-        return marcarError(
-          planAccion,
-          `Trabajador ${numeroTrabajador}: debe registrar un plan de acción porque existen elementos calificados como Malo o Regular.`,
-        );
+      // ---------------------------------------------------
+      // SI EXISTE R O M → PLAN DE ACCIÓN OBLIGATORIO
+      // ---------------------------------------------------
+
+      if (requierePlanAccion) {
+        if (!planAccion || !planAccion.value.trim()) {
+          abrirTrabajador(tarjeta);
+
+          return marcarError(
+            planAccion,
+            `Trabajador ${numeroTrabajador}: debe registrar un plan de acción porque existen elementos calificados como Malo o Regular.`,
+          );
+        }
+
+        // -------------------------------------------------
+        // SI HAY PLAN OBLIGATORIO → FECHA OBLIGATORIA
+        // -------------------------------------------------
+
+        if (!fechaPlanAccion || !fechaPlanAccion.value) {
+          abrirTrabajador(tarjeta);
+
+          return marcarError(
+            fechaPlanAccion,
+            `Trabajador ${numeroTrabajador}: debe registrar la fecha límite del plan de acción.`,
+          );
+        }
       }
-
       // ===================================================
       // EVIDENCIA FOTOGRÁFICA
       // ===================================================
@@ -1057,6 +1079,9 @@ export function createTrabajadoresEppManager({
 
         planAccion:
           tarjeta.querySelector('[data-role="planAccion"]')?.value.trim() || "",
+
+        fechaPlanAccion:
+          tarjeta.querySelector('[data-role="fechaPlanAccion"]')?.value || "",
 
         observaciones:
           tarjeta.querySelector('[data-role="observaciones"]')?.value.trim() ||

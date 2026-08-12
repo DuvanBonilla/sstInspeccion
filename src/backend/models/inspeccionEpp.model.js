@@ -114,6 +114,8 @@ function validarInspeccionEpp(payload) {
 
     const planAccion = normalizarTexto(trabajador?.planAccion);
 
+    const fechaPlanAccion = normalizarTexto(trabajador?.fechaPlanAccion);
+
     const observaciones = normalizarTexto(trabajador?.observaciones);
 
     const elementosEntrada = Array.isArray(trabajador?.elementos)
@@ -197,6 +199,12 @@ function validarInspeccionEpp(payload) {
       );
     }
 
+    if (tieneNovedad && !fechaPlanAccion) {
+      errores.push(
+        `Trabajador ${numeroTrabajador}: debe registrar la fecha límite del plan de acción`,
+      );
+    }
+
     return {
       trabajadorId: trabajador?.trabajadorId ?? null,
 
@@ -209,6 +217,8 @@ function validarInspeccionEpp(payload) {
       cargo,
 
       planAccion,
+
+      fechaPlanAccion,
 
       observaciones,
 
@@ -263,6 +273,13 @@ async function guardarInspeccionEppEnDB(data) {
        INSPECCIÓN
     ------------------------------------------------------- */
 
+    console.log("📋 DATOS GENERALES EPP:", {
+      inspeccionId: general.inspeccionId,
+      fecha: general.fecha,
+      sedeOperacion: general.sedeOperacion,
+      areaTrabajo: general.areaTrabajo,
+    });
+
     const { rows } = await client.query(
       `
       INSERT INTO inspecciones (
@@ -301,16 +318,16 @@ async function guardarInspeccionEppEnDB(data) {
         token_copasst
       `,
       [
-        general.inspeccionId || "",
-        general.fecha || "",
-        general.sedeOperacion || "",
-        general.areaTrabajo || "",
-        general.jefeResponsable || "",
-        general.cargoJefe || "",
-        general.responsableInspeccion || "",
-        general.cargoResponsable || "",
-        general.responsableInspeccion || "",
-        "",
+        general.inspeccionId || "", // $1
+        general.fecha || null, // $2
+        general.sedeOperacion || "", // $3
+        general.areaTrabajo || "", // $4
+        general.jefeResponsable || "", // $5
+        general.cargoJefe || "", // $6
+        general.responsableInspeccion || "", // $7
+        general.cargoResponsable || "", // $8
+        general.responsableInspeccion || "", // $9
+        "", // $10
       ],
     );
 
@@ -318,11 +335,30 @@ async function guardarInspeccionEppEnDB(data) {
 
     const inspeccionPk = inspeccion.id;
 
+    console.log("✅ CABECERA EPP GUARDADA:", {
+      inspeccionPk,
+      inspeccionId: general.inspeccionId,
+      numInspeccion: inspeccion.num_inspeccion,
+    });
+
     /* -------------------------------------------------------
        TRABAJADORES
     ------------------------------------------------------- */
 
     for (const [idx, trabajador] of trabajadores.entries()) {
+      // LOG TEMPORAL DE DIAGNÓSTICO
+      console.log(`👷 TRABAJADOR EPP ${idx + 1} A INSERTAR:`, {
+        nombre: trabajador.nombre,
+        codigo: trabajador.codigo,
+        cargo: trabajador.cargo,
+        planAccion: trabajador.planAccion,
+        fechaPlanAccion: trabajador.fechaPlanAccion,
+        observaciones: trabajador.observaciones,
+        evidenciaRuta: trabajador.evidenciaRuta,
+        evidenciaArchivo: trabajador.evidenciaArchivo,
+        evidenciaFecha: trabajador.evidenciaFecha,
+      });
+
       const { rows: trabajadorRows } = await client.query(
         `
         INSERT INTO trabajadores_epp (
@@ -332,31 +368,38 @@ async function guardarInspeccionEppEnDB(data) {
           codigo,
           cargo,
           plan_accion,
+          fecha_plan_accion,
           observaciones,
           evidencia_ruta,
           evidencia_archivo,
           evidencia_fecha
         )
         VALUES (
-          $1,$2,$3,$4,$5,$6,$7,$8,$9,$10
+          $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11
         )
         RETURNING id
         `,
         [
-          inspeccionPk,
-          idx,
-          trabajador.nombre || "",
-          trabajador.codigo || "",
-          trabajador.cargo || "",
-          trabajador.planAccion || "",
-          trabajador.observaciones || "",
-          trabajador.evidenciaRuta || "",
-          trabajador.evidenciaArchivo || "",
-          trabajador.evidenciaFecha || null,
+          inspeccionPk, // $1
+          idx, // $2
+          trabajador.nombre || "", // $3
+          trabajador.codigo || "", // $4
+          trabajador.cargo || "", // $5
+          trabajador.planAccion || "", // $6
+          trabajador.fechaPlanAccion || null, // $7
+          trabajador.observaciones || "", // $8
+          trabajador.evidenciaRuta || "", // $9
+          trabajador.evidenciaArchivo || "", // $10
+          trabajador.evidenciaFecha || null, // $11
         ],
       );
 
       const trabajadorEppId = trabajadorRows[0].id;
+
+      console.log(`✅ TRABAJADOR EPP ${idx + 1} GUARDADO:`, {
+        trabajadorEppId,
+        fechaPlanAccion: trabajador.fechaPlanAccion || null,
+      });
 
       /* -----------------------------------------------------
          EVALUACIONES DEL TRABAJADOR
@@ -385,6 +428,12 @@ async function guardarInspeccionEppEnDB(data) {
           ],
         );
       }
+
+      console.log(
+        `✅ Evaluaciones EPP trabajador ${idx + 1}: ${
+          trabajador.elementos?.length || 0
+        }`,
+      );
     }
 
     /* -------------------------------------------------------
@@ -392,6 +441,12 @@ async function guardarInspeccionEppEnDB(data) {
     ------------------------------------------------------- */
 
     await client.query("COMMIT");
+
+    console.log("✅ INSPECCIÓN EPP GUARDADA COMPLETAMENTE:", {
+      inspeccionId: general.inspeccionId,
+      numInspeccion: inspeccion.num_inspeccion,
+      trabajadores: trabajadores.length,
+    });
 
     return {
       inspeccionId: general.inspeccionId || "",
@@ -408,6 +463,11 @@ async function guardarInspeccionEppEnDB(data) {
     };
   } catch (error) {
     await client.query("ROLLBACK");
+
+    console.error("❌ ERROR GUARDANDO INSPECCIÓN EPP:", {
+      mensaje: error.message,
+      inspeccionId: general.inspeccionId,
+    });
 
     throw error;
   } finally {
