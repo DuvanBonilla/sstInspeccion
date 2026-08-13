@@ -40,12 +40,14 @@ const {
 const {
   enviarInspeccionEpp,
 } = require("./controllers/inspeccionEpp.controller");
+const {
+  obtenerSeguimientoEpp,
+} = require("./controllers/seguimientoEpp.controller");
 
 const app = express();
 app.set("trust proxy", true);
 const PORT = process.env.PORT || 3000;
 const upload = multer({ storage: multer.memoryStorage() });
-
 
 const VIEWS_DIR = path.resolve(__dirname, "..", "views");
 const FLATPICKR_DIR = path.resolve(
@@ -86,6 +88,8 @@ app.get("/estadisticas-epp", (req, res) => {
   res.sendFile(path.resolve(VIEWS_DIR, "html", "estadisticas-epp.html"));
 });
 
+
+
 app.post("/enviar-onedrive-extintor", upload.any(), enviarExtintorOneDrive);
 
 app.post("/enviar-inspeccion-epp", upload.any(), enviarInspeccionEpp);
@@ -100,6 +104,7 @@ app.get("/api/estadisticas/resumen", obtenerResumen);
 app.get("/api/estadisticas/inspecciones", listarInspecciones);
 app.get("/api/estadisticas-epp/resumen", obtenerResumenEpp);
 app.get("/api/estadisticas-epp/inspecciones", listarInspeccionesEpp);
+app.get("/api/seguimiento-epp/datos", obtenerSeguimientoEpp);
 app.get("/api/inspecciones/:id/links", obtenerLinks);
 
 app.listen(PORT, () => {

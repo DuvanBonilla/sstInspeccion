@@ -272,14 +272,6 @@ async function guardarInspeccionEppEnDB(data) {
     /* -------------------------------------------------------
        INSPECCIÓN
     ------------------------------------------------------- */
-
-    console.log("📋 DATOS GENERALES EPP:", {
-      inspeccionId: general.inspeccionId,
-      fecha: general.fecha,
-      sedeOperacion: general.sedeOperacion,
-      areaTrabajo: general.areaTrabajo,
-    });
-
     const { rows } = await client.query(
       `
       INSERT INTO inspecciones (
@@ -335,29 +327,12 @@ async function guardarInspeccionEppEnDB(data) {
 
     const inspeccionPk = inspeccion.id;
 
-    console.log("✅ CABECERA EPP GUARDADA:", {
-      inspeccionPk,
-      inspeccionId: general.inspeccionId,
-      numInspeccion: inspeccion.num_inspeccion,
-    });
 
     /* -------------------------------------------------------
        TRABAJADORES
     ------------------------------------------------------- */
 
     for (const [idx, trabajador] of trabajadores.entries()) {
-      // LOG TEMPORAL DE DIAGNÓSTICO
-      console.log(`👷 TRABAJADOR EPP ${idx + 1} A INSERTAR:`, {
-        nombre: trabajador.nombre,
-        codigo: trabajador.codigo,
-        cargo: trabajador.cargo,
-        planAccion: trabajador.planAccion,
-        fechaPlanAccion: trabajador.fechaPlanAccion,
-        observaciones: trabajador.observaciones,
-        evidenciaRuta: trabajador.evidenciaRuta,
-        evidenciaArchivo: trabajador.evidenciaArchivo,
-        evidenciaFecha: trabajador.evidenciaFecha,
-      });
 
       const { rows: trabajadorRows } = await client.query(
         `
@@ -396,11 +371,6 @@ async function guardarInspeccionEppEnDB(data) {
 
       const trabajadorEppId = trabajadorRows[0].id;
 
-      console.log(`✅ TRABAJADOR EPP ${idx + 1} GUARDADO:`, {
-        trabajadorEppId,
-        fechaPlanAccion: trabajador.fechaPlanAccion || null,
-      });
-
       /* -----------------------------------------------------
          EVALUACIONES DEL TRABAJADOR
       ----------------------------------------------------- */
@@ -429,11 +399,6 @@ async function guardarInspeccionEppEnDB(data) {
         );
       }
 
-      console.log(
-        `✅ Evaluaciones EPP trabajador ${idx + 1}: ${
-          trabajador.elementos?.length || 0
-        }`,
-      );
     }
 
     /* -------------------------------------------------------
@@ -441,12 +406,6 @@ async function guardarInspeccionEppEnDB(data) {
     ------------------------------------------------------- */
 
     await client.query("COMMIT");
-
-    console.log("✅ INSPECCIÓN EPP GUARDADA COMPLETAMENTE:", {
-      inspeccionId: general.inspeccionId,
-      numInspeccion: inspeccion.num_inspeccion,
-      trabajadores: trabajadores.length,
-    });
 
     return {
       inspeccionId: general.inspeccionId || "",

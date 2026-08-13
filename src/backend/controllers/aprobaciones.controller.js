@@ -224,10 +224,7 @@ async function previsualizarAprobacion(req, res) {
       row.tipo_inspeccion || completa?.inspeccion?.tipo_inspeccion || "SST",
     ).toUpperCase();
 
-    console.log(
-      `[aprobaciones] Generando preview ${tipoInspeccion}:`,
-      row.inspeccion_id,
-    );
+
 
     // =====================================================
     // 4. APROBACIONES
@@ -262,18 +259,12 @@ async function previsualizarAprobacion(req, res) {
         ? completa.trabajadores
         : [];
 
-      console.log(`[EPP] Trabajadores encontrados: ${trabajadores.length}`);
-
       // ---------------------------------------------------
       // DESCARGAR EVIDENCIAS
       // ---------------------------------------------------
 
       const evidenciasPorTrabajador =
         await construirEvidenciasEppDesdeOneDrive(trabajadores);
-
-      console.log(
-        `[EPP] Evidencias descargadas: ${evidenciasPorTrabajador.size}`,
-      );
 
       // ---------------------------------------------------
       // INFORMACIÓN GENERAL
@@ -592,10 +583,6 @@ async function finalizarInspeccion(inspeccionId) {
 
   const tipoInspeccion = String(row.tipo_inspeccion || "SST").toUpperCase();
 
-  console.log(
-    `[aprobaciones] Finalizando inspección ${row.inspeccion_id} - Tipo: ${tipoInspeccion}`,
-  );
-
   // =======================================================
   // 3. APROBACIONES
   // =======================================================
@@ -653,10 +640,6 @@ async function finalizarInspeccion(inspeccionId) {
       ? completa.trabajadores
       : [];
 
-    console.log(
-      `[EPP] Generando PDF final con ${trabajadoresEpp.length} trabajadores`,
-    );
-
     // -----------------------------------------------------
     // EVIDENCIAS DE LOS TRABAJADORES
     // -----------------------------------------------------
@@ -705,7 +688,6 @@ async function finalizarInspeccion(inspeccionId) {
       },
     );
 
-    console.log(`[EPP] PDF final generado: ${row.inspeccion_id}`);
   }
 
   // =======================================================
@@ -798,7 +780,6 @@ async function finalizarInspeccion(inspeccionId) {
       },
     );
 
-    console.log(`[SST] PDF final generado: ${row.inspeccion_id}`);
   }
 
   // =======================================================
@@ -975,9 +956,6 @@ async function finalizarInspeccion(inspeccionId) {
 
   await marcarInspeccionEnviada(row.inspeccion_id, webUrl);
 
-  console.log(
-    `[aprobaciones] Inspección ${row.inspeccion_id} finalizada y marcada como ENVIADA`,
-  );
 }
 
 module.exports = {

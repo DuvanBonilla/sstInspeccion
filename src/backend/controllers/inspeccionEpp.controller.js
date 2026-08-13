@@ -66,9 +66,7 @@ async function enviarInspeccionEpp(req, res) {
     ------------------------------------------------------- */
 
     const payload = leerPayload(req);
-
-    console.log("📋 Payload EPP recibido:", JSON.stringify(payload, null, 2));
-
+    
     /* -------------------------------------------------------
        2. VALIDAR
     ------------------------------------------------------- */
@@ -90,8 +88,6 @@ async function enviarInspeccionEpp(req, res) {
     ------------------------------------------------------- */
 
     const archivos = obtenerArchivos(req);
-
-    console.log(`📷 Evidencias EPP recibidas: ${archivos.length}`);
 
     /* -------------------------------------------------------
        4. PROCESAR EVIDENCIAS
@@ -159,10 +155,6 @@ async function enviarInspeccionEpp(req, res) {
 
       trabajador.evidenciaFecha = evidenciaFecha;
 
-      console.log(
-        `✅ Evidencia trabajador ${i + 1}:`,
-        trabajador.evidenciaArchivo,
-      );
     }
 
     /* -------------------------------------------------------

@@ -615,9 +615,6 @@ async function enviarInspeccionEpp() {
     // Construir todo el FormData utilizando el mismo ID
     const formData = construirFormDataEpp(inspeccionId);
 
-    console.log("🆔 ID inspección EPP:", inspeccionId);
-    console.log("📤 Enviando inspección EPP...");
-
     const respuesta = await fetch("/enviar-inspeccion-epp", {
       method: "POST",
       body: formData,
@@ -625,15 +622,13 @@ async function enviarInspeccionEpp() {
 
     const data = await respuesta.json();
 
-    console.log("📥 Respuesta servidor EPP:", data);
+
 
     if (!respuesta.ok || !data.ok) {
       throw new Error(
         data.mensaje || "No fue posible registrar la inspección EPP.",
       );
     }
-
-    console.log("✅ Inspección EPP registrada:", data);
 
     return data;
   } catch (error) {
@@ -698,15 +693,11 @@ function inicializarEnvioEpp() {
 
       const resultado = await enviarInspeccionEpp();
 
-      console.log("🎉 ENVÍO EPP COMPLETADO:", resultado);
-
       // ---------------------------------------------------
       // CONSTRUIR LINKS DE APROBACIÓN
       // ---------------------------------------------------
 
       const links = construirLinksAprobacionEpp(resultado.tokens);
-
-      console.log("🔗 Links aprobación EPP:", links);
 
       // ---------------------------------------------------
       // MOSTRAR MODAL DE ÉXITO
@@ -747,7 +738,6 @@ function inicializarEnvioEpp() {
 function verificarFormDataEpp() {
   const formData = construirFormDataEpp();
 
-  console.log("========== FORMDATA EPP ==========");
 
   for (const [clave, valor] of formData.entries()) {
     if (valor instanceof File) {
@@ -762,7 +752,7 @@ function verificarFormDataEpp() {
     }
   }
 
-  console.log("==================================");
+
 }
 
 // =========================================================

@@ -45,8 +45,6 @@
       q: String(fd.get("q") || "").trim(),
     };
 
-    console.log("FILTROS ACTUALES:", filtros);
-
     return filtros;
   }
 
@@ -110,7 +108,7 @@
 
     tablaBody.innerHTML = items
       .map((it) => {
-        console.log(it.estado);
+
         const totalItems =
           Number(it.extintores || 0) +
           Number(it.camillas || 0) +
@@ -323,20 +321,12 @@
   async function recuperarLinks(btnRecuperar) {
     const inspeccionId = btnRecuperar.dataset.inspeccionId;
 
-    console.log("Recuperar inspección:", inspeccionId);
-
     //mostrarModal("cargando");
 
     try {
       const resp = await fetch(`/api/inspecciones/${inspeccionId}/links`);
 
       const data = await resp.json();
-
-      console.log("RESPUESTA COMPLETA:");
-      console.log(data);
-
-      console.log("LINKS:");
-      console.log(data.links);
 
       mostrarModal(
         "exito",
