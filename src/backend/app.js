@@ -40,9 +40,7 @@ const {
 const {
   enviarInspeccionEpp,
 } = require("./controllers/inspeccionEpp.controller");
-const {
-  obtenerSeguimientoEpp,
-} = require("./controllers/seguimientoEpp.controller");
+
 
 const app = express();
 app.set("trust proxy", true);
@@ -104,7 +102,6 @@ app.get("/api/estadisticas/resumen", obtenerResumen);
 app.get("/api/estadisticas/inspecciones", listarInspecciones);
 app.get("/api/estadisticas-epp/resumen", obtenerResumenEpp);
 app.get("/api/estadisticas-epp/inspecciones", listarInspeccionesEpp);
-app.get("/api/seguimiento-epp/datos", obtenerSeguimientoEpp);
 app.get("/api/inspecciones/:id/links", obtenerLinks);
 
 app.listen(PORT, () => {

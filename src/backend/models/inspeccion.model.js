@@ -1,8 +1,9 @@
-const GRAPH_BASE = "https://graph.microsoft.com/v1.0";
 const { query, pool } = require("../db/pool");
 
-let _cachedToken = null;
-let _tokenExpiresAt = 0;
+const {
+  subirArchivoOneDrive,
+  descargarArchivoOneDrive,
+} = require("../services/graph.service");
 
 const {
   normalizarExtintores: normalizarExtintoresSeccion,
@@ -65,43 +66,6 @@ function getRequiredEnv(name) {
   return value;
 }
 
-async function getAccessToken() {
-  if (_cachedToken && Date.now() < _tokenExpiresAt - 30_000) {
-    return _cachedToken;
-  }
-
-  const tenantId = getRequiredEnv("MS_TENANT_ID");
-  const clientId = getRequiredEnv("MS_CLIENT_ID");
-  const clientSecret = getRequiredEnv("MS_CLIENT_SECRET");
-
-  const tokenUrl = `https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/token`;
-  const body = new URLSearchParams({
-    client_id: clientId,
-    client_secret: clientSecret,
-    grant_type: "client_credentials",
-    scope: "https://graph.microsoft.com/.default",
-  });
-
-  // Realiza la solicitud POST para obtener el token.
-  const response = await fetch(tokenUrl, {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body,
-  });
-
-  // Lee la respuesta y parsea JSON.
-  const data = await response.json();
-
-  if (!response.ok || !data.access_token) {
-    const detail =
-      data?.error_description || data?.error || "No se pudo obtener token";
-    throw new Error(`Error autenticando en Microsoft Graph: ${detail}`);
-  }
-
-  _cachedToken = data.access_token;
-  _tokenExpiresAt = Date.now() + (data.expires_in || 3600) * 1000;
-  return _cachedToken;
-}
 
 // Valida datos de formulario y retorna una salida normalizada para controlador.
 function validarInspeccion(payload) {
@@ -258,41 +222,22 @@ async function uploadEvidenceToOneDrive(
     return "";
   }
 
-  const oneDriveUser = getRequiredEnv("ONEDRIVE_USER_ID");
-  const token = await getAccessToken();
   const evidenceFolderPath = getEvidenceFolderPath();
   const extension = pathExtension(file.originalname);
   const codigoInspeccion = extraerCodigoInspeccion(inspeccionId);
+
   const fileName =
     subIndice != null
       ? `${prefijo}_${indice}_${subIndice}_${codigoInspeccion}${extension}`
       : `${prefijo}_${indice}_${codigoInspeccion}${extension}`;
+
   const evidencePath = `${evidenceFolderPath}/${fileName}`;
-  const url = `${GRAPH_BASE}/users/${encodeURIComponent(oneDriveUser)}/drive/root:${encodeURI(evidencePath)}:/content?@microsoft.graph.conflictBehavior=replace`;
 
-  const response = await fetch(url, {
-    method: "PUT",
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": file.mimetype || "application/octet-stream",
-    },
-    body: file.buffer,
+  await subirArchivoOneDrive({
+    ruta: evidencePath,
+    buffer: file.buffer,
+    contentType: file.mimetype || "application/octet-stream",
   });
-
-  const text = await response.text();
-  let data;
-
-  try {
-    data = text ? JSON.parse(text) : {};
-  } catch {
-    data = { raw: text };
-  }
-
-  if (!response.ok) {
-    const detail =
-      data?.error?.message || data?.raw || "No se pudo subir la evidencia";
-    throw new Error(`Error OneDrive/Graph al subir evidencia: ${detail}`);
-  }
 
   return evidencePath;
 }
@@ -304,23 +249,7 @@ async function descargarEvidenciaOneDrive(evidencePath) {
     return null;
   }
 
-  const oneDriveUser = getRequiredEnv("ONEDRIVE_USER_ID");
-  const token = await getAccessToken();
-  const normalizedPath = evidencePath.startsWith("/")
-    ? evidencePath
-    : `/${evidencePath}`;
-  const url = `${GRAPH_BASE}/users/${encodeURIComponent(oneDriveUser)}/drive/root:${encodeURI(normalizedPath)}:/content`;
-
-  const response = await fetch(url, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-
-  if (!response.ok) {
-    return null;
-  }
-
-  const arrayBuffer = await response.arrayBuffer();
-  return Buffer.from(arrayBuffer);
+  return descargarArchivoOneDrive(evidencePath);
 }
 
 // Extrae la extensión del archivo y la limpia para usarla en el nombre del archivo en OneDrive.
