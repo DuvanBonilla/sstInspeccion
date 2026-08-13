@@ -1,30 +1,9 @@
-/*
-  pdfInspeccionEpp.controller.js
-  --------------------------------
-  Generador del informe PDF para inspecciones EPP.
-
-  Este controlador NO modifica la generación del informe SST.
-
-  Estructura:
-  - Información general
-  - Un bloque por trabajador
-  - Evaluación de elementos EPP
-  - Plan de acción
-  - Observaciones
-  - Evidencia fotográfica
-  - Aprobaciones
-*/
-
 const path = require("node:path");
 const PDFDocument = require("pdfkit");
 
 const MARGEN = 25;
 const ANCHO = 545;
 const LIMITE_INFERIOR = 800;
-
-// =======================================================
-// UTILIDADES
-// =======================================================
 
 function texto(valor) {
   if (valor === null || valor === undefined) {
@@ -39,7 +18,6 @@ function formatearFecha(valor) {
     return "";
   }
 
-  // PostgreSQL puede devolver DATE como objeto Date
   if (valor instanceof Date) {
     const dia = String(valor.getUTCDate()).padStart(2, "0");
     const mes = String(valor.getUTCMonth() + 1).padStart(2, "0");
@@ -48,7 +26,6 @@ function formatearFecha(valor) {
     return `${dia}/${mes}/${anio}`;
   }
 
-  // Si viene como YYYY-MM-DD
   const fecha = String(valor).split("T")[0];
 
   const partes = fecha.split("-");
@@ -83,10 +60,6 @@ function dibujarIdInspeccion(doc, general, y) {
     .fillColor("black");
 }
 
-// =======================================================
-// IMAGEN
-// =======================================================
-
 function dibujarImagenAjustada(doc, file, x, y, width, height, fontSize = 9) {
   try {
     if (!file?.buffer?.length) {
@@ -117,10 +90,6 @@ function dibujarImagenAjustada(doc, file, x, y, width, height, fontSize = 9) {
       });
   }
 }
-
-// =======================================================
-// ENCABEZADO
-// =======================================================
 
 function renderEncabezado(doc) {
   let y = MARGEN;
@@ -173,16 +142,8 @@ function renderEncabezado(doc) {
   return y + 70;
 }
 
-// =======================================================
-// INFORMACIÓN GENERAL
-// =======================================================
-
 function renderInformacionGeneral(doc, general, y) {
   const mitad = ANCHO / 2;
-
-  // -----------------------------------------------------
-  // Fecha / Sede
-  // -----------------------------------------------------
 
   doc.rect(MARGEN, y, mitad, 25).stroke();
   doc.rect(MARGEN + mitad, y, mitad, 25).stroke();
@@ -210,10 +171,6 @@ function renderInformacionGeneral(doc, general, y) {
     });
 
   y += 25;
-
-  // -----------------------------------------------------
-  // Área / Responsable
-  // -----------------------------------------------------
 
   doc.rect(MARGEN, y, mitad, 25).stroke();
   doc.rect(MARGEN + mitad, y, mitad, 25).stroke();
@@ -244,10 +201,6 @@ function renderInformacionGeneral(doc, general, y) {
 
   y += 25;
 
-  // -----------------------------------------------------
-  // Jefe
-  // -----------------------------------------------------
-
   doc.rect(MARGEN, y, ANCHO, 25).stroke();
 
   doc
@@ -267,10 +220,6 @@ function renderInformacionGeneral(doc, general, y) {
     });
 
   y += 25;
-
-  // -----------------------------------------------------
-  // Responsable + cargo
-  // -----------------------------------------------------
 
   doc.rect(MARGEN, y, ANCHO, 25).stroke();
 
@@ -297,10 +246,6 @@ function renderInformacionGeneral(doc, general, y) {
 
   return y + 25;
 }
-
-// =======================================================
-// DATOS DEL TRABAJADOR
-// =======================================================
 
 function renderDatosTrabajador(doc, trabajador, numero, y) {
   doc.rect(MARGEN, y, ANCHO, 25).stroke();
@@ -357,10 +302,6 @@ function renderDatosTrabajador(doc, trabajador, numero, y) {
 
   return y + 25;
 }
-
-// =======================================================
-// TABLA EPP
-// =======================================================
 
 function renderTablaEpp(doc, trabajador, y) {
   doc.rect(MARGEN, y, ANCHO, 38).stroke();
@@ -441,10 +382,6 @@ function renderTablaEpp(doc, trabajador, y) {
   return y;
 }
 
-// =======================================================
-// PLAN DE ACCIÓN Y OBSERVACIONES
-// =======================================================
-
 function renderTextoBloque(doc, titulo, contenido, y) {
   const contenidoSeguro = texto(contenido) || "Sin registro.";
 
@@ -488,10 +425,6 @@ function renderPlanAccion(doc, trabajador, y) {
     ? formatearFecha(trabajador.fechaPlanAccion)
     : "No aplica";
 
-  // =====================================================
-  // TÍTULO
-  // =====================================================
-
   doc.rect(MARGEN, y, ANCHO, 22).stroke();
 
   doc
@@ -503,10 +436,6 @@ function renderPlanAccion(doc, trabajador, y) {
     });
 
   y += 22;
-
-  // =====================================================
-  // CONTENIDO DEL PLAN
-  // =====================================================
 
   const altoTexto = Math.max(
     35,
@@ -528,10 +457,6 @@ function renderPlanAccion(doc, trabajador, y) {
 
   y += altoTexto;
 
-  // =====================================================
-  // FECHA LÍMITE
-  // =====================================================
-
   doc.rect(MARGEN, y, ANCHO, 25).stroke();
 
   doc
@@ -546,10 +471,6 @@ function renderPlanAccion(doc, trabajador, y) {
 
   return y + 25;
 }
-
-// =======================================================
-// EVIDENCIA
-// =======================================================
 
 function renderEvidencia(doc, evidencia, y) {
   doc.rect(MARGEN, y, ANCHO, 20).stroke();
@@ -591,10 +512,6 @@ function renderEvidencia(doc, evidencia, y) {
 
   return y + alto;
 }
-
-// =======================================================
-// APROBACIONES
-// =======================================================
 
 function renderAprobaciones(doc, y, aprobaciones = null) {
   doc.save();
@@ -664,10 +581,6 @@ function renderAprobaciones(doc, y, aprobaciones = null) {
   return y + boxH;
 }
 
-// =======================================================
-// GENERADOR PRINCIPAL
-// =======================================================
-
 async function crearPdfInspeccionEpp(
   data,
   evidenciasPorTrabajador = new Map(),
@@ -700,10 +613,6 @@ async function crearPdfInspeccionEpp(
 
     let y = 0;
 
-    // =================================================
-    // NUEVA PÁGINA
-    // =================================================
-
     function nuevaPagina(mostrarInformacionGeneral = false) {
       doc.addPage();
 
@@ -716,15 +625,7 @@ async function crearPdfInspeccionEpp(
       return y;
     }
 
-    // =================================================
-    // PRIMERA PÁGINA
-    // =================================================
-
     nuevaPagina(true);
-
-    // =================================================
-    // TRABAJADORES
-    // =================================================
 
     trabajadores.forEach((trabajador, index) => {
       /*
@@ -740,8 +641,6 @@ async function crearPdfInspeccionEpp(
         nuevaPagina(false);
       }
 
-      // Si el primer trabajador ya no cabe debajo
-      // de información general, usamos otra página.
       const espacioMinimoTrabajador = 380;
 
       if (y + espacioMinimoTrabajador > LIMITE_INFERIOR) {
@@ -780,10 +679,6 @@ async function crearPdfInspeccionEpp(
       dibujarIdInspeccion(doc, general, Math.min(y + 5, 810));
     });
 
-    // =================================================
-    // SIN TRABAJADORES
-    // =================================================
-
     if (trabajadores.length === 0) {
       doc
         .font("Helvetica")
@@ -801,10 +696,6 @@ async function crearPdfInspeccionEpp(
       y += 70;
     }
 
-    // =================================================
-    // APROBACIONES
-    // =================================================
-
     const espacioAprobaciones = 20 + 25 + 60 + 20;
 
     if (y + espacioAprobaciones > LIMITE_INFERIOR) {
@@ -812,10 +703,6 @@ async function crearPdfInspeccionEpp(
     } else {
       y += 20;
     }
-
-    // =================================================
-    // TÍTULO DE APROBACIONES
-    // =================================================
 
     y += 12;
 
@@ -830,10 +717,6 @@ async function crearPdfInspeccionEpp(
     // Espacio entre título y firmas
     y += 28;
 
-    // =================================================
-    // TABLA DE APROBACIONES
-    // =================================================
-
     y = renderAprobaciones(doc, y, aprobaciones);
 
     dibujarIdInspeccion(doc, general, y + 4);
@@ -841,10 +724,6 @@ async function crearPdfInspeccionEpp(
     doc.end();
   });
 }
-
-// =========================================================
-// HTML CORREO FINAL EPP
-// =========================================================
 
 function construirHtmlCorreoEpp({
   inspeccionId,
@@ -862,19 +741,11 @@ function construirHtmlCorreoEpp({
   aprobaciones = {},
   webUrl = null,
 }) {
-  // -------------------------------------------------------
-  // APROBACIONES
-  // -------------------------------------------------------
-
   const inspector = aprobaciones?.inspector?.nombre || "Aprobado";
 
   const jefe = aprobaciones?.jefe?.nombre || "Aprobado";
 
   const copasst = aprobaciones?.copasst?.nombre || "Aprobado";
-
-  // -------------------------------------------------------
-  // LINK ONEDRIVE
-  // -------------------------------------------------------
 
   const botonOneDrive = webUrl
     ? `
@@ -907,10 +778,6 @@ function construirHtmlCorreoEpp({
       </table>
     `
     : "";
-
-  // -------------------------------------------------------
-  // HTML
-  // -------------------------------------------------------
 
   return `
 <!DOCTYPE html>
@@ -1752,10 +1619,6 @@ ${botonOneDrive}
 `;
 }
 
-// =========================================================
-// CORREO DESTINO EPP SEGÚN SEDE
-// =========================================================
-
 function resolverCorreoDestinoEpp(sedeOperacion, correoManual) {
   const sede = (sedeOperacion || "").toLowerCase().trim();
 
@@ -1769,10 +1632,6 @@ function resolverCorreoDestinoEpp(sedeOperacion, correoManual) {
 
   return correoManual || process.env.GRAPH_EMAIL_TO_TEST;
 }
-
-// =======================================================
-// EXPORTS
-// =======================================================
 
 module.exports = {
   crearPdfInspeccionEpp,

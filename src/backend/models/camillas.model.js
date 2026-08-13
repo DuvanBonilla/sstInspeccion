@@ -1,17 +1,3 @@
-/*
-  camillas.model.js — Modelo de validación y normalización de camillas.
-
-  Qué hace:
-  - normalizarCamillas(): limpia y estandariza el array de camillas del payload.
-  - validarCamillas(): verifica que cada camilla tenga número, ubicación y
-    afectación a la productividad (SI/NO), y que las 7 condiciones sean estados
-    válidos (B, R, M, NC, NA). Acumula errores encontrados.
-
-  Cómo interactúa:
-  - Es importado por extintor.model.js y usado dentro de validarInspeccion()
-    para validar únicamente la sección de camillas del payload.
-  - No se comunica con el servidor ni con el frontend directamente.
-*/
 const ESTADOS_VALIDOS = new Set(["B", "R", "M", "NC", "NA"]);
 const AFECTACION_PRODUCTIVIDAD_VALIDOS = new Set(["SI", "NO"]);
 
@@ -26,7 +12,6 @@ const CAMPOS_CONDICION_CAMILLA = [
   "inmovilizador"
 ];
 
-// Normaliza un valor de texto: elimina espacios al inicio y al final.
 function normalizarTexto(valor) {
   if (typeof valor !== "string") return "";
   return valor.trim();

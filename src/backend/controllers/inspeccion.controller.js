@@ -1,23 +1,3 @@
-/*
-  inspeccion.controller.js — Controlador del endpoint POST /enviar-onedrive-extintor.
-
-  Qué hace:
-  - Recibe el FormData del frontend (payload JSON + archivos de evidencia en memoria).
-  - Valida la inspección usando inspeccion.model.js (campos obligatorios, estados válidos).
-  - Sube las evidencias de cada sección a OneDrive (carpeta EVIDENCIAS) y guarda
-    la ruta + fecha de cada una junto al item correspondiente.
-  - Guarda la inspección completa (datos generales + las 5 secciones) en Neon
-    con una sola llamada. El Inspector queda aprobado automáticamente con los
-    datos de la info general (es quien diligencia el formulario); solo se
-    generan links de aprobación para Jefe de Área y COPASST.
-  - Responde 201 con el número de inspección y los links, o 400/500 con el detalle del error.
-
-  Cómo interactúa:
-  - Es registrado en app.js como handler de POST /enviar-onedrive-extintor.
-  - Utiliza inspeccion.model.js para validación, subida de evidencias y guardado en Neon.
-  - El frontend (inspeccion-sst.js) es quien construye y envía el FormData, y
-    muestra los links de aprobación devueltos en el modal de éxito.
-*/
 const {
   validarInspeccion,
   uploadEvidenceToOneDrive,
@@ -28,7 +8,6 @@ const {
     obtenerLinksInspeccion
 } = require("../models/inspeccion.model");
 
-// Convierte payload multipart/json en un objeto utilizable por el modelo.
 function leerPayload(req) {
   if (typeof req.body?.payload === "string") {
     return JSON.parse(req.body.payload);
@@ -37,8 +16,6 @@ function leerPayload(req) {
   return req.body;
 }
 
-// Extrae, ordenadas por photoIndex, todas las fotos de un ítem cuyo fieldname
-// sigue el patrón "{prefix}-{index}-{photoIndex}".
 function obtenerArchivosMultiples(files, prefix, index) {
   const patron = new RegExp(`^${prefix}-${index}-(\\d+)$`);
   return files
@@ -48,8 +25,6 @@ function obtenerArchivosMultiples(files, prefix, index) {
     .map((x) => x.file);
 }
 
-// Sube todas las fotos de un ítem a OneDrive, combina las rutas/nombres resultantes
-// en un solo texto (una celda por ítem) y resuelve la fecha de la primera foto.
 async function subirEvidenciasMultiples(files, prefix, tipoPrefijo, index, inspeccionId, body) {
   const archivos = obtenerArchivosMultiples(files, prefix, index);
   if (archivos.length === 0) return { ruta: "", nombre: "", fecha: null };
@@ -71,7 +46,6 @@ async function subirEvidenciasMultiples(files, prefix, tipoPrefijo, index, inspe
   };
 }
 
-// Controlador principal para el endpoint POST /enviar-onedrive-extintor
 async function enviarExtintorOneDrive(req, res) {
   let payload;
 

@@ -1,26 +1,6 @@
-/*
-  botiquines.model.js — Modelo de validación y normalización de botiquines.
-
-  Qué hace:
-  - normalizarBotiquines(): limpia y estandariza el array de botiquines del payload,
-    incluyendo los ítems anidados de cada botiquín.
-  - validarBotiquines(): verifica que cada botiquín tenga número y ubicación,
-    y que cada ítem tenga los campos requeridos con estados válidos
-    (B, R, M, NC, NA) para integridad, plan de intervención, cumplimiento
-    y afectación al servicio.
-
-  Cómo interactúa:
-  - Es importado por extintor.model.js y usado dentro de validarInspeccion()
-    para validar únicamente la sección de botiquines del payload.
-  - No se comunica con el servidor ni con el frontend directamente.
-*/
-
-
-// Definición de estados válidos para integridad, plan de intervención, cumplimiento y afectación al servicio
 const ESTADOS_VALIDOS = new Set(["B", "R", "M", "NC", "NA"]);
 const VALORES_SI_NO   = new Set(["Sí", "No", ""]);
 
-// Función para normalizar texto: elimina espacios al inicio y al final, y asegura que sea una cadena
 function normalizarTexto(valor) {
   if (typeof valor !== "string") return "";
   return valor.trim();

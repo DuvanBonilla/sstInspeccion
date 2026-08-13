@@ -1,24 +1,3 @@
-/*
-  migrate.js — Crea/actualiza el esquema de Neon.
-
-  Qué hace:
-  - `inspecciones`: datos generales de cada inspección + estado de las 3 aprobaciones.
-    La aprobación NO guarda firma dibujada/biométrica (restricción legal): se
-    registra como nombre completo + cédula, con fecha.
-  - Cada sección del formulario (extintores, camillas, señalizaciones, equipos
-    tecnológicos, botiquines) vive en su propia tabla, con llave foránea a
-    `inspecciones`, en vez de un solo campo JSONB por sección — así queda
-    normalizado y es más fácil de consultar/filtrar directamente en la base.
-  - El único JSONB que queda es `condiciones` dentro de extintores/camillas:
-    es un sub-objeto de forma fija (checklist B/R/M/NC/NA), no una lista, así
-    que separarlo en columnas (19 en extintores, 7 en camillas) no aporta nada.
-  - Es idempotente: se puede correr varias veces sin romper nada. Si la tabla
-    ya existía con columnas `firma_*` (de una versión anterior a la aprobación
-    por nombre+cédula), las renombra a `aprobacion_*` en vez de perder los datos.
-
-  Cómo se usa:
-  - `npm run migrate` (requiere DATABASE_URL en .env).
-*/
 require("dotenv").config();
 const { pool } = require("./pool");
 
@@ -64,7 +43,6 @@ CREATE INDEX IF NOT EXISTS idx_inspecciones_created_at ON inspecciones (created_
 CREATE INDEX IF NOT EXISTS idx_inspecciones_estado ON inspecciones (estado);
 CREATE INDEX IF NOT EXISTS idx_inspecciones_sede ON inspecciones (sede_operacion);
 
--- Instalaciones previas: renombra las columnas firma_* a aprobacion_* sin perder datos.
 DO $$
 BEGIN
   IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'inspecciones' AND column_name = 'firma_inspector_cedula') THEN

@@ -1,30 +1,3 @@
-/*
-  pdfInspeccion.controller.js — Controlador de generación de PDF y envío por correo.
-
-  Qué hace:
-  - generarPdfPrueba (POST /pdf-prueba):
-      Recibe el FormData con el payload y las evidencias, genera un PDF con PDFKit
-      y lo devuelve como descarga directa al navegador.
-  - enviarPdfPruebaCorreo (POST /enviar-pdf-prueba-correo):
-      Genera el mismo PDF y lo envía como adjunto por correo electrónico usando
-      Microsoft Graph API (autenticación client_credentials con tenant/client/secret).
-
-  Estructura del PDF (una página por sección):
-    Pág. 1+  → Extintores (una página por extintor)
-    Pág. n+  → Camillas (una página por camilla)
-    Pág. n+  → Señalizaciones (una página por señalización)
-    Pág. n+1 → Equipos tecnológicos (tabla única con los 4 equipos)
-    Pág. n+  → Botiquines (una página por botiquín con tabla de 28 ítems)
-
-  Cómo interactúa:
-  - Es registrado en app.js como handler de /pdf-prueba y /enviar-pdf-prueba-correo.
-  - Lee las credenciales de Microsoft Graph desde variables de entorno (.env):
-      MS_TENANT_ID, MS_CLIENT_ID, MS_CLIENT_SECRET, ONEDRIVE_USER_ID, GRAPH_EMAIL_TO_TEST
-  - El frontend (inspeccion-sst.js) llama a /enviar-pdf-prueba-correo después
-    de un envío exitoso a OneDrive; también puede llamarse de forma independiente.
-  - No depende de extintor.model.js; trabaja directamente sobre el payload recibido.
-*/
-
 const path = require("node:path");
 const PDFDocument = require("pdfkit");
 const {
@@ -35,7 +8,6 @@ const { optimizarPdf } = require("../utils/pdfOptimizer");
 
 const LOGO_URL = "https://sstinspeccion.onrender.com/img/Cargo.png";
 
-// ===== Utilidades =====
 function getRequiredEnv(name) {
   const value = process.env[name];
   if (!value) {
@@ -67,7 +39,6 @@ function resolverCarpetaDestinoPdf(sedeOperacion) {
   return "Respuestas_PDF";
 }
 
-// Extrae el payload del body de la request, parseando JSON si viene como string.
 function leerPayload(req) {
   if (typeof req.body?.payload === "string") {
     return JSON.parse(req.body.payload);
@@ -75,9 +46,6 @@ function leerPayload(req) {
   return req.body || {};
 }
 
-// Extrae un Map<index, file[]> de los archivos subidos, según el prefijo del fieldname.
-// El fieldname esperado es "{prefix}-{index}-{photoIndex}"; las fotos de un mismo índice
-// se devuelven ordenadas por photoIndex.
 function extraerEvidenciasPorIndex(files, prefix = "evidencia") {
   const temp = new Map();
   const lista = Array.isArray(files) ? files : [];
@@ -104,8 +72,6 @@ function extraerEvidenciasPorIndex(files, prefix = "evidencia") {
   return mapa;
 }
 
-// Construye un Map<index, fechaString> a partir de la primera foto de cada índice:
-// intenta EXIF, si no usa lastModified del body.
 async function extraerFechasArchivos(fileMapa, body, prefijo) {
   const fechas = new Map();
   for (const [idx, archivos] of fileMapa) {
@@ -120,7 +86,6 @@ async function extraerFechasArchivos(fileMapa, body, prefijo) {
   return fechas;
 }
 
-// ===== GRAPH API PARA CORREO =====
 let _cachedToken = null;
 let _tokenExpiresAt = 0;
 
@@ -160,7 +125,6 @@ async function getAccessToken() {
   return _cachedToken;
 }
 
-// Envía un correo con adjunto PDF usando Microsoft Graph API.
 async function enviarCorreoPorGraph({
   to,
   subject,
@@ -206,7 +170,6 @@ async function enviarCorreoPorGraph({
     },
   );
 
-  // Manejo de errores
   if (!response.ok) {
     const errorData = await response.json();
     const detail = errorData?.error?.message || `HTTP ${response.status}`;
@@ -214,9 +177,6 @@ async function enviarCorreoPorGraph({
   }
 }
 
-// ===== ================ PDF =====================
-
-// Dibuja el ID de inspección en la esquina inferior derecha, debajo del bloque de evidencia.
 function dibujarIdInspeccion(doc, general, y) {
   const id = general.inspeccionId || "";
   if (!id) return;
@@ -232,7 +192,6 @@ function dibujarIdInspeccion(doc, general, y) {
     .fillColor("black");
 }
 
-// Ajusta y centra una imagen dentro de una caja (x,y,width,height). Si falla, muestra un aviso.
 function dibujarImagenAjustada(doc, file, x, y, width, height, fontSize = 9) {
   try {
     const img = doc.openImage(file.buffer);
@@ -252,8 +211,6 @@ function dibujarImagenAjustada(doc, file, x, y, width, height, fontSize = 9) {
   }
 }
 
-// Dibuja hasta 2 evidencias lado a lado dentro de una caja (x,y,width,height).
-// Las fotos 3+ de un mismo ítem no se dibujan aquí: se listan aparte con renderPaginasEvidenciasExtra.
 function dibujarEvidenciasEnCaja(doc, files, x, y, width, height, opts = {}) {
   const {
     fontSize = 9,
@@ -284,13 +241,6 @@ function dibujarEvidenciasEnCaja(doc, files, x, y, width, height, opts = {}) {
   });
 }
 
-// Renderiza páginas de continuación con las evidencias que no caben en la caja principal
-// (a partir de la 3ra foto). Si en una página caben 1 o 2 fotos, se centran en cajas grandes
-// para no dejar la página casi en blanco; con 3 o 4 se usa una grilla 2x2 a todo el ancho.
-// Devuelve { lastY } con la posición justo debajo del último contenido dibujado (o null si no había
-// evidencias extra), para que el llamador pueda seguir agregando contenido sin dejar huecos.
-// opts.dibujarIdEnUltima (default true) controla si se dibuja el pie de ID en la última página
-// generada aquí; pásalo en false cuando el llamador vaya a agregar más contenido debajo (p.ej. aprobaciones).
 function renderPaginasEvidenciasExtra(
   doc,
   general,
@@ -383,10 +333,6 @@ function renderPaginasEvidenciasExtra(
   return { lastY };
 }
 
-//PAGINA 1 (EXTINTOR)
-// opts.aprobaciones: { inspector: {nombre}, jefe: {...}, copasst: {...} } — si no se pasa, quedan en blanco.
-// opts.fechasPrecomputadas: { extintores, camillas, senalizaciones, equipos, botiquines } (Maps ya calculados) —
-//   se usa al regenerar el PDF tras las 3 aprobaciones, cuando las evidencias vienen de OneDrive y no del request original.
 async function crearPdfInspeccionExtintor(
   data,
   evidenciasPorIndex = new Map(),
@@ -399,8 +345,6 @@ async function crearPdfInspeccionExtintor(
 ) {
   const { aprobaciones = null, fechasPrecomputadas = null } = opts;
 
-  // Pre-extraer fechas (EXIF → fallback a lastModified enviado desde el navegador),
-  // salvo que ya vengan precalculadas (regeneración post-aprobación).
   const [
     exifExtintores,
     exifCamillas,
@@ -439,7 +383,6 @@ async function crearPdfInspeccionExtintor(
         ),
       ]);
 
-  // Crear PDF con PDFKit
   return new Promise((resolve, reject) => {
     const doc = new PDFDocument({ size: "A4", margin: 25 });
     const chunks = [];
@@ -450,11 +393,6 @@ async function crearPdfInspeccionExtintor(
 
     const general = data || {};
 
-    // PDFKit abre la página 1 automáticamente al crear el doc. Como cualquier
-    // sección puede venir vacía (secciones opcionales, ver sede Urabá), no se
-    // puede asumir que "extintores" siempre dibuja esa primera página: la
-    // primera sección con contenido reutiliza la página inicial, y solo las
-    // siguientes llaman addPage(). Así nunca queda una página en blanco al inicio.
     let primeraPaginaUsada = false;
     function nuevaPagina() {
       if (primeraPaginaUsada) {
@@ -491,7 +429,6 @@ async function crearPdfInspeccionExtintor(
       const condiciones = extintor.condiciones || {};
       let y = 25;
 
-      // ===== ENCABEZADO =====
       doc.rect(25, y, 545, 70).stroke();
       doc.rect(25, y, 150, 70).stroke();
       doc.image(
@@ -521,7 +458,6 @@ async function crearPdfInspeccionExtintor(
 
       y += 70;
 
-      // ===== DATOS GENERALES =====
       doc.rect(25, y, 272.5, 25).stroke();
       doc.rect(297.5, y, 272.5, 25).stroke();
       doc
@@ -579,7 +515,6 @@ async function crearPdfInspeccionExtintor(
         );
       y += 25;
 
-      // ===== DATOS DEL EXTINTOR =====
       const datosExtintor = [
         ["N° DE EXTINTOR:", extintor.numero || ""],
         ["TIPO DE EXTINTOR:", extintor.tipo || ""],
@@ -593,7 +528,6 @@ async function crearPdfInspeccionExtintor(
       datosExtintor.forEach(([label, valor]) => {
         doc.rect(25, y, 545, 22).stroke();
 
-        // Texto combinado: etiqueta en negrita, valor normal
         doc
           .font("Helvetica-Bold")
           .fontSize(9)
@@ -604,7 +538,7 @@ async function crearPdfInspeccionExtintor(
 
         y += 22;
       });
-      // ===== DETALLE CONDICIONES =====
+
       doc.rect(25, y, 545, 40).stroke();
       doc
         .font("Helvetica-Bold")
@@ -624,7 +558,6 @@ async function crearPdfInspeccionExtintor(
         );
       y += 40;
 
-      // ===== TABLA =====
       const columnas = [190, 82.5, 190, 82.5];
       let x = 25;
       ["ELEMENTO", "ESTADO", "ELEMENTO", "ESTADO"].forEach((titulo, i) => {
@@ -711,7 +644,6 @@ async function crearPdfInspeccionExtintor(
         y += rowHeight;
       });
 
-      // ===== OBSERVACIONES =====
       const observacionesHeaderHeight = 25;
       const observacionesBoxHeight = 30;
 
@@ -728,7 +660,6 @@ async function crearPdfInspeccionExtintor(
         .text(extintor.observaciones || "", 30, y + 8, { width: 535 });
       y += observacionesBoxHeight;
 
-      // ===== EVIDENCIAS =====
       const evidenciaHeaderHeight = 20;
       const evidenciaBoxHeight = 180;
 
@@ -780,15 +711,7 @@ async function crearPdfInspeccionExtintor(
       );
     });
 
-    // ===== PAGINAS DE CAMILLAS, SEÑALIZACIONES, EQUIPOS TECNOLÓGICOS Y BOTIQUINES =====
-    // ===== PAGINAS DE CAMILLAS, SEÑALIZACIONES,
-    // EQUIPOS TECNOLÓGICOS Y BOTIQUINES =====
-
     let ultimaPosicion = null;
-
-    // -------------------------------------------------------
-    // CAMILLAS
-    // -------------------------------------------------------
 
     camillas.forEach((camilla, idx) => {
       nuevaPagina();
@@ -803,10 +726,6 @@ async function crearPdfInspeccionExtintor(
       );
     });
 
-    // -------------------------------------------------------
-    // SEÑALIZACIONES
-    // -------------------------------------------------------
-
     senalizaciones.forEach((senalizacion, idx) => {
       nuevaPagina();
 
@@ -819,10 +738,6 @@ async function crearPdfInspeccionExtintor(
         exifSenalizaciones.get(idx),
       );
     });
-
-    // -------------------------------------------------------
-    // EQUIPOS TECNOLÓGICOS
-    // -------------------------------------------------------
 
     if (equiposTecnologicos.length > 0) {
       nuevaPagina();
@@ -842,10 +757,6 @@ async function crearPdfInspeccionExtintor(
       ultimaPosicion = null;
     }
 
-    // -------------------------------------------------------
-    // BOTIQUINES
-    // -------------------------------------------------------
-
     if (botiquines.length > 0) {
       botiquines.forEach((botiquin, idx) => {
         nuevaPagina();
@@ -862,11 +773,6 @@ async function crearPdfInspeccionExtintor(
         );
       });
     } else {
-      // -----------------------------------------------------
-      // NO HAY BOTIQUINES
-      // Intentamos aprovechar la página anterior.
-      // -----------------------------------------------------
-
       const ALTO_TITULO = 40;
       const ALTO_APROBACIONES = 60;
       const ESPACIO_INFERIOR = 25;
@@ -881,19 +787,12 @@ async function crearPdfInspeccionExtintor(
         ultimaPosicion.lastY &&
         ultimaPosicion.lastY + espacioNecesario <= 817
       ) {
-        // Hay espacio suficiente en la página actual.
         yAprobaciones = ultimaPosicion.lastY + 20;
       } else {
-        // No hay espacio o no conocemos la posición final.
-        // Creamos una página nueva como antes.
         nuevaPagina();
 
         yAprobaciones = 25;
       }
-
-      // -----------------------------------------------------
-      // TÍTULO
-      // -----------------------------------------------------
 
       doc
         .font("Helvetica-Bold")
@@ -905,15 +804,7 @@ async function crearPdfInspeccionExtintor(
 
       yAprobaciones += 40;
 
-      // -----------------------------------------------------
-      // APROBACIONES
-      // -----------------------------------------------------
-
       renderAprobaciones(doc, yAprobaciones, aprobaciones);
-
-      // -----------------------------------------------------
-      // ID DE INSPECCIÓN
-      // -----------------------------------------------------
 
       dibujarIdInspeccion(doc, general, yAprobaciones + 60 + 4);
     }
@@ -922,7 +813,6 @@ async function crearPdfInspeccionExtintor(
   });
 }
 
-// PAGINA 2 (CAMILLA)
 function renderPaginaCamilla(
   doc,
   general,
@@ -1146,7 +1036,6 @@ function renderPaginaCamilla(
   };
 }
 
-//PAGINA 3 (señalizacion)
 function renderPaginaSenalizacion(
   doc,
   general,
@@ -1286,14 +1175,12 @@ function renderPaginaSenalizacion(
   });
   y += 25;
 
-  // Elementos de la tabla de señalización
   const elementos = [
     ["Cantidad", senalizacion.cantidad || ""],
     ["Estado", senalizacion.estado || ""],
     ["Aseo", senalizacion.aseo || ""],
   ];
 
-  // Altura de cada fila de la tabla
   const rowHeight = 30;
   elementos.forEach((fila) => {
     let xx = 25;
@@ -1336,7 +1223,6 @@ function renderPaginaSenalizacion(
   y += 20;
   doc.rect(25, y, 545, 180).stroke();
 
-  // Renderizar evidencia(s) de señalización
   const evidenciaArchivos = evidenciasSenalizacionPorIndex.get(idx) || [];
 
   dibujarEvidenciasEnCaja(doc, evidenciaArchivos, 30, y + 5, 535, 170);
@@ -1366,8 +1252,6 @@ function renderPaginaSenalizacion(
     tienePaginaExtra: false,
   };
 }
-
-//PAGINA 4 (EQUIPOS TECNOLOGICOS - TABLA UNICA)
 
 function renderPaginaEquiposTecnologicos(
   doc,
@@ -1501,7 +1385,6 @@ function renderPaginaEquiposTecnologicos(
 
   const rowHeight = 18;
 
-  // Renderizar filas de equipos tecnológicos
   if (equiposTecnologicos && equiposTecnologicos.length > 0) {
     equiposTecnologicos.forEach((equipo) => {
       let xx = 25;
@@ -1554,7 +1437,6 @@ function renderPaginaEquiposTecnologicos(
     });
   y += 20;
 
-  // Calcular altura de observaciones
   let observacionesText = "";
   if (equiposTecnologicos && equiposTecnologicos.length > 0) {
     observacionesText = equiposTecnologicos
@@ -1584,7 +1466,6 @@ function renderPaginaEquiposTecnologicos(
   const celdaH = 130;
   const labelH = 16;
 
-  // Renderizar evidencias de equipos tecnológicos (hasta 2 fotos por equipo en la celda)
   for (let i = 0; i < 4; i++) {
     const col = i % 2;
     const row = Math.floor(i / 2);
@@ -1632,10 +1513,8 @@ function renderPaginaEquiposTecnologicos(
       },
     );
   }
-  // ID debajo de la grilla de evidencias (2 filas × (labelH + celdaH))
   dibujarIdInspeccion(doc, general, y + 2 * (labelH + celdaH));
 
-  // Páginas de continuación para los equipos que tengan más de 2 fotos
   for (let i = 0; i < 4; i++) {
     const equipo = equiposTecnologicos[i];
     const nombre = equipo
@@ -1652,11 +1531,6 @@ function renderPaginaEquiposTecnologicos(
   }
 }
 
-// Renderizar el bloque de aprobación al final del documento.
-// aprobaciones: { inspector: {nombre}, jefe: {...}, copasst: {...} }.
-// No se dibuja ninguna firma manuscrita/biométrica (restricción legal): se
-// imprime el nombre de quien aprobó cada rol. Si falta un rol, queda la línea
-// en blanco (aprobación pendiente).
 function renderAprobaciones(doc, y, aprobaciones = null) {
   doc.save();
   doc.lineWidth(0.5);
@@ -1704,7 +1578,6 @@ function renderAprobaciones(doc, y, aprobaciones = null) {
   doc.restore();
 }
 
-//PAGINA 5 (BOTIQUIN)
 function renderPaginaBotiquin(
   doc,
   general,
@@ -1744,7 +1617,6 @@ function renderPaginaBotiquin(
 
   y += 70;
 
-  // Fila 1: FECHA | SEDE
   doc.rect(25, y, 272.5, 25).stroke();
   doc.rect(297.5, y, 272.5, 25).stroke();
   doc
@@ -1765,7 +1637,6 @@ function renderPaginaBotiquin(
     .text(general.sedeOperacion || "", 335, y + 8, { width: 227 });
   y += 25;
 
-  // Fila 2: AREA | RESPONSABLE INSPECCION
   doc.rect(25, y, 272.5, 25).stroke();
   doc.rect(297.5, y, 272.5, 25).stroke();
   doc
@@ -1786,7 +1657,6 @@ function renderPaginaBotiquin(
     .text(general.responsableInspeccion || "", 445, y + 8, { width: 120 });
   y += 25;
 
-  // Fila 3: RESPONSABLE DEL AREA A INSPECCIONAR (ancho completo)
   doc.rect(25, y, 545, 25).stroke();
   doc
     .font("Helvetica-Bold")
@@ -1798,7 +1668,6 @@ function renderPaginaBotiquin(
     .text(general.jefeResponsable || "", 265, y + 8, { width: 300 });
   y += 25;
 
-  // Fila 4: N. BOTIQUIN | UBICACION
   doc.rect(25, y, 272.5, 25).stroke();
   doc.rect(297.5, y, 272.5, 25).stroke();
   doc
@@ -1831,7 +1700,6 @@ function renderPaginaBotiquin(
     );
   y += 20;
 
-  // columnas: [No, ITEM, IDEAL, REAL, INTEG., VENCE, PLAN, FECHA, CUMP., AFECTAC.] = 545 total
   const columnas = [20, 180, 32, 32, 42, 52, 52, 42, 35, 58];
   const encabezados = [
     "No",
@@ -1895,7 +1763,6 @@ function renderPaginaBotiquin(
           (item?.planIntervencion === "Ninguna" ? "-" : ""),
       ];
 
-      // Dibujar fila de la tabla
       fila.forEach((valor, i) => {
         doc.rect(xx, y, columnas[i], rowH).stroke();
         const align = i === 1 ? "left" : "center";
@@ -1992,7 +1859,6 @@ function renderPaginaBotiquin(
     return;
   }
 
-  // Último botiquín: las evidencias adicionales (si las hay) van antes del bloque de aprobación, nunca después.
   const extra = renderPaginasEvidenciasExtra(
     doc,
     general,
@@ -2020,7 +1886,6 @@ function renderPaginaBotiquin(
   dibujarIdInspeccion(doc, general, yAprobaciones + 60 + 4);
 }
 
-// ===== generar PDF =====
 async function generarPdfPrueba(req, res) {
   try {
     const data = leerPayload(req);
@@ -2080,7 +1945,6 @@ async function generarPdfPrueba(req, res) {
   }
 }
 
-// ===== subir PDF a OneDrive (carpeta Respuestas_PDF) =====
 async function subirPdfAOneDrive(
   pdfBuffer,
   inspeccionId,
@@ -2120,7 +1984,6 @@ async function subirPdfAOneDrive(
   return item?.webUrl || null;
 }
 
-// Decide el correo destino según la sede (con fallback manual/GRAPH_EMAIL_TO_TEST).
 function resolverCorreoDestino(sedeOperacion, correoManual) {
   const sede = (sedeOperacion || "").toLowerCase().trim();
   if (sede.includes("santa marta")) return "jmmontenegro201@gmail.com";
@@ -2128,9 +1991,6 @@ function resolverCorreoDestino(sedeOperacion, correoManual) {
   return correoManual || process.env.GRAPH_EMAIL_TO_TEST;
 }
 
-// Arma el HTML del correo de notificación de inspección. Reutilizado tanto por
-// el envío inmediato (enviarPdfPruebaCorreo) como por el envío tras completar
-// las 3 aprobaciones (aprobaciones.controller.js).
 function construirHtmlCorreo({
   inspeccionId,
   numInspeccion,
@@ -2296,7 +2156,6 @@ async function enviarPdfPruebaCorreo(req, res) {
       "botiquin-evidencia",
     );
 
-    // 1. Generar PDF con PDFKit.
     const pdfGenerado = await crearPdfInspeccionExtintor(
       payloadData,
       evidenciasPorIndex,
@@ -2309,8 +2168,6 @@ async function enviarPdfPruebaCorreo(req, res) {
 
     const nombrePdf = `${payloadData?.inspeccionId || "inspeccion-sst"}.pdf`;
 
-    // 2. Optimizar una sola vez con Ghostscript.
-    // Si falla, optimizarPdf devuelve automáticamente el original.
     const pdfFinal = await optimizarPdf(pdfGenerado, {
       profile: "inspection",
       fileName: nombrePdf,
@@ -2318,7 +2175,6 @@ async function enviarPdfPruebaCorreo(req, res) {
 
     const numInspeccionCorreo = payloadData?.numInspeccion ?? null;
 
-    // 3. Subir el PDF final a OneDrive.
     const webUrl = await subirPdfAOneDrive(
       pdfFinal,
       payloadData?.inspeccionId,
@@ -2340,7 +2196,6 @@ async function enviarPdfPruebaCorreo(req, res) {
     const subjectNum =
       numInspeccionCorreo != null ? `N.° ${numInspeccionCorreo} – ` : "";
 
-    // 4. Adjuntar el mismo PDF final al correo.
     await enviarCorreoPorGraph({
       to: correoDestino,
       subject:
@@ -2364,7 +2219,7 @@ async function enviarPdfPruebaCorreo(req, res) {
     });
   }
 }
-// ===== Exports =====
+
 module.exports = {
   generarPdfPrueba,
   enviarPdfPruebaCorreo,

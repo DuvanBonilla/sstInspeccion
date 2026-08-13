@@ -1,38 +1,6 @@
-/*
-  inspeccion.model.js — Modelo principal de la inspección SST (capa de datos/negocio).
-
-  Qué hace:
-  - validarInspeccion(): valida el payload completo recibido del frontend.
-    Delega la validación de cada sección a los modelos específicos:
-      extintores.model.js, camillas.model.js, senalizaciones.model.js,
-      equiposTecnologicos.model.js, botiquines.model.js
-  - uploadEvidenceToOneDrive(): sube un archivo de imagen a la carpeta de
-    evidencias en OneDrive usando Microsoft Graph API y devuelve la ruta.
-  - descargarEvidenciaOneDrive(): descarga el contenido de una evidencia ya
-    subida (se usa al regenerar el PDF una vez las 3 aprobaciones están completas).
-  - guardarInspeccionEnDB(): guarda la inspección completa en Neon (Postgres):
-    la fila general en `inspecciones` y cada sección en su propia tabla
-    (extintores, camillas, senalizaciones, equipos_tecnologicos, botiquines +
-    botiquin_items), todo en una transacción. Devuelve el número de inspección
-    y los tokens de aprobación generados.
-  - obtenerInspeccionCompleta(): reconstruye una inspección completa (fila
-    general + las 5 secciones) desde esas tablas, en la misma forma anidada
-    que espera el generador de PDF. Se usa al completar las 3 aprobaciones.
-
-  Cómo interactúa:
-  - Es llamado por inspeccion.controller.js y aprobaciones.controller.js.
-  - Requiere variables de entorno en .env:
-      MS_TENANT_ID, MS_CLIENT_ID, MS_CLIENT_SECRET, ONEDRIVE_USER_ID,
-      ONEDRIVE_EXCEL_PATH (solo para ubicar la carpeta de evidencias), DATABASE_URL.
-  - Importa los modelos de sección para normalización y validación.
-  - La data estructurada de cada inspección vive en Neon (varias tablas,
-    ver backend/db/migrate.js); OneDrive queda solo para los binarios (fotos de
-    evidencia y PDF final).
-*/
 const GRAPH_BASE = "https://graph.microsoft.com/v1.0";
 const { query, pool } = require("../db/pool");
 
-// Caché de token OAuth (evita una llamada de autenticación por cada operación)
 let _cachedToken = null;
 let _tokenExpiresAt = 0;
 
@@ -57,7 +25,6 @@ const {
   validarBotiquines,
 } = require("./botiquines.model");
 
-// Campos de condición que se esperan en la sección de extintores.
 const CAMPOS_CONDICION = [
   "acceso",
   "visibilidad",
@@ -80,7 +47,6 @@ const CAMPOS_CONDICION = [
   "otros",
 ];
 
-// Normaliza un valor de texto: si no es string, devuelve "", si es string, lo trimmea.
 function normalizarTexto(valor) {
   if (typeof valor !== "string") {
     return "";
@@ -89,7 +55,6 @@ function normalizarTexto(valor) {
   return valor.trim();
 }
 
-// Obtiene una variable de entorno requerida y lanza error si no está definida.
 function getRequiredEnv(name) {
   const value = process.env[name];
 
@@ -100,7 +65,6 @@ function getRequiredEnv(name) {
   return value;
 }
 
-// Solicita token app-only para consumir Microsoft Graph (con caché).
 async function getAccessToken() {
   if (_cachedToken && Date.now() < _tokenExpiresAt - 30_000) {
     return _cachedToken;

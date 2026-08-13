@@ -1,16 +1,3 @@
-/*
-  senalizaciones.model.js — Modelo de validación y normalización de señalizaciones.
-
-  Qué hace:
-  - normalizarSenalizaciones(): limpia y estandariza el array de señalizaciones del payload.
-  - validarSenalizaciones(): verifica que cada señalización tenga tipo y ubicación,
-    y que los campos de estado y aseo sean valores válidos (B, R, M, NC, NA).
-
-  Cómo interactúa:
-  - Es importado por extintor.model.js y usado dentro de validarInspeccion()
-    para validar únicamente la sección de señalizaciones del payload.
-  - No se comunica con el servidor ni con el frontend directamente.
-*/
 const ESTADOS_VALIDOS = new Set(["B", "R", "M", "NC", "NA"]);
 
 // Normaliza un valor de texto, eliminando espacios al inicio y al final.
