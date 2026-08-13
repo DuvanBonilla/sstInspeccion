@@ -124,9 +124,26 @@ export function createTrabajadoresEppManager({
   function limpiarErrorCampo(event) {
     const elemento = event.target;
 
+    // =======================================================
+    // CÓDIGO DEL TRABAJADOR
+    // Solo números y máximo 6 dígitos
+    // =======================================================
+
+    if (elemento.matches('[data-role="codigo"]')) {
+      elemento.value = elemento.value.replace(/\D/g, "").slice(0, 6);
+    }
+
+    // =======================================================
+    // LIMPIAR ERROR VISUAL
+    // =======================================================
+
     if (elemento.matches("input, select, textarea")) {
       elemento.classList.remove("campo-error");
     }
+
+    // =======================================================
+    // ACTUALIZAR NOMBRE DEL ACORDEÓN
+    // =======================================================
 
     if (elemento.matches('[data-role="nombre"]')) {
       actualizarNombreResumen(elemento);
@@ -653,11 +670,14 @@ export function createTrabajadoresEppManager({
             Código
           </label>
 
-          <input
-            type="text"
-            data-role="codigo"
-            autocomplete="off"
-          />
+<input
+  type="text"
+  data-role="codigo"
+  inputmode="numeric"
+  maxlength="6"
+  autocomplete="off"
+  placeholder="000001"
+/>
 
         </div>
 
@@ -1327,12 +1347,39 @@ export function createTrabajadoresEppManager({
         );
       }
 
-      if (!codigo?.value.trim()) {
+      // ---------------------------------------------------
+      // CÓDIGO DEL TRABAJADOR
+      // ---------------------------------------------------
+
+      const codigoValor = codigo?.value.trim() || "";
+
+      // Código obligatorio
+      if (!codigoValor) {
         abrirTrabajador(tarjeta);
 
         return marcarError(
           codigo,
           `Trabajador ${numeroTrabajador}: ingrese el código.`,
+        );
+      }
+
+      // Debe contener únicamente números y máximo 6 dígitos
+      if (!/^\d{1,6}$/.test(codigoValor)) {
+        abrirTrabajador(tarjeta);
+
+        return marcarError(
+          codigo,
+          `Trabajador ${numeroTrabajador}: el código debe contener únicamente números y tener máximo 6 dígitos.`,
+        );
+      }
+
+      // 000000 no está permitido
+      if (Number(codigoValor) < 1) {
+        abrirTrabajador(tarjeta);
+
+        return marcarError(
+          codigo,
+          `Trabajador ${numeroTrabajador}: el código debe estar entre 000001 y 999999.`,
         );
       }
 
