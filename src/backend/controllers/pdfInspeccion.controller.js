@@ -1,5 +1,6 @@
 const path = require("node:path");
 const PDFDocument = require("pdfkit");
+const { getAccessToken } = require("../services/graph.service");
 const {
   extraerFechaExif,
   formatearFechaMs,
@@ -84,45 +85,6 @@ async function extraerFechasArchivos(fileMapa, body, prefijo) {
     if (fecha) fechas.set(idx, fecha);
   }
   return fechas;
-}
-
-let _cachedToken = null;
-let _tokenExpiresAt = 0;
-
-async function getAccessToken() {
-  if (_cachedToken && Date.now() < _tokenExpiresAt - 30_000) {
-    return _cachedToken;
-  }
-
-  const tenantId = getRequiredEnv("MS_TENANT_ID");
-  const clientId = getRequiredEnv("MS_CLIENT_ID");
-  const clientSecret = getRequiredEnv("MS_CLIENT_SECRET");
-
-  const tokenUrl = `https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/token`;
-  const body = new URLSearchParams({
-    client_id: clientId,
-    client_secret: clientSecret,
-    grant_type: "client_credentials",
-    scope: "https://graph.microsoft.com/.default",
-  });
-
-  const response = await fetch(tokenUrl, {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body,
-  });
-
-  const data = await response.json();
-
-  if (!response.ok || !data.access_token) {
-    const detail =
-      data?.error_description || data?.error || "No se pudo obtener token";
-    throw new Error(`Error autenticando en Microsoft Graph: ${detail}`);
-  }
-
-  _cachedToken = data.access_token;
-  _tokenExpiresAt = Date.now() + (data.expires_in || 3600) * 1000;
-  return _cachedToken;
 }
 
 async function enviarCorreoPorGraph({
