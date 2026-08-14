@@ -134,6 +134,14 @@ export function createTrabajadoresEppManager({
     }
 
     // =======================================================
+    // NOMBRE DEL TRABAJADOR
+    // No permitir números
+    // =======================================================
+
+    if (elemento.matches('[data-role="nombre"]')) {
+      elemento.value = elemento.value.replace(/[0-9]/g, "").slice(0, 100);
+    }
+    // =======================================================
     // LIMPIAR ERROR VISUAL
     // =======================================================
 
@@ -647,6 +655,22 @@ export function createTrabajadoresEppManager({
            DATOS DEL TRABAJADOR
            =================================================== -->
 
+                     <div class="conventions">
+            <span class="conventions-label">Convenciones:</span>
+            <span class="convention-chip"
+              ><span class="convention-code">B</span> Bueno</span
+            >
+            <span class="convention-chip"
+              ><span class="convention-code">R</span> Regular</span
+            >
+            <span class="convention-chip"
+              ><span class="convention-code">M</span> Malo</span
+            >
+            <span class="convention-chip"
+              ><span class="convention-code">NA</span> No Aplica</span
+            >
+          </div>
+
       <div class="trabajador-datos">
 
         <div class="field">
@@ -655,11 +679,13 @@ export function createTrabajadoresEppManager({
             Nombre y apellido
           </label>
 
-          <input
-            type="text"
-            data-role="nombre"
-            autocomplete="off"
-          />
+<input
+  type="text"
+  data-role="nombre"
+  maxlength="100"
+  autocomplete="off"
+  placeholder="Nombre y apellido"
+/>
 
         </div>
 
@@ -1285,6 +1311,11 @@ export function createTrabajadoresEppManager({
 
   function validar() {
     const tarjetas = container.querySelectorAll(".trabajador-card");
+    // =====================================================
+    // CONTROL DE CÓDIGOS DUPLICADOS
+    // =====================================================
+
+    const codigosRegistrados = new Set();
 
     // =====================================================
     // FECHA DE LA INSPECCIÓN
@@ -1338,12 +1369,51 @@ export function createTrabajadoresEppManager({
 
       const cargo = tarjeta.querySelector('[data-role="cargo"]');
 
-      if (!nombre?.value.trim()) {
+      // ---------------------------------------------------
+      // NOMBRE Y APELLIDO
+      // ---------------------------------------------------
+
+      const nombreValor = nombre?.value.trim() || "";
+
+      // Obligatorio
+      if (!nombreValor) {
         abrirTrabajador(tarjeta);
 
         return marcarError(
           nombre,
           `Trabajador ${numeroTrabajador}: ingrese el nombre y apellido.`,
+        );
+      }
+
+      // Longitud mínima
+      if (nombreValor.length < 5) {
+        abrirTrabajador(tarjeta);
+
+        return marcarError(
+          nombre,
+          `Trabajador ${numeroTrabajador}: el nombre y apellido debe contener al menos 5 caracteres.`,
+        );
+      }
+
+      // Solo letras y caracteres válidos para nombres
+      if (!/^[A-Za-zÁÉÍÓÚáéíóúÜüÑñ' -]+$/.test(nombreValor)) {
+        abrirTrabajador(tarjeta);
+
+        return marcarError(
+          nombre,
+          `Trabajador ${numeroTrabajador}: el nombre y apellido no puede contener números ni caracteres especiales.`,
+        );
+      }
+
+      // Debe existir al menos nombre + apellido
+      const partesNombre = nombreValor.split(/\s+/).filter(Boolean);
+
+      if (partesNombre.length < 2) {
+        abrirTrabajador(tarjeta);
+
+        return marcarError(
+          nombre,
+          `Trabajador ${numeroTrabajador}: registre al menos el nombre y un apellido.`,
         );
       }
 
@@ -1382,6 +1452,21 @@ export function createTrabajadoresEppManager({
           `Trabajador ${numeroTrabajador}: el código debe estar entre 000001 y 999999.`,
         );
       }
+
+      // ---------------------------------------------------
+      // EVITAR CÓDIGOS DUPLICADOS
+      // ---------------------------------------------------
+
+      if (codigosRegistrados.has(codigoValor)) {
+        abrirTrabajador(tarjeta);
+
+        return marcarError(
+          codigo,
+          `Trabajador ${numeroTrabajador}: el código "${codigoValor}" ya fue registrado en otro trabajador.`,
+        );
+      }
+
+      codigosRegistrados.add(codigoValor);
 
       if (!cargo?.value.trim()) {
         abrirTrabajador(tarjeta);
