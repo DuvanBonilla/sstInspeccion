@@ -17,7 +17,7 @@ const {
   guardarInspeccionEppEnDB,
 } = require("../models/inspeccionEpp.model");
 
-const { uploadEvidenceToOneDrive } = require("../models/inspeccion.model");
+const { uploadEvidenceToOneDrive } = require("../services/evidencia.service");
 
 const { resolverFechaEvidencia } = require("../utils/fechaEvidencia");
 

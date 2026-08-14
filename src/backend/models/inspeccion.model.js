@@ -1,158 +1,5 @@
 const { query, pool } = require("../db/pool");
 
-const {
-  subirArchivoOneDrive,
-  descargarArchivoOneDrive,
-} = require("../services/graph.service");
-
-const {
-  normalizarExtintores: normalizarExtintoresSeccion,
-  validarExtintores,
-} = require("../validators/extintores.validator");
-const {
-  normalizarCamillas: normalizarCamillasSeccion,
-  validarCamillas,
-} = require("../validators/camillas.validator");
-const {
-  normalizarSenalizaciones: normalizarSenalizacionesSeccion,
-  validarSenalizaciones,
-} = require("../validators/senalizaciones.validator");
-const {
-  normalizarEquiposTecnologicos: normalizarEquiposTecnologicosSeccion,
-  validarEquiposTecnologicos,
-} = require("../validators/equiposTecnologicos.validator");
-const {
-  normalizarBotiquines: normalizarBotiquinesSeccion,
-  validarBotiquines,
-} = require("../validators/botiquines.validator");
-
-const CAMPOS_CONDICION = [
-  "acceso",
-  "visibilidad",
-  "senalizacion",
-  "paredAltura",
-  "piso",
-  "limpieza",
-  "rotulo",
-  "cilindro",
-  "manometro",
-  "presion",
-  "pin",
-  "manguera",
-  "boquilla",
-  "corneta",
-  "pintura",
-  "manija",
-  "sello",
-  "llaveSpanner",
-  "otros",
-];
-
-function normalizarTexto(valor) {
-  if (typeof valor !== "string") {
-    return "";
-  }
-
-  return valor.trim();
-}
-
-function getRequiredEnv(name) {
-  const value = process.env[name];
-
-  if (!value) {
-    throw new Error(`Falta variable de entorno requerida: ${name}`);
-  }
-
-  return value;
-}
-
-// Limpia el nombre del archivo para que sea seguro usarlo en OneDrive.
-function limpiarNombreArchivo(valor) {
-  return String(valor || "").replace(/[^a-zA-Z0-9._-]/g, "_");
-}
-
-function getEvidenceFolderPath() {
-  const configuredPath = process.env.ONEDRIVE_EVIDENCIAS_PATH;
-
-  if (configuredPath) {
-    return configuredPath.startsWith("/")
-      ? configuredPath
-      : `/${configuredPath}`;
-  }
-
-  const excelPath = getRequiredEnv("ONEDRIVE_EXCEL_PATH");
-  const normalizedExcelPath = excelPath.startsWith("/")
-    ? excelPath
-    : `/${excelPath}`;
-  const lastSlashIndex = normalizedExcelPath.lastIndexOf("/");
-  const parentPath =
-    lastSlashIndex > 0 ? normalizedExcelPath.slice(0, lastSlashIndex) : "";
-
-  return `${parentPath}/EVIDENCIAS`;
-}
-
-// Extrae el código aleatorio del inspeccionId (ej: "INSP-20250630-K7X9" → "K7X9").
-function extraerCodigoInspeccion(inspeccionId) {
-  const partes = String(inspeccionId || "").split("-");
-  return limpiarNombreArchivo(partes[partes.length - 1] || "") || "SINCOD";
-}
-
-// Carga la evidencia del formulario a OneDrive y retorna la ruta creada.
-// Nombre del archivo: {PREFIJO}_{indice}_{codigoInspeccion}.ext (ej: EXT_1_K7X9.jpg).
-// Si se pasa subIndice (item con más de una foto), se agrega al nombre: {PREFIJO}_{indice}_{subIndice}_{codigoInspeccion}.ext.
-async function uploadEvidenceToOneDrive(
-  file,
-  prefijo,
-  indice,
-  inspeccionId,
-  subIndice = null,
-) {
-  if (!file) {
-    return "";
-  }
-
-  const evidenceFolderPath = getEvidenceFolderPath();
-  const extension = pathExtension(file.originalname);
-  const codigoInspeccion = extraerCodigoInspeccion(inspeccionId);
-
-  const fileName =
-    subIndice != null
-      ? `${prefijo}_${indice}_${subIndice}_${codigoInspeccion}${extension}`
-      : `${prefijo}_${indice}_${codigoInspeccion}${extension}`;
-
-  const evidencePath = `${evidenceFolderPath}/${fileName}`;
-
-  await subirArchivoOneDrive({
-    ruta: evidencePath,
-    buffer: file.buffer,
-    contentType: file.mimetype || "application/octet-stream",
-  });
-
-  return evidencePath;
-}
-
-// Descarga una evidencia ya subida a OneDrive por su ruta. Devuelve un Buffer o null si falla.
-// Se usa solo al regenerar el PDF final, una vez las 3 firmas están completas.
-async function descargarEvidenciaOneDrive(evidencePath) {
-  if (!evidencePath) {
-    return null;
-  }
-
-  return descargarArchivoOneDrive(evidencePath);
-}
-
-// Extrae la extensión del archivo y la limpia para usarla en el nombre del archivo en OneDrive.
-function pathExtension(fileName) {
-  const safeName = String(fileName || "");
-  const lastDotIndex = safeName.lastIndexOf(".");
-
-  if (lastDotIndex === -1) {
-    return "";
-  }
-
-  return limpiarNombreArchivo(safeName.slice(lastDotIndex));
-}
-
 // Guarda la inspección completa: la fila general en `inspecciones` y cada
 // sección en su propia tabla (extintores, camillas, senalizaciones,
 // equipos_tecnologicos, botiquines + botiquin_items), todas con FK a la
@@ -571,9 +418,7 @@ function construirFiltrosInspecciones({
   if (tipoInspeccion) {
     valores.push(tipoInspeccion);
 
-    condiciones.push(
-      `i.tipo_inspeccion = $${valores.length}`
-    );
+    condiciones.push(`i.tipo_inspeccion = $${valores.length}`);
   }
 
   // =====================================================
@@ -583,9 +428,7 @@ function construirFiltrosInspecciones({
   if (fechaDesde) {
     valores.push(fechaDesde);
 
-    condiciones.push(
-      `i.created_at::date >= $${valores.length}`
-    );
+    condiciones.push(`i.created_at::date >= $${valores.length}`);
   }
 
   // =====================================================
@@ -595,9 +438,7 @@ function construirFiltrosInspecciones({
   if (fechaHasta) {
     valores.push(fechaHasta);
 
-    condiciones.push(
-      `i.created_at::date <= $${valores.length}`
-    );
+    condiciones.push(`i.created_at::date <= $${valores.length}`);
   }
 
   // =====================================================
@@ -607,9 +448,7 @@ function construirFiltrosInspecciones({
   if (sedeOperacion) {
     valores.push(sedeOperacion);
 
-    condiciones.push(
-      `i.sede_operacion = $${valores.length}`
-    );
+    condiciones.push(`i.sede_operacion = $${valores.length}`);
   }
 
   // =====================================================
@@ -619,9 +458,7 @@ function construirFiltrosInspecciones({
   if (estado) {
     valores.push(estado);
 
-    condiciones.push(
-      `i.estado = $${valores.length}`
-    );
+    condiciones.push(`i.estado = $${valores.length}`);
   }
 
   // =====================================================
@@ -642,10 +479,7 @@ function construirFiltrosInspecciones({
   }
 
   return {
-    whereSql:
-      condiciones.length > 0
-        ? condiciones.join(" AND ")
-        : "1=1",
+    whereSql: condiciones.length > 0 ? condiciones.join(" AND ") : "1=1",
 
     valores,
   };
@@ -779,32 +613,19 @@ async function listarInspeccionesConFiltros(filtros = {}, paginacion = {}) {
   };
 }
 
-async function listarInspeccionesEppConFiltros(
-  filtros = {},
-  paginacion = {},
-) {
-  const page = Math.max(
-    1,
-    Number(paginacion.page) || 1,
-  );
+async function listarInspeccionesEppConFiltros(filtros = {}, paginacion = {}) {
+  const page = Math.max(1, Number(paginacion.page) || 1);
 
   const pageSize = Math.min(
     100,
-    Math.max(
-      1,
-      Number(paginacion.pageSize) || 10,
-    ),
+    Math.max(1, Number(paginacion.pageSize) || 10),
   );
 
   const offset = (page - 1) * pageSize;
 
   const sortBy = paginacion.sortBy;
 
-  const sortOrder =
-    paginacion.sortOrder === "desc"
-      ? "DESC"
-      : "ASC";
-
+  const sortOrder = paginacion.sortOrder === "desc" ? "DESC" : "ASC";
 
   // =====================================================
   // COLUMNAS ORDENABLES
@@ -825,15 +646,10 @@ async function listarInspeccionesEppConFiltros(
 
     estado: "i.estado",
 
-    trabajadores:
-      "COALESCE(tra.cantidad, 0)",
+    trabajadores: "COALESCE(tra.cantidad, 0)",
   };
 
-
-  const columnaOrden =
-    columnasOrdenables[sortBy] ||
-    "i.created_at";
-
+  const columnaOrden = columnasOrdenables[sortBy] || "i.created_at";
 
   // =====================================================
   // FORZAR TIPO EPP
@@ -845,14 +661,7 @@ async function listarInspeccionesEppConFiltros(
     tipoInspeccion: "EPP",
   };
 
-
-  const {
-    whereSql,
-    valores,
-  } = construirFiltrosInspecciones(
-    filtrosEpp,
-  );
-
+  const { whereSql, valores } = construirFiltrosInspecciones(filtrosEpp);
 
   // =====================================================
   // TOTAL
@@ -866,7 +675,6 @@ async function listarInspeccionesEppConFiltros(
 
     WHERE ${whereSql}
   `;
-
 
   // =====================================================
   // DATOS
@@ -913,37 +721,17 @@ async function listarInspeccionesEppConFiltros(
     OFFSET $${valores.length + 2}
   `;
 
-
   // =====================================================
   // EJECUTAR CONSULTAS
   // =====================================================
 
-  const [
-    resTotal,
-    resDatos,
-  ] = await Promise.all([
+  const [resTotal, resDatos] = await Promise.all([
+    query(totalSql, valores),
 
-    query(
-      totalSql,
-      valores,
-    ),
-
-    query(
-      datosSql,
-      [
-        ...valores,
-        pageSize,
-        offset,
-      ],
-    ),
-
+    query(datosSql, [...valores, pageSize, offset]),
   ]);
 
-
-  const total = Number(
-    resTotal.rows?.[0]?.total || 0,
-  );
-
+  const total = Number(resTotal.rows?.[0]?.total || 0);
 
   // =====================================================
   // RESPUESTA
@@ -956,14 +744,9 @@ async function listarInspeccionesEppConFiltros(
 
     pageSize,
 
-    totalPages:
-      Math.max(
-        1,
-        Math.ceil(total / pageSize),
-      ),
+    totalPages: Math.max(1, Math.ceil(total / pageSize)),
 
-    items:
-      resDatos.rows || [],
+    items: resDatos.rows || [],
   };
 }
 
@@ -1021,9 +804,6 @@ async function obtenerLinksInspeccion(inspeccionId) {
 
 // Exporta funciones y constantes para uso en el controlador.
 module.exports = {
-  CAMPOS_CONDICION,
-  uploadEvidenceToOneDrive,
-  descargarEvidenciaOneDrive,
   guardarInspeccionEnDB,
   obtenerInspeccionCompleta,
   obtenerResumenEstadisticas,

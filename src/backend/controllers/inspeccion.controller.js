@@ -1,8 +1,8 @@
 const {
-  uploadEvidenceToOneDrive,
   guardarInspeccionEnDB,
   obtenerLinksInspeccion,
 } = require("../models/inspeccion.model");
+const { uploadEvidenceToOneDrive } = require("../services/evidencia.service");
 const { validarInspeccion } = require("../validators/inspeccion.validator");
 const { resolverFechaEvidencia } = require("../utils/fechaEvidencia");
 

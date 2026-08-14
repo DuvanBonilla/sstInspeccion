@@ -29,9 +29,11 @@ const {
   marcarInspeccionEnviada,
 } = require("../models/aprobaciones.model");
 const {
-  descargarEvidenciaOneDrive,
   obtenerInspeccionCompleta,
 } = require("../models/inspeccion.model");
+const {
+  descargarEvidenciaOneDrive,
+} = require("../services/evidencia.service");
 const {
   crearPdfInspeccionExtintor,
   subirPdfAOneDrive,
