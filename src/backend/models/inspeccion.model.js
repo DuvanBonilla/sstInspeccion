@@ -8,23 +8,23 @@ const {
 const {
   normalizarExtintores: normalizarExtintoresSeccion,
   validarExtintores,
-} = require("./extintores.model");
+} = require("../validators/extintores.validator");
 const {
   normalizarCamillas: normalizarCamillasSeccion,
   validarCamillas,
-} = require("./camillas.model");
+} = require("../validators/camillas.validator");
 const {
   normalizarSenalizaciones: normalizarSenalizacionesSeccion,
   validarSenalizaciones,
-} = require("./senalizaciones.model");
+} = require("../validators/senalizaciones.validator");
 const {
   normalizarEquiposTecnologicos: normalizarEquiposTecnologicosSeccion,
   validarEquiposTecnologicos,
-} = require("./equiposTecnologicos.model");
+} = require("../validators/equiposTecnologicos.validator");
 const {
   normalizarBotiquines: normalizarBotiquinesSeccion,
   validarBotiquines,
-} = require("./botiquines.model");
+} = require("../validators/botiquines.validator");
 
 const CAMPOS_CONDICION = [
   "acceso",
@@ -64,117 +64,6 @@ function getRequiredEnv(name) {
   }
 
   return value;
-}
-
-
-// Valida datos de formulario y retorna una salida normalizada para controlador.
-function validarInspeccion(payload) {
-  const errores = [];
-
-  // Normaliza campos generales del payload.
-  const inspeccionId = normalizarTexto(payload?.inspeccionId);
-  const fecha = normalizarTexto(payload?.fecha);
-  const sedeOperacion = normalizarTexto(payload?.sedeOperacion);
-  const areaTrabajo = normalizarTexto(payload?.areaTrabajo);
-  const jefeResponsable = normalizarTexto(payload?.jefeResponsable);
-  const cargoJefe = normalizarTexto(payload?.cargoJefe);
-  const responsableInspeccion = normalizarTexto(payload?.responsableInspeccion);
-  const cargoResponsable = normalizarTexto(payload?.cargoResponsable);
-
-  // Validaciones de campos obligatorios.
-  if (!fecha) errores.push("Fecha de inspeccion es obligatoria");
-  if (!sedeOperacion) errores.push("Sede de operacion es obligatoria");
-  if (!areaTrabajo) errores.push("Area de trabajo es obligatoria");
-  if (!jefeResponsable)
-    errores.push("Nombre del jefe responsable es obligatorio");
-  if (!cargoJefe) errores.push("Cargo del jefe es obligatorio");
-  if (!responsableInspeccion)
-    errores.push("Nombre del responsable de inspeccion es obligatorio");
-  if (!cargoResponsable) errores.push("Cargo del responsable es obligatorio");
-
-  // Normaliza cada sección del payload para validación.
-  const extintores = normalizarExtintoresSeccion(payload);
-  const camillas = normalizarCamillasSeccion(payload);
-  const senalizaciones = normalizarSenalizacionesSeccion(payload);
-  const equiposTecnologicos = normalizarEquiposTecnologicosSeccion(payload);
-  const botiquines = normalizarBotiquinesSeccion(payload);
-
-  // Sede Urabá: el usuario puede omitir cualquiera de las 5 secciones desde
-  // el formulario (botón "Omitir"), que las envía vacías. Para esa sede no
-  // se exige el mínimo de 1 ítem por sección. Fuera de eso, cualquier ítem
-  // que sí venga (omitido o no, Urabá o no) se valida igual que siempre —
-  // omitir una sección es dejarla en cero ítems, no aceptar datos incompletos.
-  const SEDES_PERMITEN_OMITIR = ["urab", "santa marta"];
-
-  const seccionMinimoOpcional = SEDES_PERMITEN_OMITIR.some((sede) =>
-    sedeOperacion.toLowerCase().includes(sede),
-  );
-
-  if (!seccionMinimoOpcional) {
-    // Validaciones de existencia mínima de cada sección.
-    if (extintores.length === 0) {
-      errores.push("Debe agregar al menos un extintor");
-    }
-
-    if (camillas.length === 0) {
-      errores.push("Debe agregar al menos una camilla");
-    }
-
-    if (senalizaciones.length === 0) {
-      errores.push("Debe agregar al menos una senalizacion");
-    }
-
-    if (equiposTecnologicos.length === 0) {
-      errores.push("Debe agregar al menos un equipo tecnologico");
-    }
-
-    if (botiquines.length === 0) {
-      errores.push("Debe agregar al menos un botiquin");
-    }
-  }
-
-  // Valida cada sección y acumula errores.
-  const extintoresValidados = validarExtintores(extintores, errores);
-  const camillasValidadas = validarCamillas(camillas, errores);
-  const senalizacionesValidadas = validarSenalizaciones(
-    senalizaciones,
-    errores,
-  );
-  const equiposTecnologicosValidados = validarEquiposTecnologicos(
-    equiposTecnologicos,
-    errores,
-  );
-  const botiquinesValidados = validarBotiquines(botiquines, errores);
-
-  // Retorna errores si los hay, o la data normalizada.
-  if (errores.length > 0) {
-    return { ok: false, errores };
-  }
-
-  return {
-    ok: true,
-    data: {
-      general: {
-        inspeccionId,
-        fecha,
-        sedeOperacion,
-        areaTrabajo,
-        jefeResponsable,
-        cargoJefe,
-        responsableInspeccion,
-        cargoResponsable,
-      },
-      extintores: extintoresValidados,
-      camillas: camillasValidadas,
-      camilla: camillasValidadas[0] || null,
-      senalizaciones: senalizacionesValidadas,
-      senalizacion: senalizacionesValidadas[0] || null,
-      equiposTecnologicos: equiposTecnologicosValidados,
-      equipoTecnologico: equiposTecnologicosValidados[0] || null,
-      botiquines: botiquinesValidados,
-      botiquin: botiquinesValidados[0] || null,
-    },
-  };
 }
 
 // Limpia el nombre del archivo para que sea seguro usarlo en OneDrive.
@@ -1133,7 +1022,6 @@ async function obtenerLinksInspeccion(inspeccionId) {
 // Exporta funciones y constantes para uso en el controlador.
 module.exports = {
   CAMPOS_CONDICION,
-  validarInspeccion,
   uploadEvidenceToOneDrive,
   descargarEvidenciaOneDrive,
   guardarInspeccionEnDB,

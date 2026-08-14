@@ -1,3 +1,4 @@
+const { normalizarTexto } = require("../utils/texto.util");
 const ESTADOS_VALIDOS = new Set(["B", "R", "M", "NC", "NA"]);
 
 const CAMPOS_CONDICION = [
@@ -21,11 +22,6 @@ const CAMPOS_CONDICION = [
   "llaveSpanner",
   "otros"
 ];
-
-function normalizarTexto(valor) {
-  if (typeof valor !== "string") return "";
-  return valor.trim();
-}
 
 function normalizarExtintor(extintor) {
   if (!extintor || typeof extintor !== "object") return null;

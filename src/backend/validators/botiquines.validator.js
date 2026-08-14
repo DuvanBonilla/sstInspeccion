@@ -1,10 +1,7 @@
+const { normalizarTexto } = require("../utils/texto.util");
 const ESTADOS_VALIDOS = new Set(["B", "R", "M", "NC", "NA"]);
 const VALORES_SI_NO   = new Set(["Sí", "No", ""]);
 
-function normalizarTexto(valor) {
-  if (typeof valor !== "string") return "";
-  return valor.trim();
-}
 
 // Función para normalizar un ítem de botiquín
 function normalizarBotiquinItem(item) {

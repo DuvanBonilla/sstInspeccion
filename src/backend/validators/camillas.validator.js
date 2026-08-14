@@ -1,3 +1,4 @@
+const { normalizarTexto } = require("../utils/texto.util");
 const ESTADOS_VALIDOS = new Set(["B", "R", "M", "NC", "NA"]);
 const AFECTACION_PRODUCTIVIDAD_VALIDOS = new Set(["SI", "NO"]);
 
@@ -12,10 +13,6 @@ const CAMPOS_CONDICION_CAMILLA = [
   "inmovilizador"
 ];
 
-function normalizarTexto(valor) {
-  if (typeof valor !== "string") return "";
-  return valor.trim();
-}
 
 // Normaliza un objeto de camilla, asegurando que todos los campos sean cadenas de texto
 function normalizarCamilla(camilla) {

@@ -1,3 +1,4 @@
+const { normalizarTexto } = require("../utils/texto.util");
 const ESTADOS_VALIDOS = new Set(["B", "R", "M", "NC", "NA"]);
 const AFECTACION_SERVICIO_VALIDOS = new Set(["SI", "NO"]);
 
@@ -8,14 +9,6 @@ const EQUIPOS_TECNOLOGICOS = [
   "Camaras de seguridad",
   "Alarma de emergencia"
 ];
-
-
-// Normaliza un valor de texto, eliminando espacios en blanco al inicio y al final.
-function normalizarTexto(valor) {
-  if (typeof valor !== "string") return "";
-  return valor.trim();
-}
-
 
 // Normaliza un objeto de equipo tecnológico, asegurando que todos los campos estén presentes y en el formato correcto.
 function normalizarEquipoTecnologico(equipoTecnologico, index) {
