@@ -1,17 +1,4 @@
-/*
-  inspeccionEpp.controller.js
-
-  Controlador para el envío de inspecciones EPP.
-
-  Flujo:
-  1. Recibe multipart/form-data.
-  2. Lee el payload JSON.
-  3. Valida la inspección.
-  4. Relaciona cada evidencia con su trabajador.
-  5. Sube las evidencias a OneDrive.
-  6. Guarda la inspección completa en PostgreSQL.
-*/
-
+const { leerPayload } = require("../utils/request.utils");
 const {
   validarInspeccionEpp,
   guardarInspeccionEppEnDB,
@@ -20,24 +7,6 @@ const {
 const { uploadEvidenceToOneDrive } = require("../services/evidencia.service");
 
 const { resolverFechaEvidencia } = require("../utils/fechaEvidencia");
-
-/* =========================================================
-   LEER PAYLOAD
-========================================================= */
-
-function leerPayload(req) {
-  if (!req.body?.payload) {
-    throw new Error("No se recibió el payload de la inspección EPP.");
-  }
-
-  try {
-    return JSON.parse(req.body.payload);
-  } catch (error) {
-    throw new Error(
-      "El payload de la inspección EPP no contiene un JSON válido.",
-    );
-  }
-}
 
 /* =========================================================
    OBTENER ARCHIVOS RECIBIDOS

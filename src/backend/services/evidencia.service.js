@@ -1,3 +1,4 @@
+const { resolverFechaEvidencia } = require("../utils/fechaEvidencia");
 const {
   getAccessToken,
   subirArchivoOneDrive,
@@ -163,8 +164,87 @@ function pathExtension(fileName) {
   return limpiarNombreArchivo(safeName.slice(lastDotIndex));
 }
 
+function obtenerArchivosMultiples(files, prefix, index) {
+  const patron = new RegExp(`^${prefix}-${index}-(\\d+)$`);
+
+  return files
+    .map((file) => ({ file, match: patron.exec(file.fieldname || "") }))
+    .filter((x) => x.match)
+    .sort((a, b) => Number(a.match[1]) - Number(b.match[1]))
+    .map((x) => x.file);
+}
+
+async function subirEvidenciasMultiples(
+  files,
+  prefix,
+  tipoPrefijo,
+  index,
+  inspeccionId,
+  body,
+) {
+  const archivos = obtenerArchivosMultiples(files, prefix, index);
+  if (archivos.length === 0) return { ruta: "", nombre: "", fecha: null };
+
+  const rutas = await Promise.all(
+    archivos.map((file, subIdx) =>
+      uploadEvidenceToOneDrive(
+        file,
+        tipoPrefijo,
+        index + 1,
+        inspeccionId,
+        archivos.length > 1 ? subIdx + 1 : null,
+      ),
+    ),
+  );
+
+  const rutasValidas = rutas.filter(Boolean);
+  const lastmod = body?.[`${prefix}-${index}-0-lastmod`];
+  const fecha = await resolverFechaEvidencia(archivos[0], lastmod);
+
+  return {
+    ruta: rutasValidas.join("\n"),
+    nombre: rutasValidas.map((ruta) => ruta.split("/").pop() || "").join("\n"),
+    fecha,
+  };
+}
+
+async function construirEvidenciasDesdeOneDrive(items) {
+  const evidenciasPorIndex = new Map();
+  const fechas = new Map();
+
+  await Promise.all(
+    (Array.isArray(items) ? items : []).map(async (item, idx) => {
+      const rutas = String(item?.evidenciaRuta || "")
+        .split("\n")
+        .map((r) => r.trim())
+        .filter(Boolean);
+
+      if (rutas.length === 0) return;
+
+      const buffers = await Promise.all(
+        rutas.map((ruta) => descargarEvidenciaOneDrive(ruta)),
+      );
+
+      const archivos = buffers.filter(Boolean).map((buffer) => ({ buffer }));
+
+      if (archivos.length > 0) {
+        evidenciasPorIndex.set(idx, archivos);
+      }
+
+      if (item?.evidenciaFecha) {
+        fechas.set(idx, item.evidenciaFecha);
+      }
+    }),
+  );
+
+  return { evidenciasPorIndex, fechas };
+}
+
 module.exports = {
   uploadEvidenceToOneDrive,
   descargarEvidenciaOneDrive,
   subirPdfAOneDrive,
+  obtenerArchivosMultiples,
+  subirEvidenciasMultiples,
+  construirEvidenciasDesdeOneDrive,
 };

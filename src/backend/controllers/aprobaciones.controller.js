@@ -32,27 +32,21 @@ const {
   obtenerInspeccionCompleta,
 } = require("../models/inspeccion.model");
 const {
+  subirPdfAOneDrive,
   descargarEvidenciaOneDrive,
+  construirEvidenciasDesdeOneDrive,
 } = require("../services/evidencia.service");
 const {
   crearPdfInspeccionExtintor,
-  subirPdfAOneDrive,
-  enviarCorreoPorGraph,
-  resolverCorreoDestino,
-  construirHtmlCorreo,
-} = require("./pdfInspeccion.controller");
+} = require("../services/pdfInspeccion.service");
+const { enviarCorreoPorGraph, resolverCorreoDestino, construirHtmlCorreo } = require("../services/correo.service");
 const {
   crearPdfInspeccionEpp,
   resolverCorreoDestinoEpp,
   construirHtmlCorreoEpp,
 } = require("./pdfInspeccionEpp.controller");
 const { optimizarPdf } = require("../utils/pdfOptimizer");
-const {
-  recuperarLinksAprobacion,
-} = require("../controllers/inspeccion.controller");
 
-// GET /api/aprobaciones/:token
-// GET /api/aprobaciones/:token
 async function obtenerResumenAprobacion(req, res) {
   try {
     const contexto = await obtenerContextoAprobacion(req.params.token);
@@ -428,7 +422,6 @@ async function previsualizarAprobacion(req, res) {
   }
 }
 
-// POST /api/aprobaciones/:token — body { nombre }
 async function registrarAprobacion(req, res) {
   try {
     const { nombre } = req.body || {};
@@ -474,36 +467,6 @@ async function registrarAprobacion(req, res) {
     return res.status(500).json({ ok: false, errores: [mensaje] });
   }
 }
-
-// Descarga de OneDrive todas las evidencias de una sección y arma los mapas
-// evidenciasPorIndex + fechas que espera crearPdfInspeccionExtintor.
-async function construirEvidenciasDesdeOneDrive(items) {
-  const evidenciasPorIndex = new Map();
-  const fechas = new Map();
-
-  await Promise.all(
-    (Array.isArray(items) ? items : []).map(async (item, idx) => {
-      const rutas = String(item?.evidenciaRuta || "")
-        .split("\n")
-        .map((r) => r.trim())
-        .filter(Boolean);
-      if (rutas.length === 0) return;
-
-      const buffers = await Promise.all(
-        rutas.map((ruta) => descargarEvidenciaOneDrive(ruta)),
-      );
-      const archivos = buffers.filter(Boolean).map((buffer) => ({ buffer }));
-      if (archivos.length > 0) evidenciasPorIndex.set(idx, archivos);
-      if (item?.evidenciaFecha) fechas.set(idx, item.evidenciaFecha);
-    }),
-  );
-
-  return { evidenciasPorIndex, fechas };
-}
-
-// =========================================================
-// EVIDENCIAS EPP DESDE ONEDRIVE
-// =========================================================
 
 async function construirEvidenciasEppDesdeOneDrive(trabajadores) {
   const evidenciasPorTrabajador = new Map();
@@ -556,15 +519,6 @@ async function construirEvidenciasEppDesdeOneDrive(trabajadores) {
 
   return evidenciasPorTrabajador;
 }
-
-// Regenera el PDF (con las 3 aprobaciones reales), lo archiva en OneDrive y envía el correo final.
-// =========================================================
-// FINALIZAR INSPECCIÓN
-//
-// IMPORTANTE:
-// Esta función solamente es llamada cuando guardarAprobacion()
-// confirma que Inspector + Jefe + COPASST ya aprobaron.
-// =========================================================
 
 async function finalizarInspeccion(inspeccionId) {
   // =======================================================

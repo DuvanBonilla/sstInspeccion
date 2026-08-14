@@ -1,61 +1,15 @@
+const { leerPayload } = require("../utils/request.utils");
+
 const {
   guardarInspeccionEnDB,
   obtenerLinksInspeccion,
 } = require("../models/inspeccion.model");
-const { uploadEvidenceToOneDrive } = require("../services/evidencia.service");
+
+const {
+  subirEvidenciasMultiples,
+} = require("../services/evidencia.service");
+
 const { validarInspeccion } = require("../validators/inspeccion.validator");
-const { resolverFechaEvidencia } = require("../utils/fechaEvidencia");
-
-function leerPayload(req) {
-  if (typeof req.body?.payload === "string") {
-    return JSON.parse(req.body.payload);
-  }
-
-  return req.body;
-}
-
-function obtenerArchivosMultiples(files, prefix, index) {
-  const patron = new RegExp(`^${prefix}-${index}-(\\d+)$`);
-  return files
-    .map((file) => ({ file, match: patron.exec(file.fieldname || "") }))
-    .filter((x) => x.match)
-    .sort((a, b) => Number(a.match[1]) - Number(b.match[1]))
-    .map((x) => x.file);
-}
-
-async function subirEvidenciasMultiples(
-  files,
-  prefix,
-  tipoPrefijo,
-  index,
-  inspeccionId,
-  body,
-) {
-  const archivos = obtenerArchivosMultiples(files, prefix, index);
-  if (archivos.length === 0) return { ruta: "", nombre: "", fecha: null };
-
-  const rutas = await Promise.all(
-    archivos.map((file, subIdx) =>
-      uploadEvidenceToOneDrive(
-        file,
-        tipoPrefijo,
-        index + 1,
-        inspeccionId,
-        archivos.length > 1 ? subIdx + 1 : null,
-      ),
-    ),
-  );
-
-  const rutasValidas = rutas.filter(Boolean);
-  const lastmod = body?.[`${prefix}-${index}-0-lastmod`];
-  const fecha = await resolverFechaEvidencia(archivos[0], lastmod);
-
-  return {
-    ruta: rutasValidas.join("\n"),
-    nombre: rutasValidas.map((ruta) => ruta.split("/").pop() || "").join("\n"),
-    fecha,
-  };
-}
 
 async function enviarExtintorOneDrive(req, res) {
   let payload;
