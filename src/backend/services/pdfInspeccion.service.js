@@ -2,6 +2,10 @@ const path = require("node:path");
 const PDFDocument = require("pdfkit");
 
 const {
+  construirEvidenciasDesdeOneDrive,
+} = require("./evidencia.service");
+
+const {
   resolverFechaEvidencia
 } = require("../utils/fechaEvidencia");
 
@@ -1755,6 +1759,61 @@ async function crearPdfInspeccionExtintor(
   });
 }
 
+function construirDatosGenerales(row) {
+  return {
+    inspeccionId: row.inspeccion_id,
+    numInspeccion: Number(row.num_inspeccion),
+    fecha: row.fecha,
+    sedeOperacion: row.sede_operacion,
+    areaTrabajo: row.area_trabajo,
+    jefeResponsable: row.jefe_responsable,
+    cargoJefe: row.cargo_jefe,
+    responsableInspeccion: row.responsable_inspeccion,
+    cargoResponsable: row.cargo_responsable,
+  };
+}
+
+async function generarPdfSstAprobacion(completa, row, aprobaciones) {
+  const [ext, cam, sen, eqp, bot] = await Promise.all([
+    construirEvidenciasDesdeOneDrive(completa.extintores),
+    construirEvidenciasDesdeOneDrive(completa.camillas),
+    construirEvidenciasDesdeOneDrive(completa.senalizaciones),
+    construirEvidenciasDesdeOneDrive(completa.equiposTecnologicos),
+    construirEvidenciasDesdeOneDrive(completa.botiquines),
+  ]);
+
+  const data = {
+    ...construirDatosGenerales(row),
+
+    extintores: completa.extintores,
+    camillas: completa.camillas,
+    senalizaciones: completa.senalizaciones,
+    equiposTecnologicos: completa.equiposTecnologicos,
+    botiquines: completa.botiquines,
+  };
+
+  return crearPdfInspeccionExtintor(
+    data,
+    ext.evidenciasPorIndex,
+    cam.evidenciasPorIndex,
+    sen.evidenciasPorIndex,
+    eqp.evidenciasPorIndex,
+    bot.evidenciasPorIndex,
+    {},
+    {
+      aprobaciones,
+
+      fechasPrecomputadas: {
+        extintores: ext.fechas,
+        camillas: cam.fechas,
+        senalizaciones: sen.fechas,
+        equipos: eqp.fechas,
+        botiquines: bot.fechas,
+      },
+    },
+  );
+}
+
 module.exports = {
   dibujarIdInspeccion,
   dibujarImagenAjustada,
@@ -1768,4 +1827,5 @@ module.exports = {
   renderPaginaBotiquin,
   renderAprobaciones,
   crearPdfInspeccionExtintor,
+  generarPdfSstAprobacion,
 };

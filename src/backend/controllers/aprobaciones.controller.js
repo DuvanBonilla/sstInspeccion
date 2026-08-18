@@ -31,11 +31,11 @@ const {
 const { obtenerInspeccionCompleta } = require("../models/inspeccion.model");
 const {
   subirPdfAOneDrive,
-  descargarEvidenciaOneDrive,
   construirEvidenciasDesdeOneDrive,
+  construirEvidenciasEppDesdeOneDrive,
 } = require("../services/evidencia.service");
 const {
-  crearPdfInspeccionExtintor,
+  generarPdfSstAprobacion,
 } = require("../services/pdfInspeccion.service");
 const {
   enviarCorreoPorGraph,
@@ -43,10 +43,16 @@ const {
   construirHtmlCorreo,
 } = require("../services/correo.service");
 const {
-  crearPdfInspeccionEpp,
+  generarPdfEppAprobacion,
+} = require("../services/pdfInspeccionEpp.service");
+
+const {
   resolverCorreoDestinoEpp,
   construirHtmlCorreoEpp,
-} = require("./pdfInspeccionEpp.controller");
+} = require("../services/correoEpp.service");
+
+const { calcularResumenEpp } = require("../services/resumenEpp.service");
+
 const { optimizarPdf } = require("../utils/pdfOptimizer");
 
 async function obtenerResumenAprobacion(req, res) {
@@ -85,39 +91,14 @@ async function obtenerResumenAprobacion(req, res) {
         ? completa.trabajadores
         : [];
 
-      let totalEvaluaciones = 0;
-      let totalNovedades = 0;
-      let trabajadoresConNovedades = 0;
-
-      for (const trabajador of trabajadores) {
-        const elementos = Array.isArray(trabajador.elementos)
-          ? trabajador.elementos
-          : [];
-
-        totalEvaluaciones += elementos.length;
-
-        const novedadesTrabajador = elementos.filter(
-          (elemento) =>
-            elemento.condicion === "M" ||
-            elemento.condicion === "R" ||
-            elemento.uso === "M" ||
-            elemento.uso === "R",
-        ).length;
-
-        totalNovedades += novedadesTrabajador;
-
-        if (novedadesTrabajador > 0) {
-          trabajadoresConNovedades++;
-        }
-      }
+      const resumenEpp = calcularResumenEpp(trabajadores);
 
       conteos = {
-        trabajadores: trabajadores.length,
-        evaluaciones: totalEvaluaciones,
-        novedades: totalNovedades,
-        trabajadoresConNovedades,
-        trabajadoresSinNovedades:
-          trabajadores.length - trabajadoresConNovedades,
+        trabajadores: resumenEpp.totalTrabajadores,
+        evaluaciones: resumenEpp.totalEvaluaciones,
+        novedades: resumenEpp.totalNovedades,
+        trabajadoresConNovedades: resumenEpp.trabajadoresConNovedad,
+        trabajadoresSinNovedades: resumenEpp.trabajadoresSinNovedad,
       };
     } else {
       conteos = {
@@ -182,6 +163,20 @@ async function obtenerResumenAprobacion(req, res) {
       errores: [mensaje],
     });
   }
+}
+
+function construirAprobaciones(row) {
+  return {
+    inspector: {
+      nombre: row.aprobacion_inspector_nombre || "",
+    },
+    jefe: {
+      nombre: row.aprobacion_jefe_nombre || "",
+    },
+    copasst: {
+      nombre: row.aprobacion_copasst_nombre || "",
+    },
+  };
 }
 
 async function previsualizarAprobacion(req, res) {
@@ -250,28 +245,14 @@ async function previsualizarAprobacion(req, res) {
       const evidenciasPorTrabajador =
         await construirEvidenciasEppDesdeOneDrive(trabajadores);
 
-      // ---------------------------------------------------
-      // INFORMACIÓN GENERAL
-      // ---------------------------------------------------
-
-      const general = construirDatosGenerales(row);
-
-      // ---------------------------------------------------
-      // GENERAR PDF EPP
-      // ---------------------------------------------------
-
-      pdfBuffer = await crearPdfInspeccionEpp(
-        {
-          general,
-          trabajadores,
-        },
-
+      const resultadoEpp = await generarPdfEppAprobacion(
+        completa,
+        row,
+        aprobaciones,
         evidenciasPorTrabajador,
-
-        {
-          aprobaciones,
-        },
       );
+
+      pdfBuffer = resultadoEpp.pdf;
     }
 
     // =====================================================
@@ -354,141 +335,6 @@ async function registrarAprobacion(req, res) {
   }
 }
 
-function construirAprobaciones(row) {
-  return {
-    inspector: {
-      nombre: row.aprobacion_inspector_nombre,
-    },
-
-    jefe: {
-      nombre: row.aprobacion_jefe_nombre,
-    },
-
-    copasst: {
-      nombre: row.aprobacion_copasst_nombre,
-    },
-  };
-}
-
-function construirDatosGenerales(row) {
-  return {
-    inspeccionId: row.inspeccion_id,
-    numInspeccion: Number(row.num_inspeccion),
-    fecha: row.fecha,
-    sedeOperacion: row.sede_operacion,
-    areaTrabajo: row.area_trabajo,
-    jefeResponsable: row.jefe_responsable,
-    cargoJefe: row.cargo_jefe,
-    responsableInspeccion: row.responsable_inspeccion,
-    cargoResponsable: row.cargo_responsable,
-  };
-}
-
-async function generarPdfSstAprobacion(completa, row, aprobaciones) {
-  // =======================================================
-  // 1. DESCARGAR EVIDENCIAS SST
-  // =======================================================
-
-  const [ext, cam, sen, eqp, bot] = await Promise.all([
-    construirEvidenciasDesdeOneDrive(completa.extintores),
-    construirEvidenciasDesdeOneDrive(completa.camillas),
-    construirEvidenciasDesdeOneDrive(completa.senalizaciones),
-    construirEvidenciasDesdeOneDrive(completa.equiposTecnologicos),
-    construirEvidenciasDesdeOneDrive(completa.botiquines),
-  ]);
-
-  // =======================================================
-  // 2. CONSTRUIR DATOS SST
-  // =======================================================
-
-  const data = {
-    ...construirDatosGenerales(row),
-
-    extintores: completa.extintores,
-    camillas: completa.camillas,
-    senalizaciones: completa.senalizaciones,
-    equiposTecnologicos: completa.equiposTecnologicos,
-    botiquines: completa.botiquines,
-  };
-
-  // =======================================================
-  // 3. GENERAR PDF SST
-  // =======================================================
-
-  return crearPdfInspeccionExtintor(
-    data,
-    ext.evidenciasPorIndex,
-    cam.evidenciasPorIndex,
-    sen.evidenciasPorIndex,
-    eqp.evidenciasPorIndex,
-    bot.evidenciasPorIndex,
-    {},
-    {
-      aprobaciones,
-
-      fechasPrecomputadas: {
-        extintores: ext.fechas,
-        camillas: cam.fechas,
-        senalizaciones: sen.fechas,
-        equipos: eqp.fechas,
-        botiquines: bot.fechas,
-      },
-    },
-  );
-}
-
-async function construirEvidenciasEppDesdeOneDrive(trabajadores) {
-  const evidenciasPorTrabajador = new Map();
-
-  await Promise.all(
-    (Array.isArray(trabajadores) ? trabajadores : []).map(
-      async (trabajador, idx) => {
-        const ruta = String(trabajador?.evidenciaRuta || "").trim();
-
-        if (!ruta) {
-          return;
-        }
-
-        try {
-          const buffer = await descargarEvidenciaOneDrive(ruta);
-
-          if (!buffer) {
-            return;
-          }
-
-          const archivo = {
-            buffer,
-          };
-
-          // -------------------------------------------------
-          // Guardar por índice
-          // -------------------------------------------------
-
-          evidenciasPorTrabajador.set(idx, archivo);
-
-          // -------------------------------------------------
-          // También guardar por trabajadorId si existe
-          // -------------------------------------------------
-
-          if (
-            trabajador?.trabajadorId !== undefined &&
-            trabajador?.trabajadorId !== null
-          ) {
-            evidenciasPorTrabajador.set(trabajador.trabajadorId, archivo);
-          }
-        } catch (error) {
-          console.error(
-            `[EPP] Error descargando evidencia trabajador ${idx + 1}:`,
-            error.message,
-          );
-        }
-      },
-    ),
-  );
-
-  return evidenciasPorTrabajador;
-}
-
 async function finalizarInspeccion(inspeccionId) {
   // =======================================================
   // 1. OBTENER INSPECCIÓN COMPLETA
@@ -553,35 +399,18 @@ async function finalizarInspeccion(inspeccionId) {
       ? completa.trabajadores
       : [];
 
-    // -----------------------------------------------------
-    // EVIDENCIAS DE LOS TRABAJADORES
-    // -----------------------------------------------------
-
     const evidenciasPorTrabajador =
       await construirEvidenciasEppDesdeOneDrive(trabajadoresEpp);
 
-    // -----------------------------------------------------
-    // INFORMACIÓN GENERAL EPP
-    // -----------------------------------------------------
-
-    const general = construirDatosGenerales(row);
-
-    // -----------------------------------------------------
-    // PDF FINAL EPP
-    // -----------------------------------------------------
-
-    pdfGenerado = await crearPdfInspeccionEpp(
-      {
-        general,
-        trabajadores: trabajadoresEpp,
-      },
-
+    const resultadoEpp = await generarPdfEppAprobacion(
+      completa,
+      row,
+      aprobaciones,
       evidenciasPorTrabajador,
-
-      {
-        aprobaciones,
-      },
     );
+
+    pdfGenerado = resultadoEpp.pdf;
+    trabajadoresEpp = resultadoEpp.trabajadores;
   }
 
   // =======================================================
@@ -635,47 +464,14 @@ async function finalizarInspeccion(inspeccionId) {
       // CALCULAR RESUMEN EPP
       // ---------------------------------------------------
 
-      let trabajadoresConNovedad = 0;
-      let totalNovedades = 0;
+      const resumenEpp = calcularResumenEpp(trabajadoresEpp);
 
-      for (const trabajador of trabajadoresEpp) {
-        const elementos = Array.isArray(trabajador.elementos)
-          ? trabajador.elementos
-          : [];
-
-        let tieneNovedad = false;
-
-        for (const elemento of elementos) {
-          const condicion = String(elemento.condicion || "").toUpperCase();
-
-          const uso = String(elemento.uso || "").toUpperCase();
-
-          /*
-           * Consideramos novedad cualquier resultado
-           * diferente de B (Bueno) o NA (No aplica).
-           *
-           * M = Malo
-           * R = Regular
-           */
-
-          const novedadCondicion = condicion === "M" || condicion === "R";
-
-          const novedadUso = uso === "M" || uso === "R";
-
-          if (novedadCondicion || novedadUso) {
-            totalNovedades++;
-            tieneNovedad = true;
-          }
-        }
-
-        if (tieneNovedad) {
-          trabajadoresConNovedad++;
-        }
-      }
-
-      const totalTrabajadores = trabajadoresEpp.length;
-
-      const trabajadoresSinNovedad = totalTrabajadores - trabajadoresConNovedad;
+      const {
+        totalTrabajadores,
+        trabajadoresConNovedad,
+        trabajadoresSinNovedad,
+        totalNovedades,
+      } = resumenEpp;
 
       // ---------------------------------------------------
       // HTML EPP

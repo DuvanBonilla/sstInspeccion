@@ -6,7 +6,6 @@ const {
   descargarArchivoOneDrive,
 } = require("./graph.service");
 
-
 const PDF_DESTINOS_POR_SEDE = new Map([
   ["uraba", "Respuestas_PDF/URABÁ"],
   ["santa marta", "Respuestas_PDF/STM"],
@@ -232,10 +231,63 @@ async function construirEvidenciasDesdeOneDrive(items) {
   return { evidenciasPorIndex, fechas };
 }
 
+async function construirEvidenciasEppDesdeOneDrive(trabajadores) {
+  const evidenciasPorTrabajador = new Map();
+
+  await Promise.all(
+    (Array.isArray(trabajadores) ? trabajadores : []).map(
+      async (trabajador, idx) => {
+        const ruta = String(trabajador?.evidenciaRuta || "").trim();
+
+        if (!ruta) {
+          return;
+        }
+
+        try {
+          const buffer = await descargarEvidenciaOneDrive(ruta);
+
+          if (!buffer) {
+            return;
+          }
+
+          const archivo = {
+            buffer,
+          };
+
+          // -------------------------------------------------
+          // Guardar por índice
+          // -------------------------------------------------
+
+          evidenciasPorTrabajador.set(idx, archivo);
+
+          // -------------------------------------------------
+          // También guardar por trabajadorId si existe
+          // -------------------------------------------------
+
+          if (
+            trabajador?.trabajadorId !== undefined &&
+            trabajador?.trabajadorId !== null
+          ) {
+            evidenciasPorTrabajador.set(trabajador.trabajadorId, archivo);
+          }
+        } catch (error) {
+          console.error(
+            `[EPP] Error descargando evidencia trabajador ${idx + 1}:`,
+            error.message,
+          );
+        }
+      },
+    ),
+  );
+
+  return evidenciasPorTrabajador;
+}
+
 module.exports = {
   uploadEvidenceToOneDrive,
   descargarEvidenciaOneDrive,
   subirPdfAOneDrive,
   subirEvidenciasMultiples,
   construirEvidenciasDesdeOneDrive,
+  construirEvidenciasEppDesdeOneDrive,
 };

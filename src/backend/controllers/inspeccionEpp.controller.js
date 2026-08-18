@@ -1,6 +1,10 @@
 const { leerPayload } = require("../utils/request.utils");
+
 const {
   validarInspeccionEpp,
+} = require("../validators/inspeccionEpp.validator");
+
+const {
   guardarInspeccionEppEnDB,
 } = require("../models/inspeccionEpp.model");
 
@@ -35,7 +39,7 @@ async function enviarInspeccionEpp(req, res) {
     ------------------------------------------------------- */
 
     const payload = leerPayload(req);
-    
+
     /* -------------------------------------------------------
        2. VALIDAR
     ------------------------------------------------------- */
@@ -123,7 +127,6 @@ async function enviarInspeccionEpp(req, res) {
         : "";
 
       trabajador.evidenciaFecha = evidenciaFecha;
-
     }
 
     /* -------------------------------------------------------

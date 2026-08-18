@@ -238,7 +238,7 @@ sstInspeccion/
     │   │   ├── aprobaciones.controller.js
     │   │   ├── estadisticas.controller.js
     │   │   ├── pdfInspeccion.controller.js
-    │   │   └── pdfInspeccionEpp.controller.js
+    │   │   
     │   │
     │   ├── models/
     │   ├── db/

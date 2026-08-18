@@ -9,7 +9,7 @@ const {
 const { optimizarPdf } = require("../utils/pdfOptimizer");
 const {
   extraerEvidenciasPorIndex,
-  crearPdfInspeccionExtintor
+  crearPdfInspeccionExtintor,
 } = require("../services/pdfInspeccion.service");
 
 async function generarPdfPrueba(req, res) {
