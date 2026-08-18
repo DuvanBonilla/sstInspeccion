@@ -46,28 +46,30 @@ function obtenerElementosPredeterminados() {
   }));
 }
 
-function crearOpcionCatalogoEpp(elemento) {
-  const idSeguro = `epp-${elemento.id}`;
-
+function crearPanelCatalogoEpp() {
   return `
-    <label
-      class="epp-catalogo-opcion"
-      for="${idSeguro}"
-      data-catalogo-epp-id="${elemento.id}"
-      data-elemento="${elemento.nombre}"
-      data-categoria="${elemento.categoria}"
-    >
-      <input
-        type="checkbox"
-        id="${idSeguro}"
-        class="epp-catalogo-checkbox"
-        value="${elemento.id}"
-        data-catalogo-epp-id="${elemento.id}"
-        data-elemento="${elemento.nombre}"
-      >
+    <div class="epp-catalogo-panel" hidden>
 
-      <span>${elemento.nombre}</span>
-    </label>
+      <div class="epp-combobox">
+
+        <div class="epp-combobox-buscador">
+          <input
+            type="text"
+            class="epp-combobox-input"
+            placeholder="Buscar elemento EPP..."
+            autocomplete="off"
+            aria-label="Buscar elemento EPP"
+          >
+        </div>
+
+        <div
+          class="epp-combobox-resultados"
+          hidden
+        ></div>
+
+      </div>
+
+    </div>
   `;
 }
 
@@ -1183,27 +1185,15 @@ export function createTrabajadoresEppManager({
   }
 
   function sincronizarCatalogoEpp(card) {
-    // =====================================================
-    // 1. OBTENER IDs DE CATÁLOGO YA AGREGADOS
-    // =====================================================
-
     const idsActuales = new Set(
       Array.from(
-        card.querySelectorAll(".epp-table tbody tr[data-catalogo-epp-id]"),
+        card.querySelectorAll(".epp-table tbody tr[data-elemento-epp-id]"),
       )
         .map((fila) => fila.dataset.elementoEppId)
         .filter(Boolean),
     );
 
-    // =====================================================
-    // 2. OBTENER CHECKBOXES DEL CATÁLOGO
-    // =====================================================
-
     const checks = card.querySelectorAll(".epp-catalogo-checkbox");
-
-    // =====================================================
-    // 3. SINCRONIZAR ESTADO
-    // =====================================================
 
     checks.forEach((check) => {
       const elementoEppId = check.dataset.elementoEppId;
@@ -1211,7 +1201,6 @@ export function createTrabajadoresEppManager({
       const yaAgregado = elementoEppId && idsActuales.has(elementoEppId);
 
       check.checked = false;
-
       check.disabled = Boolean(yaAgregado);
 
       const opcion = check.closest(".epp-catalogo-opcion");
@@ -1260,22 +1249,30 @@ export function createTrabajadoresEppManager({
       return;
     }
 
-    // IDs de catálogo que ya están agregados al trabajador.
+    // =====================================================
+    // IDs DE ELEMENTOS EPP YA AGREGADOS
+    // =====================================================
+
     const idsActuales = new Set(
-      Array.from(tbody.querySelectorAll("tr[data-catalogo-epp-id]"))
+      Array.from(tbody.querySelectorAll("tr[data-elemento-epp-id]"))
         .map((fila) => fila.dataset.elementoEppId)
         .filter(Boolean),
     );
 
+    // =====================================================
+    // AGREGAR ELEMENTOS SELECCIONADOS
+    // =====================================================
+
     seleccionados.forEach((check) => {
       const elementoEppId = check.dataset.elementoEppId;
+
       const elemento = check.dataset.elemento;
 
       if (!elementoEppId || !elemento) {
         return;
       }
 
-      // Evitar duplicados por ID, no por nombre.
+      // Evitar duplicados por ID.
       if (idsActuales.has(elementoEppId)) {
         return;
       }
@@ -1296,7 +1293,15 @@ export function createTrabajadoresEppManager({
       idsActuales.add(elementoEppId);
     });
 
+    // =====================================================
+    // ACTUALIZAR ESTADO DEL CATÁLOGO
+    // =====================================================
+
     sincronizarCatalogoEpp(card);
+
+    // =====================================================
+    // CERRAR PANEL
+    // =====================================================
 
     const panel = card.querySelector(".epp-catalogo-panel");
 

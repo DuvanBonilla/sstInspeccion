@@ -208,11 +208,11 @@ async function obtenerInspeccionCompleta(inspeccionId) {
   if (inspeccion.tipo_inspeccion === "EPP") {
     const { rows: trabajadoresRows } = await query(
       `
-      SELECT *
-      FROM trabajadores_epp
-      WHERE inspeccion_pk = $1
-      ORDER BY idx
-      `,
+    SELECT *
+    FROM trabajadores_epp
+    WHERE inspeccion_pk = $1
+    ORDER BY idx
+    `,
       [pk],
     );
 
@@ -220,11 +220,22 @@ async function obtenerInspeccionCompleta(inspeccionId) {
       trabajadoresRows.map(async (trabajador) => {
         const { rows: evaluacionesRows } = await query(
           `
-          SELECT *
-          FROM evaluaciones_epp
-          WHERE trabajador_epp_id = $1
-          ORDER BY idx
-          `,
+        SELECT
+          ee.id,
+          ee.trabajador_epp_id,
+          ee.idx,
+          ee.elemento_epp_id,
+          e.nombre AS elemento,
+          ee.condicion,
+          ee.uso,
+          ee.plan_accion,
+          ee.fecha_plan_accion
+        FROM evaluaciones_epp ee
+        INNER JOIN elementos_epp e
+          ON e.id = ee.elemento_epp_id
+        WHERE ee.trabajador_epp_id = $1
+        ORDER BY ee.idx ASC
+        `,
           [trabajador.id],
         );
 
@@ -236,8 +247,6 @@ async function obtenerInspeccionCompleta(inspeccionId) {
           codigo: trabajador.codigo || "",
           cargo: trabajador.cargo || "",
 
-          planAccion: trabajador.plan_accion || "",
-          fechaPlanAccion: trabajador.fecha_plan_accion || null,
           observaciones: trabajador.observaciones || "",
 
           evidenciaRuta: trabajador.evidencia_ruta || "",
@@ -246,10 +255,18 @@ async function obtenerInspeccionCompleta(inspeccionId) {
 
           elementos: evaluacionesRows.map((evaluacion) => ({
             idx: evaluacion.idx,
-            elementoEppId: evaluacion.elementos_epp_id || null,
+
+            elementoEppId: evaluacion.elemento_epp_id,
+
             elemento: evaluacion.elemento || "",
+
             condicion: evaluacion.condicion || "",
+
             uso: evaluacion.uso || "",
+
+            planAccion: evaluacion.plan_accion || "",
+
+            fechaPlanAccion: evaluacion.fecha_plan_accion || null,
           })),
         };
       }),
