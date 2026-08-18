@@ -28,9 +28,7 @@ const {
   guardarAprobacion,
   marcarInspeccionEnviada,
 } = require("../models/aprobaciones.model");
-const {
-  obtenerInspeccionCompleta,
-} = require("../models/inspeccion.model");
+const { obtenerInspeccionCompleta } = require("../models/inspeccion.model");
 const {
   subirPdfAOneDrive,
   descargarEvidenciaOneDrive,
@@ -39,7 +37,11 @@ const {
 const {
   crearPdfInspeccionExtintor,
 } = require("../services/pdfInspeccion.service");
-const { enviarCorreoPorGraph, resolverCorreoDestino, construirHtmlCorreo } = require("../services/correo.service");
+const {
+  enviarCorreoPorGraph,
+  resolverCorreoDestino,
+  construirHtmlCorreo,
+} = require("../services/correo.service");
 const {
   crearPdfInspeccionEpp,
   resolverCorreoDestinoEpp,
@@ -220,25 +222,11 @@ async function previsualizarAprobacion(req, res) {
       row.tipo_inspeccion || completa?.inspeccion?.tipo_inspeccion || "SST",
     ).toUpperCase();
 
-
-
     // =====================================================
     // 4. APROBACIONES
     // =====================================================
 
-    const aprobaciones = {
-      inspector: {
-        nombre: row.aprobacion_inspector_nombre,
-      },
-
-      jefe: {
-        nombre: row.aprobacion_jefe_nombre,
-      },
-
-      copasst: {
-        nombre: row.aprobacion_copasst_nombre,
-      },
-    };
+    const aprobaciones = construirAprobaciones(row);
 
     // =====================================================
     // 5. BUFFER PDF
@@ -266,25 +254,7 @@ async function previsualizarAprobacion(req, res) {
       // INFORMACIÓN GENERAL
       // ---------------------------------------------------
 
-      const general = {
-        inspeccionId: row.inspeccion_id,
-
-        numInspeccion: Number(row.num_inspeccion),
-
-        fecha: row.fecha,
-
-        sedeOperacion: row.sede_operacion,
-
-        areaTrabajo: row.area_trabajo,
-
-        jefeResponsable: row.jefe_responsable,
-
-        cargoJefe: row.cargo_jefe,
-
-        responsableInspeccion: row.responsable_inspeccion,
-
-        cargoResponsable: row.cargo_responsable,
-      };
+      const general = construirDatosGenerales(row);
 
       // ---------------------------------------------------
       // GENERAR PDF EPP
@@ -308,91 +278,7 @@ async function previsualizarAprobacion(req, res) {
     // SST
     // =====================================================
     else {
-      // ---------------------------------------------------
-      // DESCARGAR EVIDENCIAS SST
-      // ---------------------------------------------------
-
-      const [ext, cam, sen, eqp, bot] = await Promise.all([
-        construirEvidenciasDesdeOneDrive(completa.extintores),
-
-        construirEvidenciasDesdeOneDrive(completa.camillas),
-
-        construirEvidenciasDesdeOneDrive(completa.senalizaciones),
-
-        construirEvidenciasDesdeOneDrive(completa.equiposTecnologicos),
-
-        construirEvidenciasDesdeOneDrive(completa.botiquines),
-      ]);
-
-      // ---------------------------------------------------
-      // DATOS SST
-      // ---------------------------------------------------
-
-      const data = {
-        inspeccionId: row.inspeccion_id,
-
-        numInspeccion: Number(row.num_inspeccion),
-
-        fecha: row.fecha,
-
-        sedeOperacion: row.sede_operacion,
-
-        areaTrabajo: row.area_trabajo,
-
-        jefeResponsable: row.jefe_responsable,
-
-        cargoJefe: row.cargo_jefe,
-
-        responsableInspeccion: row.responsable_inspeccion,
-
-        cargoResponsable: row.cargo_responsable,
-
-        extintores: completa.extintores,
-
-        camillas: completa.camillas,
-
-        senalizaciones: completa.senalizaciones,
-
-        equiposTecnologicos: completa.equiposTecnologicos,
-
-        botiquines: completa.botiquines,
-      };
-
-      // ---------------------------------------------------
-      // GENERAR PDF SST
-      // ---------------------------------------------------
-
-      pdfBuffer = await crearPdfInspeccionExtintor(
-        data,
-
-        ext.evidenciasPorIndex,
-
-        cam.evidenciasPorIndex,
-
-        sen.evidenciasPorIndex,
-
-        eqp.evidenciasPorIndex,
-
-        bot.evidenciasPorIndex,
-
-        {},
-
-        {
-          aprobaciones,
-
-          fechasPrecomputadas: {
-            extintores: ext.fechas,
-
-            camillas: cam.fechas,
-
-            senalizaciones: sen.fechas,
-
-            equipos: eqp.fechas,
-
-            botiquines: bot.fechas,
-          },
-        },
-      );
+      pdfBuffer = await generarPdfSstAprobacion(completa, row, aprobaciones);
     }
 
     // =====================================================
@@ -466,6 +352,89 @@ async function registrarAprobacion(req, res) {
         : "Error registrando la aprobación";
     return res.status(500).json({ ok: false, errores: [mensaje] });
   }
+}
+
+function construirAprobaciones(row) {
+  return {
+    inspector: {
+      nombre: row.aprobacion_inspector_nombre,
+    },
+
+    jefe: {
+      nombre: row.aprobacion_jefe_nombre,
+    },
+
+    copasst: {
+      nombre: row.aprobacion_copasst_nombre,
+    },
+  };
+}
+
+function construirDatosGenerales(row) {
+  return {
+    inspeccionId: row.inspeccion_id,
+    numInspeccion: Number(row.num_inspeccion),
+    fecha: row.fecha,
+    sedeOperacion: row.sede_operacion,
+    areaTrabajo: row.area_trabajo,
+    jefeResponsable: row.jefe_responsable,
+    cargoJefe: row.cargo_jefe,
+    responsableInspeccion: row.responsable_inspeccion,
+    cargoResponsable: row.cargo_responsable,
+  };
+}
+
+async function generarPdfSstAprobacion(completa, row, aprobaciones) {
+  // =======================================================
+  // 1. DESCARGAR EVIDENCIAS SST
+  // =======================================================
+
+  const [ext, cam, sen, eqp, bot] = await Promise.all([
+    construirEvidenciasDesdeOneDrive(completa.extintores),
+    construirEvidenciasDesdeOneDrive(completa.camillas),
+    construirEvidenciasDesdeOneDrive(completa.senalizaciones),
+    construirEvidenciasDesdeOneDrive(completa.equiposTecnologicos),
+    construirEvidenciasDesdeOneDrive(completa.botiquines),
+  ]);
+
+  // =======================================================
+  // 2. CONSTRUIR DATOS SST
+  // =======================================================
+
+  const data = {
+    ...construirDatosGenerales(row),
+
+    extintores: completa.extintores,
+    camillas: completa.camillas,
+    senalizaciones: completa.senalizaciones,
+    equiposTecnologicos: completa.equiposTecnologicos,
+    botiquines: completa.botiquines,
+  };
+
+  // =======================================================
+  // 3. GENERAR PDF SST
+  // =======================================================
+
+  return crearPdfInspeccionExtintor(
+    data,
+    ext.evidenciasPorIndex,
+    cam.evidenciasPorIndex,
+    sen.evidenciasPorIndex,
+    eqp.evidenciasPorIndex,
+    bot.evidenciasPorIndex,
+    {},
+    {
+      aprobaciones,
+
+      fechasPrecomputadas: {
+        extintores: ext.fechas,
+        camillas: cam.fechas,
+        senalizaciones: sen.fechas,
+        equipos: eqp.fechas,
+        botiquines: bot.fechas,
+      },
+    },
+  );
 }
 
 async function construirEvidenciasEppDesdeOneDrive(trabajadores) {
@@ -543,19 +512,7 @@ async function finalizarInspeccion(inspeccionId) {
   // 3. APROBACIONES
   // =======================================================
 
-  const aprobaciones = {
-    inspector: {
-      nombre: row.aprobacion_inspector_nombre,
-    },
-
-    jefe: {
-      nombre: row.aprobacion_jefe_nombre,
-    },
-
-    copasst: {
-      nombre: row.aprobacion_copasst_nombre,
-    },
-  };
+  const aprobaciones = construirAprobaciones(row);
 
   // =======================================================
   // 4. SEGURIDAD ADICIONAL
@@ -607,25 +564,7 @@ async function finalizarInspeccion(inspeccionId) {
     // INFORMACIÓN GENERAL EPP
     // -----------------------------------------------------
 
-    const general = {
-      inspeccionId: row.inspeccion_id,
-
-      numInspeccion: Number(row.num_inspeccion),
-
-      fecha: row.fecha,
-
-      sedeOperacion: row.sede_operacion,
-
-      areaTrabajo: row.area_trabajo,
-
-      jefeResponsable: row.jefe_responsable,
-
-      cargoJefe: row.cargo_jefe,
-
-      responsableInspeccion: row.responsable_inspeccion,
-
-      cargoResponsable: row.cargo_responsable,
-    };
+    const general = construirDatosGenerales(row);
 
     // -----------------------------------------------------
     // PDF FINAL EPP
@@ -643,99 +582,13 @@ async function finalizarInspeccion(inspeccionId) {
         aprobaciones,
       },
     );
-
   }
 
   // =======================================================
   // SST
   // =======================================================
   else {
-    // -----------------------------------------------------
-    // DESCARGAR EVIDENCIAS SST
-    // -----------------------------------------------------
-
-    const [ext, cam, sen, eqp, bot] = await Promise.all([
-      construirEvidenciasDesdeOneDrive(completa.extintores),
-
-      construirEvidenciasDesdeOneDrive(completa.camillas),
-
-      construirEvidenciasDesdeOneDrive(completa.senalizaciones),
-
-      construirEvidenciasDesdeOneDrive(completa.equiposTecnologicos),
-
-      construirEvidenciasDesdeOneDrive(completa.botiquines),
-    ]);
-
-    // -----------------------------------------------------
-    // DATOS SST
-    // -----------------------------------------------------
-
-    const data = {
-      inspeccionId: row.inspeccion_id,
-
-      numInspeccion: Number(row.num_inspeccion),
-
-      fecha: row.fecha,
-
-      sedeOperacion: row.sede_operacion,
-
-      areaTrabajo: row.area_trabajo,
-
-      jefeResponsable: row.jefe_responsable,
-
-      cargoJefe: row.cargo_jefe,
-
-      responsableInspeccion: row.responsable_inspeccion,
-
-      cargoResponsable: row.cargo_responsable,
-
-      extintores: completa.extintores,
-
-      camillas: completa.camillas,
-
-      senalizaciones: completa.senalizaciones,
-
-      equiposTecnologicos: completa.equiposTecnologicos,
-
-      botiquines: completa.botiquines,
-    };
-
-    // -----------------------------------------------------
-    // PDF FINAL SST
-    // -----------------------------------------------------
-
-    pdfGenerado = await crearPdfInspeccionExtintor(
-      data,
-
-      ext.evidenciasPorIndex,
-
-      cam.evidenciasPorIndex,
-
-      sen.evidenciasPorIndex,
-
-      eqp.evidenciasPorIndex,
-
-      bot.evidenciasPorIndex,
-
-      {},
-
-      {
-        aprobaciones,
-
-        fechasPrecomputadas: {
-          extintores: ext.fechas,
-
-          camillas: cam.fechas,
-
-          senalizaciones: sen.fechas,
-
-          equipos: eqp.fechas,
-
-          botiquines: bot.fechas,
-        },
-      },
-    );
-
+    pdfGenerado = await generarPdfSstAprobacion(completa, row, aprobaciones);
   }
 
   // =======================================================
@@ -911,7 +764,6 @@ async function finalizarInspeccion(inspeccionId) {
   // =======================================================
 
   await marcarInspeccionEnviada(row.inspeccion_id, webUrl);
-
 }
 
 module.exports = {

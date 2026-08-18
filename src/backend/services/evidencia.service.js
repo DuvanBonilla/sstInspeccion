@@ -1,19 +1,11 @@
 const { resolverFechaEvidencia } = require("../utils/fechaEvidencia");
 const {
+  getRequiredEnv,
   getAccessToken,
   subirArchivoOneDrive,
   descargarArchivoOneDrive,
 } = require("./graph.service");
 
-function getRequiredEnv(name) {
-  const value = process.env[name];
-
-  if (!value) {
-    throw new Error(`Falta variable de entorno requerida: ${name}`);
-  }
-
-  return value;
-}
 
 const PDF_DESTINOS_POR_SEDE = new Map([
   ["uraba", "Respuestas_PDF/URABÁ"],
@@ -244,7 +236,6 @@ module.exports = {
   uploadEvidenceToOneDrive,
   descargarEvidenciaOneDrive,
   subirPdfAOneDrive,
-  obtenerArchivosMultiples,
   subirEvidenciasMultiples,
   construirEvidenciasDesdeOneDrive,
 };

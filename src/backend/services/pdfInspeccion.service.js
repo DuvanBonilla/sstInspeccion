@@ -2,8 +2,7 @@ const path = require("node:path");
 const PDFDocument = require("pdfkit");
 
 const {
-  extraerFechaExif,
-  formatearFechaMs,
+  resolverFechaEvidencia
 } = require("../utils/fechaEvidencia");
 
 function dibujarIdInspeccion(doc, general, y) {
@@ -164,15 +163,16 @@ function renderPaginasEvidenciasExtra(
 
 async function extraerFechasArchivos(fileMapa, body, prefijo) {
   const fechas = new Map();
+
   for (const [idx, archivos] of fileMapa) {
     const file = archivos?.[0];
-    let fecha = await extraerFechaExif(file?.buffer);
-    if (!fecha) {
-      const lastmod = body?.[`${prefijo}-${idx}-0-lastmod`];
-      if (lastmod) fecha = formatearFechaMs(lastmod);
-    }
+    const lastmod = body?.[`${prefijo}-${idx}-0-lastmod`];
+
+    const fecha = await resolverFechaEvidencia(file, lastmod);
+
     if (fecha) fechas.set(idx, fecha);
   }
+
   return fechas;
 }
 

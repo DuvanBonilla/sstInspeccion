@@ -1,14 +1,8 @@
-const { getAccessToken } = require("./graph.service");
+const { getAccessToken, getRequiredEnv } = require("./graph.service");
 
-function getRequiredEnv(name) {
-  const value = process.env[name];
+const LOGO_URL = "https://sstinspeccion.onrender.com/img/Cargo.png";
 
-  if (!value) {
-    throw new Error(`Falta variable de entorno requerida: ${name}`);
-  }
 
-  return value;
-}
 
 async function enviarCorreoPorGraph({
   to,

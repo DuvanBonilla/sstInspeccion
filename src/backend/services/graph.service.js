@@ -148,6 +148,7 @@ async function descargarArchivoOneDrive(ruta) {
 }
 
 module.exports = {
+  getRequiredEnv,
   getAccessToken,
   subirArchivoOneDrive,
   descargarArchivoOneDrive,
