@@ -21,7 +21,10 @@
 
 import { asignarFechaHoy, abrirSelectorFecha } from "/js/shared.js";
 
-import { createTrabajadoresEppManager } from "./trabajadoresEpp.js";
+import {
+  createTrabajadoresEppManager,
+  cargarCatalogoEpp,
+} from "./trabajadoresEpp.js";
 
 // =========================================================
 // ESTADO DEL FORMULARIO
@@ -79,20 +82,31 @@ const camposInformacionGeneral = [
 // INICIALIZACIÓN
 // =========================================================
 
-document.addEventListener("DOMContentLoaded", () => {
-  inicializarFecha();
+document.addEventListener("DOMContentLoaded", async () => {
+  try {
+    await cargarCatalogoEpp();
 
-  inicializarNavegacion();
+    inicializarFecha();
 
-  inicializarSalida();
+    inicializarNavegacion();
 
-  trabajadoresManager.init();
+    inicializarSalida();
 
-  inicializarEnvioEpp();
+    trabajadoresManager.init();
 
-  actualizarPaso();
+    inicializarEnvioEpp();
 
-  inicializarAccionesModalExito();
+    actualizarPaso();
+
+    inicializarAccionesModalExito();
+  } catch (error) {
+    console.error("[EPP] Error inicializando inspección:", error);
+
+    alert(
+      "No fue posible cargar el catálogo de elementos EPP. " +
+        "Recarga la página e intenta nuevamente.",
+    );
+  }
 });
 
 // =========================================================
@@ -622,8 +636,6 @@ async function enviarInspeccionEpp() {
 
     const data = await respuesta.json();
 
-
-
     if (!respuesta.ok || !data.ok) {
       throw new Error(
         data.mensaje || "No fue posible registrar la inspección EPP.",
@@ -738,7 +750,6 @@ function inicializarEnvioEpp() {
 function verificarFormDataEpp() {
   const formData = construirFormDataEpp();
 
-
   for (const [clave, valor] of formData.entries()) {
     if (valor instanceof File) {
       console.log(clave, {
@@ -751,8 +762,6 @@ function verificarFormDataEpp() {
       console.log(clave, valor);
     }
   }
-
-
 }
 
 // =========================================================

@@ -1,7 +1,10 @@
+const { normalizarTexto } = require("../utils/texto.util");
+
 function validarInspeccionEpp(payload) {
   const errores = [];
 
   const informacionGeneral = payload?.informacionGeneral || {};
+
   const trabajadoresEntrada = Array.isArray(payload?.trabajadores)
     ? payload.trabajadores
     : [];
@@ -78,12 +81,10 @@ function validarInspeccionEpp(payload) {
     const numeroTrabajador = index + 1;
 
     const nombre = normalizarTexto(trabajador?.nombre);
+
     const codigo = normalizarTexto(trabajador?.codigo);
+
     const cargo = normalizarTexto(trabajador?.cargo);
-
-    const planAccion = normalizarTexto(trabajador?.planAccion);
-
-    const fechaPlanAccion = normalizarTexto(trabajador?.fechaPlanAccion);
 
     const observaciones = normalizarTexto(trabajador?.observaciones);
 
@@ -104,19 +105,35 @@ function validarInspeccionEpp(payload) {
     }
 
     /* -------------------------------------------------------
-       EVALUACIONES
+       EVALUACIONES EPP
     ------------------------------------------------------- */
 
-    if (elementosEntrada.length !== 11) {
+    if (elementosEntrada.length === 0) {
       errores.push(
-        `Trabajador ${numeroTrabajador}: debe contener 11 evaluaciones EPP`,
+        `Trabajador ${numeroTrabajador}: debe contener al menos una evaluación EPP`,
       );
     }
 
     const elementos = elementosEntrada.map((elemento, elementoIndex) => {
+      /* ---------------------------------------------------
+           IDENTIFICACIÓN DEL ELEMENTO
+        --------------------------------------------------- */
+
+      const elementoEppId = Number(elemento?.elementoEppId);
+
+      if (!Number.isInteger(elementoEppId) || elementoEppId <= 0) {
+        errores.push(
+          `Trabajador ${numeroTrabajador}, elemento ${elementoIndex + 1}: elemento EPP inválido`,
+        );
+      }
+
       const nombreElemento = normalizarTexto(
         elemento?.elemento || elemento?.nombre,
       );
+
+      /* ---------------------------------------------------
+           CALIFICACIONES
+        --------------------------------------------------- */
 
       const condicion = normalizarTexto(elemento?.condicion).toUpperCase();
 
@@ -124,55 +141,115 @@ function validarInspeccionEpp(payload) {
 
       const valoresPermitidos = ["M", "R", "B", "NA"];
 
-      if (!nombreElemento) {
+      /* ---------------------------------------------------
+           PLAN DE ACCIÓN DEL ELEMENTO
+        --------------------------------------------------- */
+
+      const planAccion = normalizarTexto(elemento?.planAccion);
+
+      const fechaPlanAccion = normalizarTexto(elemento?.fechaPlanAccion);
+
+      /* ---------------------------------------------------
+           VALIDAR CATÁLOGO
+        --------------------------------------------------- */
+
+      if (!Number.isInteger(elementoEppId) || elementoEppId <= 0) {
         errores.push(
-          `Trabajador ${numeroTrabajador}, elemento ${elementoIndex + 1}: nombre inválido`,
+          `Trabajador ${numeroTrabajador}, elemento ${
+            elementoIndex + 1
+          }: catálogo EPP inválido`,
         );
       }
+
+      /* ---------------------------------------------------
+           VALIDAR NOMBRE
+        --------------------------------------------------- */
+
+      if (!nombreElemento) {
+        errores.push(
+          `Trabajador ${numeroTrabajador}, elemento ${
+            elementoIndex + 1
+          }: nombre inválido`,
+        );
+      }
+
+      /* ---------------------------------------------------
+           VALIDAR CONDICIÓN
+        --------------------------------------------------- */
 
       if (!valoresPermitidos.includes(condicion)) {
         errores.push(
-          `Trabajador ${numeroTrabajador}, ${nombreElemento || `elemento ${elementoIndex + 1}`}: condición inválida`,
+          `Trabajador ${numeroTrabajador}, ${
+            nombreElemento || `elemento ${elementoIndex + 1}`
+          }: condición inválida`,
         );
       }
+
+      /* ---------------------------------------------------
+           VALIDAR USO
+        --------------------------------------------------- */
 
       if (!valoresPermitidos.includes(uso)) {
         errores.push(
-          `Trabajador ${numeroTrabajador}, ${nombreElemento || `elemento ${elementoIndex + 1}`}: uso inválido`,
+          `Trabajador ${numeroTrabajador}, ${
+            nombreElemento || `elemento ${elementoIndex + 1}`
+          }: uso inválido`,
         );
       }
 
+      /* ---------------------------------------------------
+           DETERMINAR SI REQUIERE PLAN DE ACCIÓN
+
+           NO requiere:
+           B  + B
+           B  + NA
+           NA + B
+           NA + NA
+
+           Cualquier R o M requiere plan.
+        --------------------------------------------------- */
+
+      const requierePlan =
+        condicion === "R" || condicion === "M" || uso === "R" || uso === "M";
+
+      /* ---------------------------------------------------
+           VALIDAR PLAN DE ACCIÓN
+        --------------------------------------------------- */
+
+      if (requierePlan && !planAccion) {
+        errores.push(
+          `Trabajador ${numeroTrabajador}, ${
+            nombreElemento || `elemento ${elementoIndex + 1}`
+          }: debe registrar un plan de acción`,
+        );
+      }
+
+      if (requierePlan && !fechaPlanAccion) {
+        errores.push(
+          `Trabajador ${numeroTrabajador}, ${
+            nombreElemento || `elemento ${elementoIndex + 1}`
+          }: debe registrar la fecha límite del plan de acción`,
+        );
+      }
+
+      /* ---------------------------------------------------
+           ELEMENTO NORMALIZADO
+        --------------------------------------------------- */
+
       return {
         idx: elementoIndex,
+        elementoEppId,
         elemento: nombreElemento,
         condicion,
         uso,
+        planAccion: normalizarTexto(elemento?.planAccion) || null,
+        fechaPlanAccion: normalizarTexto(elemento?.fechaPlanAccion) || null,
       };
     });
 
     /* -------------------------------------------------------
-       PLAN DE ACCIÓN
+       TRABAJADOR NORMALIZADO
     ------------------------------------------------------- */
-
-    const tieneNovedad = elementos.some(
-      (elemento) =>
-        elemento.condicion === "M" ||
-        elemento.condicion === "R" ||
-        elemento.uso === "M" ||
-        elemento.uso === "R",
-    );
-
-    if (tieneNovedad && !planAccion) {
-      errores.push(
-        `Trabajador ${numeroTrabajador}: debe registrar un plan de acción`,
-      );
-    }
-
-    if (tieneNovedad && !fechaPlanAccion) {
-      errores.push(
-        `Trabajador ${numeroTrabajador}: debe registrar la fecha límite del plan de acción`,
-      );
-    }
 
     return {
       trabajadorId: trabajador?.trabajadorId ?? null,
@@ -184,10 +261,6 @@ function validarInspeccionEpp(payload) {
       codigo,
 
       cargo,
-
-      planAccion,
-
-      fechaPlanAccion,
 
       observaciones,
 
@@ -223,5 +296,5 @@ function validarInspeccionEpp(payload) {
 }
 
 module.exports = {
-    validarInspeccionEpp,
-}
+  validarInspeccionEpp,
+};

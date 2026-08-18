@@ -1,49 +1,72 @@
 import { optimizarImagen } from "./imageOptimizer.js";
 
-const ELEMENTOS_EPP_PREDETERMINADOS = [
-  "Botas de seguridad",
-  "Dotación",
-  "Casco",
-  "Tafilete",
-  "Barbuquejo",
-];
+let CATALOGO_EPP = [];
 
-const ELEMENTOS_EPP_OTROS = [
-  "Guantes patio",
-  "Guantes fríos",
-  "Guantes de vaqueta",
-  "Gafas claras",
-  "Gafas oscuras",
-  "Guantes de lavado",
-];
+let ELEMENTOS_EPP_PREDETERMINADOS = [];
+let ELEMENTOS_EPP_OTROS = [];
+let ELEMENTOS_EPP = [];
 
-const ELEMENTOS_EPP = [
-  ...ELEMENTOS_EPP_PREDETERMINADOS,
-  ...ELEMENTOS_EPP_OTROS,
-];
+export async function cargarCatalogoEpp() {
+  const response = await fetch("/api/catalogo-epp");
 
-function obtenerElementosPredeterminados() {
-  return [...ELEMENTOS_EPP_PREDETERMINADOS];
+  if (!response.ok) {
+    throw new Error(`Error cargando catálogo EPP. HTTP ${response.status}`);
+  }
+
+  const data = await response.json();
+
+  if (!data.ok || !Array.isArray(data.elementos)) {
+    throw new Error("Respuesta inválida del catálogo EPP");
+  }
+
+  CATALOGO_EPP = data.elementos;
+
+  ELEMENTOS_EPP_PREDETERMINADOS = CATALOGO_EPP.filter(
+    (elemento) => elemento.predeterminado === true,
+  );
+
+  ELEMENTOS_EPP_OTROS = CATALOGO_EPP.filter(
+    (elemento) => elemento.predeterminado !== true,
+  );
+
+  ELEMENTOS_EPP = [...CATALOGO_EPP];
+
+  console.log("[EPP] Catálogo cargado:", {
+    total: ELEMENTOS_EPP.length,
+    predeterminados: ELEMENTOS_EPP_PREDETERMINADOS.length,
+    otros: ELEMENTOS_EPP_OTROS.length,
+  });
 }
 
-function crearOpcionCatalogoEpp(elemento, categoria) {
-  const idSeguro = elemento
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "");
+function obtenerElementosPredeterminados() {
+  return ELEMENTOS_EPP_PREDETERMINADOS.map((elemento) => ({
+    elementoEppId: elemento.id,
+    elemento: elemento.nombre,
+    categoria: elemento.categoria,
+  }));
+}
+
+function crearOpcionCatalogoEpp(elemento) {
+  const idSeguro = `epp-${elemento.id}`;
 
   return `
-    <label class="epp-catalogo-opcion">
+    <label
+      class="epp-catalogo-opcion"
+      for="${idSeguro}"
+      data-catalogo-epp-id="${elemento.id}"
+      data-elemento="${elemento.nombre}"
+      data-categoria="${elemento.categoria}"
+    >
       <input
         type="checkbox"
-        class="epp-catalogo-check"
-        data-elemento="${elemento}"
-        data-categoria="${categoria}"
-        data-elemento-id="${idSeguro}"
+        id="${idSeguro}"
+        class="epp-catalogo-checkbox"
+        value="${elemento.id}"
+        data-catalogo-epp-id="${elemento.id}"
+        data-elemento="${elemento.nombre}"
       >
-      <span>${elemento}</span>
+
+      <span>${elemento.nombre}</span>
     </label>
   `;
 }
@@ -921,10 +944,14 @@ export function createTrabajadoresEppManager({
   // FILA EPP
   // =======================================================
 
-  function crearFilaEpp(elemento, elementoIndex) {
+  function crearFilaEpp(datosElemento, elementoIndex) {
+    const elementoEppId = datosElemento?.elementoEppId || "";
+    const elemento = datosElemento?.elemento || "";
+
     return `
     <tr
       data-epp-index="${elementoIndex}"
+      data-elemento-epp-id="${elementoEppId}"
       data-elemento="${elemento}"
       class="epp-fila"
     >
@@ -995,6 +1022,7 @@ export function createTrabajadoresEppManager({
 
     <tr
       class="epp-plan-row"
+      data-elemento-epp-id="${elementoEppId}"
       data-plan-elemento="${elemento}"
       hidden
     >
@@ -1155,20 +1183,44 @@ export function createTrabajadoresEppManager({
   }
 
   function sincronizarCatalogoEpp(card) {
-    const elementosActuales = new Set(obtenerElementosActuales(card));
+    // =====================================================
+    // 1. OBTENER IDs DE CATÁLOGO YA AGREGADOS
+    // =====================================================
 
-    const checks = card.querySelectorAll(".epp-catalogo-check");
+    const idsActuales = new Set(
+      Array.from(
+        card.querySelectorAll(".epp-table tbody tr[data-catalogo-epp-id]"),
+      )
+        .map((fila) => fila.dataset.elementoEppId)
+        .filter(Boolean),
+    );
+
+    // =====================================================
+    // 2. OBTENER CHECKBOXES DEL CATÁLOGO
+    // =====================================================
+
+    const checks = card.querySelectorAll(".epp-catalogo-checkbox");
+
+    // =====================================================
+    // 3. SINCRONIZAR ESTADO
+    // =====================================================
 
     checks.forEach((check) => {
-      const yaAgregado = elementosActuales.has(check.dataset.elemento);
+      const elementoEppId = check.dataset.elementoEppId;
+
+      const yaAgregado = elementoEppId && idsActuales.has(elementoEppId);
 
       check.checked = false;
-      check.disabled = yaAgregado;
+
+      check.disabled = Boolean(yaAgregado);
 
       const opcion = check.closest(".epp-catalogo-opcion");
 
       if (opcion) {
-        opcion.classList.toggle("epp-catalogo-opcion-agregada", yaAgregado);
+        opcion.classList.toggle(
+          "epp-catalogo-opcion-agregada",
+          Boolean(yaAgregado),
+        );
       }
     });
   }
@@ -1195,7 +1247,7 @@ export function createTrabajadoresEppManager({
 
   function agregarElementosSeleccionados(card) {
     const seleccionados = Array.from(
-      card.querySelectorAll(".epp-catalogo-check:checked:not(:disabled)"),
+      card.querySelectorAll(".epp-catalogo-checkbox:checked:not(:disabled)"),
     );
 
     if (seleccionados.length === 0) {
@@ -1208,20 +1260,40 @@ export function createTrabajadoresEppManager({
       return;
     }
 
-    const elementosActuales = new Set(obtenerElementosActuales(card));
+    // IDs de catálogo que ya están agregados al trabajador.
+    const idsActuales = new Set(
+      Array.from(tbody.querySelectorAll("tr[data-catalogo-epp-id]"))
+        .map((fila) => fila.dataset.elementoEppId)
+        .filter(Boolean),
+    );
 
     seleccionados.forEach((check) => {
+      const elementoEppId = check.dataset.elementoEppId;
       const elemento = check.dataset.elemento;
 
-      if (!elemento || elementosActuales.has(elemento)) {
+      if (!elementoEppId || !elemento) {
+        return;
+      }
+
+      // Evitar duplicados por ID, no por nombre.
+      if (idsActuales.has(elementoEppId)) {
         return;
       }
 
       const nuevoIndex = tbody.querySelectorAll("tr[data-elemento]").length;
 
-      tbody.insertAdjacentHTML("beforeend", crearFilaEpp(elemento, nuevoIndex));
+      tbody.insertAdjacentHTML(
+        "beforeend",
+        crearFilaEpp(
+          {
+            elementoEppId,
+            elemento,
+          },
+          nuevoIndex,
+        ),
+      );
 
-      elementosActuales.add(elemento);
+      idsActuales.add(elementoEppId);
     });
 
     sincronizarCatalogoEpp(card);
@@ -1695,6 +1767,9 @@ export function createTrabajadoresEppManager({
         const filasEpp = tarjeta.querySelectorAll("tr[data-elemento]");
 
         const elementos = Array.from(filasEpp).map((fila, elementoIndex) => {
+          const elementoEppId = fila.dataset.elementoEppId
+            ? Number(fila.dataset.elementoEppId)
+            : null;
           // ---------------------------------------------
           // DATOS DEL ELEMENTO EPP
           // ---------------------------------------------
@@ -1742,6 +1817,7 @@ export function createTrabajadoresEppManager({
 
           return {
             indice: elementoIndex,
+            elementoEppId,
             elemento,
             condicion,
             uso,

@@ -246,6 +246,7 @@ async function obtenerInspeccionCompleta(inspeccionId) {
 
           elementos: evaluacionesRows.map((evaluacion) => ({
             idx: evaluacion.idx,
+            elementoEppId: evaluacion.elementos_epp_id || null,
             elemento: evaluacion.elemento || "",
             condicion: evaluacion.condicion || "",
             uso: evaluacion.uso || "",

@@ -44,6 +44,11 @@ const {
   descargarExcelSeguimientoEpp,
 } = require("./controllers/excel.controller");
 
+const {
+  listarCatalogoEpp,
+  listarEppPredeterminados,
+} = require("./controllers/catalogoEpp.controller");
+
 const app = express();
 app.set("trust proxy", true);
 const PORT = process.env.PORT || 3000;
@@ -104,6 +109,13 @@ app.get("/api/estadisticas-epp/resumen", obtenerResumenEpp);
 app.get("/api/estadisticas-epp/inspecciones", listarInspeccionesEpp);
 app.get("/api/excel/epp", descargarExcelSeguimientoEpp);
 app.get("/api/inspecciones/:id/links", obtenerLinks);
+// =====================================================
+// CATÁLOGO EPP
+// =====================================================
+
+app.get("/api/catalogo-epp", listarCatalogoEpp);
+
+app.get("/api/catalogo-epp/predeterminados", listarEppPredeterminados);
 
 app.listen(PORT, () => {
   console.log(`Servidor MVC activo en http://localhost:${PORT}`);

@@ -17,12 +17,9 @@ const { pool } = require("../db/pool");
    UTILIDADES
 ========================================================= */
 
-
 /* =========================================================
    VALIDACIÓN
 ========================================================= */
-
-
 
 /* =========================================================
    GUARDADO EN BASE DE DATOS
@@ -98,13 +95,11 @@ async function guardarInspeccionEppEnDB(data) {
 
     const inspeccionPk = inspeccion.id;
 
-
     /* -------------------------------------------------------
        TRABAJADORES
     ------------------------------------------------------- */
 
     for (const [idx, trabajador] of trabajadores.entries()) {
-
       const { rows: trabajadorRows } = await client.query(
         `
         INSERT INTO trabajadores_epp (
@@ -151,25 +146,28 @@ async function guardarInspeccionEppEnDB(data) {
       ).entries()) {
         await client.query(
           `
-          INSERT INTO evaluaciones_epp (
-            trabajador_epp_id,
-            idx,
-            elemento,
-            condicion,
-            uso
-          )
-          VALUES ($1,$2,$3,$4,$5)
-          `,
+    INSERT INTO evaluaciones_epp (
+      trabajador_epp_id,
+      elemento_epp_id,
+      idx,
+      condicion,
+      uso,
+      plan_accion,
+      fecha_plan_accion
+    )
+    VALUES ($1,$2,$3,$4,$5,$6,$7)
+    `,
           [
             trabajadorEppId,
+            elemento.elementoEppId,
             elementoIdx,
-            elemento.elemento || "",
             elemento.condicion || "",
             elemento.uso || "",
+            elemento.planAccion || null,
+            elemento.fechaPlanAccion || null,
           ],
         );
       }
-
     }
 
     /* -------------------------------------------------------

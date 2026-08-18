@@ -4,9 +4,7 @@ const {
   validarInspeccionEpp,
 } = require("../validators/inspeccionEpp.validator");
 
-const {
-  guardarInspeccionEppEnDB,
-} = require("../models/inspeccionEpp.model");
+const { guardarInspeccionEppEnDB } = require("../models/inspeccionEpp.model");
 
 const { uploadEvidenceToOneDrive } = require("../services/evidencia.service");
 
@@ -47,6 +45,8 @@ async function enviarInspeccionEpp(req, res) {
     const validacion = validarInspeccionEpp(payload);
 
     if (!validacion.ok) {
+      console.log("❌ ERRORES VALIDACIÓN EPP:");
+      console.log(validacion.errores);
       return res.status(400).json({
         ok: false,
         mensaje: "La inspección EPP contiene información inválida.",
