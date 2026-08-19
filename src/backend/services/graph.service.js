@@ -3,6 +3,49 @@ const GRAPH_BASE = "https://graph.microsoft.com/v1.0";
 let _cachedToken = null;
 let _tokenExpiresAt = 0;
 
+const esperar = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+function esErrorTransitorio(error) {
+  const codigo = error?.cause?.code || error?.code;
+
+  return [
+    "UND_ERR_CONNECT_TIMEOUT",
+    "UND_ERR_HEADERS_TIMEOUT",
+    "UND_ERR_BODY_TIMEOUT",
+    "ECONNRESET",
+    "ECONNREFUSED",
+    "ETIMEDOUT",
+    "EAI_AGAIN",
+  ].includes(codigo);
+}
+
+async function fetchConRetry(url, options = {}, maxIntentos = 3) {
+  let ultimoError;
+
+  for (let intento = 1; intento <= maxIntentos; intento++) {
+    try {
+      return await fetch(url, options);
+    } catch (error) {
+      ultimoError = error;
+
+      if (!esErrorTransitorio(error) || intento === maxIntentos) {
+        throw error;
+      }
+
+      const esperaMs = intento * 1000;
+
+      console.warn(
+        `[Graph] Error transitorio (${error?.cause?.code || error?.code || error.message}). ` +
+          `Reintentando ${intento + 1}/${maxIntentos} en ${esperaMs} ms...`,
+      );
+
+      await esperar(esperaMs);
+    }
+  }
+
+  throw ultimoError;
+}
+
 function getRequiredEnv(name) {
   const value = process.env[name];
 
@@ -31,13 +74,17 @@ async function getAccessToken() {
     scope: "https://graph.microsoft.com/.default",
   });
 
-  const response = await fetch(tokenUrl, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/x-www-form-urlencoded",
+  const response = await fetchConRetry(
+    tokenUrl,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body,
     },
-    body,
-  });
+    3,
+  );
 
   const data = await response.json();
 

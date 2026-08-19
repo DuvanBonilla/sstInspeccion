@@ -163,28 +163,23 @@ function aplicarFormatoCuerpo(
   for (let fila = filaInicio; fila <= filaFin; fila += 1) {
     const row = worksheet.getRow(fila);
 
+    row.height = 20;
+
     row.eachCell({ includeEmpty: true }, (cell) => {
+      cell.font = {
+        name: "Calibri",
+        size: 10,
+      };
+
       cell.alignment = {
         vertical: "middle",
-        wrapText: true,
+        wrapText: false,
       };
 
       cell.border = {
-        top: {
-          style: "thin",
-          color: { argb: "FFE7E6E6" },
-        },
-        left: {
-          style: "thin",
-          color: { argb: "FFE7E6E6" },
-        },
         bottom: {
-          style: "thin",
-          color: { argb: "FFE7E6E6" },
-        },
-        right: {
-          style: "thin",
-          color: { argb: "FFE7E6E6" },
+          style: "hair",
+          color: { argb: "FFD9E2F3" },
         },
       };
     });
@@ -237,6 +232,58 @@ function alinearColumnasIzquierda(
   });
 }
 
+function aplicarColorPorValor(
+  worksheet,
+  columna,
+  filaInicio,
+  filaFin,
+  coloresPorValor,
+) {
+  if (!worksheet) {
+    throw new Error("Se requiere una hoja");
+  }
+
+  if (!columna || !coloresPorValor) {
+    return;
+  }
+
+  for (let fila = filaInicio; fila <= filaFin; fila += 1) {
+    const cell = worksheet.getCell(`${columna}${fila}`);
+
+    const valor = String(cell.value ?? "")
+      .trim()
+      .toUpperCase();
+
+    const estilo = coloresPorValor[valor];
+
+    if (!estilo) {
+      continue;
+    }
+
+    cell.fill = {
+      type: "pattern",
+      pattern: "solid",
+      fgColor: {
+        argb: estilo.fondo,
+      },
+    };
+
+    cell.font = {
+      ...cell.font,
+      bold: true,
+      color: {
+        argb: estilo.texto,
+      },
+    };
+
+    cell.alignment = {
+      ...cell.alignment,
+      horizontal: "center",
+      vertical: "middle",
+    };
+  }
+}
+
 /* =========================================================
    EXPORTS
 ========================================================= */
@@ -257,4 +304,6 @@ module.exports = {
   aplicarFormatoCuerpo,
   centrarColumnas,
   alinearColumnasIzquierda,
+
+  aplicarColorPorValor,
 };

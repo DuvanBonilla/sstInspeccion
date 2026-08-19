@@ -7,7 +7,13 @@ function normalizarSenalizacion(item = {}, idx = 0) {
     idx,
     tipo: normalizarTexto(item.tipo),
     ubicacion: normalizarTexto(item.ubicacion),
+
+    cantidad: normalizarTexto(item.cantidad),
+
     estado: normalizarTexto(item.estado).toUpperCase(),
+
+    aseo: normalizarTexto(item.aseo).toUpperCase(),
+
     observaciones: normalizarTexto(item.observaciones),
     evidenciaRuta: normalizarTexto(item.evidenciaRuta),
     evidenciaArchivo: normalizarTexto(item.evidenciaArchivo),
