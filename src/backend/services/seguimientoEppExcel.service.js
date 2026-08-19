@@ -33,51 +33,58 @@ async function obtenerDatosEpp() {
       --------------------------------------------------- */
 
       pool.query(`
-        SELECT
-          e.id AS evaluacion_id,
-          t.id AS trabajador_epp_id,
-          i.id AS inspeccion_pk,
+          SELECT
+            e.id AS evaluacion_id,
+            t.id AS trabajador_epp_id,
+            i.id AS inspeccion_pk,
 
-          i.num_inspeccion,
-          i.inspeccion_id,
-          i.fecha,
-          i.sede_operacion,
-          i.area_trabajo,
-          i.responsable_inspeccion,
+            i.num_inspeccion,
+            i.inspeccion_id,
+            i.fecha,
+            i.sede_operacion,
+            i.area_trabajo,
+            i.responsable_inspeccion,
 
-          t.codigo AS codigo_trabajador,
-          t.nombre AS nombre_trabajador,
-          t.cargo,
+            t.codigo AS codigo_trabajador,
+            t.nombre AS nombre_trabajador,
+            t.cargo,
 
-          e.elemento,
-          e.condicion,
-          e.uso,
+            e.elemento_epp_id,
+            ep.nombre AS elemento,
+            ep.categoria AS categoria,
 
-          t.plan_accion,
-          t.fecha_plan_accion,
-          t.observaciones
+            e.condicion,
+            e.uso,
 
-        FROM inspecciones i
+            e.plan_accion,
+            e.fecha_plan_accion,
 
-        INNER JOIN trabajadores_epp t
-          ON t.inspeccion_pk = i.id
+            t.observaciones
 
-        INNER JOIN evaluaciones_epp e
-          ON e.trabajador_epp_id = t.id
+          FROM inspecciones i
 
-        WHERE
-          i.tipo_inspeccion = 'EPP'
-          AND (
-            e.condicion IN ('R', 'M')
-            OR e.uso IN ('R', 'M')
-          )
+          INNER JOIN trabajadores_epp t
+            ON t.inspeccion_pk = i.id
 
-        ORDER BY
-          i.fecha ASC,
-          i.num_inspeccion ASC,
-          t.idx ASC,
-          e.idx ASC
-      `),
+          INNER JOIN evaluaciones_epp e
+            ON e.trabajador_epp_id = t.id
+
+          INNER JOIN elementos_epp ep
+            ON ep.id = e.elemento_epp_id
+
+          WHERE
+            i.tipo_inspeccion = 'EPP'
+            AND (
+              e.condicion IN ('R', 'M')
+              OR e.uso IN ('R', 'M')
+            )
+
+          ORDER BY
+            i.fecha ASC,
+            i.num_inspeccion ASC,
+            t.idx ASC,
+            ep.nombre ASC
+`),
 
       /* ---------------------------------------------------
          TRABAJADORES
@@ -98,8 +105,6 @@ async function obtenerDatosEpp() {
           t.nombre AS nombre_trabajador,
           t.cargo,
 
-          t.plan_accion,
-          t.fecha_plan_accion,
           t.observaciones,
 
           CASE

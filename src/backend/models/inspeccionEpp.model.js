@@ -108,15 +108,13 @@ async function guardarInspeccionEppEnDB(data) {
           nombre,
           codigo,
           cargo,
-          plan_accion,
-          fecha_plan_accion,
           observaciones,
           evidencia_ruta,
           evidencia_archivo,
           evidencia_fecha
         )
         VALUES (
-          $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11
+          $1,$2,$3,$4,$5,$6,$7,$8,$9
         )
         RETURNING id
         `,
@@ -126,12 +124,10 @@ async function guardarInspeccionEppEnDB(data) {
           trabajador.nombre || "", // $3
           trabajador.codigo || "", // $4
           trabajador.cargo || "", // $5
-          trabajador.planAccion || "", // $6
-          trabajador.fechaPlanAccion || null, // $7
-          trabajador.observaciones || "", // $8
-          trabajador.evidenciaRuta || "", // $9
-          trabajador.evidenciaArchivo || "", // $10
-          trabajador.evidenciaFecha || null, // $11
+          trabajador.observaciones || "", // $6
+          trabajador.evidenciaRuta || "", // $7
+          trabajador.evidenciaArchivo || "", // $8
+          trabajador.evidenciaFecha || null, // $9
         ],
       );
 
@@ -141,26 +137,22 @@ async function guardarInspeccionEppEnDB(data) {
          EVALUACIONES DEL TRABAJADOR
       ----------------------------------------------------- */
 
-      for (const [elementoIdx, elemento] of (
-        trabajador.elementos || []
-      ).entries()) {
+      for (const elemento of trabajador.elementos || []) {
         await client.query(
           `
     INSERT INTO evaluaciones_epp (
       trabajador_epp_id,
       elemento_epp_id,
-      idx,
       condicion,
       uso,
       plan_accion,
       fecha_plan_accion
     )
-    VALUES ($1,$2,$3,$4,$5,$6,$7)
+    VALUES ($1,$2,$3,$4,$5,$6)
     `,
           [
             trabajadorEppId,
             elemento.elementoEppId,
-            elementoIdx,
             elemento.condicion || "",
             elemento.uso || "",
             elemento.planAccion || null,

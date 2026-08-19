@@ -52,18 +52,42 @@ function crearPanelCatalogoEpp() {
 
       <div class="epp-combobox">
 
-        <div class="epp-combobox-buscador">
+        <div class="epp-buscador-wrapper">
+
+          <svg
+            class="epp-buscador-icono"
+            viewBox="0 0 24 24"
+            aria-hidden="true"
+          >
+            <circle
+              cx="11"
+              cy="11"
+              r="7"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            ></circle>
+
+            <path
+              d="M16 16l5 5"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+            ></path>
+          </svg>
+
           <input
             type="text"
-            class="epp-combobox-input"
+            class="epp-catalogo-buscador"
             placeholder="Buscar elemento EPP..."
             autocomplete="off"
-            aria-label="Buscar elemento EPP"
           >
+
         </div>
 
         <div
-          class="epp-combobox-resultados"
+          class="epp-catalogo-resultados"
           hidden
         ></div>
 
@@ -73,45 +97,108 @@ function crearPanelCatalogoEpp() {
   `;
 }
 
-function crearPanelCatalogoEpp() {
-  return `
-    <div class="epp-catalogo-panel" hidden>
+function filtrarElementosEpp(card, terminoBusqueda = "") {
+  const contenedorResultados = card.querySelector(".epp-catalogo-resultados");
 
-      <div class="epp-catalogo-grupo">
-        <div class="epp-catalogo-titulo">
-          Elementos predeterminados
-        </div>
+  if (!contenedorResultados) {
+    return;
+  }
 
-        <div class="epp-catalogo-lista">
-          ${ELEMENTOS_EPP_PREDETERMINADOS.map((elemento) =>
-            crearOpcionCatalogoEpp(elemento, "predeterminado"),
-          ).join("")}
-        </div>
+  // =====================================================
+  // NORMALIZAR TEXTO DE BÚSQUEDA
+  // =====================================================
+
+  const termino = terminoBusqueda
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+
+  // =====================================================
+  // SI NO HAY BÚSQUEDA, CERRAR DROPDOWN
+  // =====================================================
+
+  if (!termino) {
+    contenedorResultados.innerHTML = "";
+    contenedorResultados.hidden = true;
+    return;
+  }
+
+  // =====================================================
+  // IDs QUE EL TRABAJADOR YA TIENE AGREGADOS
+  // =====================================================
+
+  const idsActuales = new Set(
+    Array.from(
+      card.querySelectorAll(
+        ".epp-table tbody tr.epp-fila[data-elemento-epp-id]",
+      ),
+    )
+      .map((fila) => fila.dataset.elementoEppId)
+      .filter(Boolean),
+  );
+
+  // =====================================================
+  // FILTRAR CATÁLOGO
+  // =====================================================
+
+  const resultados = ELEMENTOS_EPP.filter((elemento) => {
+    const elementoEppId = String(elemento.id);
+
+    // No mostrar elementos que ya están agregados
+    if (idsActuales.has(elementoEppId)) {
+      return false;
+    }
+
+    const nombreNormalizado = String(elemento.nombre || "")
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "");
+
+    return nombreNormalizado.includes(termino);
+  });
+
+  // =====================================================
+  // SIN RESULTADOS
+  // =====================================================
+
+  if (resultados.length === 0) {
+    contenedorResultados.innerHTML = `
+      <div class="epp-combobox-sin-resultados">
+        No se encontraron elementos EPP disponibles.
       </div>
+    `;
 
-      <div class="epp-catalogo-grupo">
-        <div class="epp-catalogo-titulo">
-          Otros EPP
-        </div>
+    contenedorResultados.hidden = false;
+    return;
+  }
 
-        <div class="epp-catalogo-lista">
-          ${ELEMENTOS_EPP_OTROS.map((elemento) =>
-            crearOpcionCatalogoEpp(elemento, "otro"),
-          ).join("")}
-        </div>
-      </div>
+  // =====================================================
+  // RENDERIZAR RESULTADOS
+  // =====================================================
 
-      <div class="epp-catalogo-acciones">
+  contenedorResultados.innerHTML = resultados
+    .map(
+      (elemento) => `
         <button
           type="button"
-          class="add-btn btn-agregar-epp-seleccionados"
+          class="epp-combobox-opcion"
+          data-elemento-epp-id="${elemento.id}"
+          data-elemento="${elemento.nombre}"
         >
-          Agregar seleccionados
-        </button>
-      </div>
+          <span class="epp-combobox-opcion-nombre">
+            ${elemento.nombre}
+          </span>
 
-    </div>
-  `;
+          <span class="epp-combobox-opcion-info">
+            ${elemento.categoria || "EPP"}
+          </span>
+        </button>
+      `,
+    )
+    .join("");
+
+  contenedorResultados.hidden = false;
 }
 
 const VALORES_CALIFICACION = ["M", "R", "B", "NA"];
@@ -144,6 +231,22 @@ export function createTrabajadoresEppManager({
     container?.addEventListener("click", manejarAccionesTrabajador);
 
     container?.addEventListener("change", manejarCambioCalificacionEpp);
+
+    container.addEventListener("input", (event) => {
+      const buscador = event.target.closest(".epp-catalogo-buscador");
+
+      if (!buscador) {
+        return;
+      }
+
+      const card = buscador.closest(".trabajador-card");
+
+      if (!card) {
+        return;
+      }
+
+      filtrarElementosEpp(card, buscador.value);
+    });
   }
 
   function limpiarErrorCampo(event) {
@@ -341,23 +444,106 @@ export function createTrabajadoresEppManager({
     }
 
     // -------------------------------------------------------
-    // AGREGAR EPP SELECCIONADOS
+    // AGREGAR EPP DESDE EL BUSCADOR
     // -------------------------------------------------------
 
-    const botonAgregarEpp = event.target.closest(
-      ".btn-agregar-epp-seleccionados",
-    );
+    const opcionEpp = event.target.closest(".epp-combobox-opcion");
 
-    if (botonAgregarEpp) {
+    if (opcionEpp) {
       event.stopPropagation();
 
-      const tarjeta = botonAgregarEpp.closest(".trabajador-card");
+      const tarjeta = opcionEpp.closest(".trabajador-card");
 
       if (!tarjeta) {
         return;
       }
 
-      agregarElementosSeleccionados(tarjeta);
+      const elementoEppId = Number(opcionEpp.dataset.elementoEppId);
+
+      const elemento = opcionEpp.dataset.elemento || "";
+
+      // -----------------------------------------------------
+      // VALIDAR ID
+      // -----------------------------------------------------
+
+      if (!Number.isInteger(elementoEppId) || elementoEppId <= 0) {
+        console.error(
+          "[EPP] ID de elemento inválido:",
+          opcionEpp.dataset.elementoEppId,
+        );
+
+        return;
+      }
+
+      if (!elemento) {
+        console.error("[EPP] Nombre del elemento vacío");
+
+        return;
+      }
+
+      // -----------------------------------------------------
+      // EVITAR DUPLICADOS
+      // -----------------------------------------------------
+
+      const yaExiste = Array.from(
+        tarjeta.querySelectorAll(
+          ".epp-table tbody tr.epp-fila[data-elemento-epp-id]",
+        ),
+      ).some((fila) => Number(fila.dataset.elementoEppId) === elementoEppId);
+
+      if (yaExiste) {
+        return;
+      }
+
+      // -----------------------------------------------------
+      // OBTENER TABLA
+      // -----------------------------------------------------
+
+      const tbody = tarjeta.querySelector(".epp-table tbody");
+
+      if (!tbody) {
+        console.error("[EPP] No se encontró la tabla EPP del trabajador");
+
+        return;
+      }
+
+      // -----------------------------------------------------
+      // CALCULAR ÍNDICE
+      // -----------------------------------------------------
+
+      const elementoIndex = tbody.querySelectorAll("tr.epp-fila").length;
+
+      // -----------------------------------------------------
+      // AGREGAR ELEMENTO
+      // -----------------------------------------------------
+
+      tbody.insertAdjacentHTML(
+        "beforeend",
+        crearFilaEpp(
+          {
+            elementoEppId,
+            elemento,
+          },
+          elementoIndex,
+        ),
+      );
+
+      // -----------------------------------------------------
+      // LIMPIAR BUSCADOR
+      // -----------------------------------------------------
+
+      const buscador = tarjeta.querySelector(".epp-catalogo-buscador");
+
+      const resultados = tarjeta.querySelector(".epp-catalogo-resultados");
+
+      if (buscador) {
+        buscador.value = "";
+      }
+
+      if (resultados) {
+        resultados.innerHTML = "";
+        resultados.hidden = true;
+      }
 
       return;
     }
@@ -385,6 +571,7 @@ export function createTrabajadoresEppManager({
 
       return;
     }
+
     // -------------------------------------------------------
     // ELIMINAR TRABAJADOR
     // -------------------------------------------------------

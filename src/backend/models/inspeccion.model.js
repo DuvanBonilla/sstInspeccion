@@ -223,9 +223,9 @@ async function obtenerInspeccionCompleta(inspeccionId) {
         SELECT
           ee.id,
           ee.trabajador_epp_id,
-          ee.idx,
           ee.elemento_epp_id,
           e.nombre AS elemento,
+          e.categoria AS categoria,
           ee.condicion,
           ee.uso,
           ee.plan_accion,
@@ -234,7 +234,6 @@ async function obtenerInspeccionCompleta(inspeccionId) {
         INNER JOIN elementos_epp e
           ON e.id = ee.elemento_epp_id
         WHERE ee.trabajador_epp_id = $1
-        ORDER BY ee.idx ASC
         `,
           [trabajador.id],
         );
@@ -254,11 +253,12 @@ async function obtenerInspeccionCompleta(inspeccionId) {
           evidenciaFecha: trabajador.evidencia_fecha || null,
 
           elementos: evaluacionesRows.map((evaluacion) => ({
-            idx: evaluacion.idx,
-
+            
             elementoEppId: evaluacion.elemento_epp_id,
 
             elemento: evaluacion.elemento || "",
+
+            categoria: evaluacion.categoria || "",
 
             condicion: evaluacion.condicion || "",
 

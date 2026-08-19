@@ -22,8 +22,7 @@ async function getAccessToken() {
   const clientId = getRequiredEnv("MS_CLIENT_ID");
   const clientSecret = getRequiredEnv("MS_CLIENT_SECRET");
 
-  const tokenUrl =
-    `https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/token`;
+  const tokenUrl = `https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/token`;
 
   const body = new URLSearchParams({
     client_id: clientId,
@@ -31,6 +30,18 @@ async function getAccessToken() {
     grant_type: "client_credentials",
     scope: "https://graph.microsoft.com/.default",
   });
+
+  console.log("=== DEBUG GRAPH TOKEN ===");
+  console.log("Node:", process.version);
+  console.log("Tenant cargado:", Boolean(tenantId));
+  console.log("Client ID cargado:", Boolean(clientId));
+  console.log("Secret cargado:", Boolean(clientSecret));
+  console.log("Secret longitud:", clientSecret.length);
+  console.log("Token URL:", tokenUrl);
+  console.log("HTTP_PROXY:", process.env.HTTP_PROXY || "NO");
+  console.log("HTTPS_PROXY:", process.env.HTTPS_PROXY || "NO");
+  console.log("NO_PROXY:", process.env.NO_PROXY || "NO");
+  console.log("=========================");
 
   const response = await fetch(tokenUrl, {
     method: "POST",
@@ -44,18 +55,13 @@ async function getAccessToken() {
 
   if (!response.ok || !data.access_token) {
     const detail =
-      data?.error_description ||
-      data?.error ||
-      "No se pudo obtener token";
+      data?.error_description || data?.error || "No se pudo obtener token";
 
-    throw new Error(
-      `Error autenticando en Microsoft Graph: ${detail}`,
-    );
+    throw new Error(`Error autenticando en Microsoft Graph: ${detail}`);
   }
 
   _cachedToken = data.access_token;
-  _tokenExpiresAt =
-    Date.now() + (data.expires_in || 3600) * 1000;
+  _tokenExpiresAt = Date.now() + (data.expires_in || 3600) * 1000;
 
   return _cachedToken;
 }
@@ -107,13 +113,9 @@ async function subirArchivoOneDrive({
 
   if (!response.ok) {
     const detail =
-      data?.error?.message ||
-      data?.raw ||
-      "No se pudo subir el archivo";
+      data?.error?.message || data?.raw || "No se pudo subir el archivo";
 
-    throw new Error(
-      `Error OneDrive/Graph al subir archivo: ${detail}`,
-    );
+    throw new Error(`Error OneDrive/Graph al subir archivo: ${detail}`);
   }
 
   return data;
