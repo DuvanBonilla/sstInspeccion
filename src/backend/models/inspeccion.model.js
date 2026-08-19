@@ -230,7 +230,7 @@ async function obtenerInspeccionCompleta(inspeccionId) {
           ee.uso,
           ee.plan_accion,
           ee.fecha_plan_accion
-        FROM evaluaciones_epp ee
+        FROM detalle_trabajador_epp ee
         INNER JOIN elementos_epp e
           ON e.id = ee.elemento_epp_id
         WHERE ee.trabajador_epp_id = $1

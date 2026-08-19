@@ -7,7 +7,7 @@
   - Normalizar y validar la información recibida desde el frontend EPP.
   - Guardar la cabecera de la inspección en `inspecciones`.
   - Guardar los trabajadores en `trabajadores_epp`.
-  - Guardar las evaluaciones de cada trabajador en `evaluaciones_epp`.
+  - Guardar las evaluaciones de cada trabajador en `detalle_trabajador_epp`.
   - Ejecutar todo el guardado dentro de una transacción.
 */
 const { normalizarTexto } = require("../utils/texto.util");
@@ -140,7 +140,7 @@ async function guardarInspeccionEppEnDB(data) {
       for (const elemento of trabajador.elementos || []) {
         await client.query(
           `
-    INSERT INTO evaluaciones_epp (
+    INSERT INTO detalle_trabajador_epp (
       trabajador_epp_id,
       elemento_epp_id,
       condicion,

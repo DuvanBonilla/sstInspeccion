@@ -66,7 +66,7 @@ async function obtenerDatosEpp() {
           INNER JOIN trabajadores_epp t
             ON t.inspeccion_pk = i.id
 
-          INNER JOIN evaluaciones_epp e
+          INNER JOIN detalle_trabajador_epp e
             ON e.trabajador_epp_id = t.id
 
           INNER JOIN elementos_epp ep
@@ -110,7 +110,7 @@ async function obtenerDatosEpp() {
           CASE
             WHEN EXISTS (
               SELECT 1
-              FROM evaluaciones_epp e
+              FROM detalle_trabajador_epp e
               WHERE
                 e.trabajador_epp_id = t.id
                 AND (
@@ -154,7 +154,7 @@ async function obtenerDatosEpp() {
           COUNT(DISTINCT t.id) FILTER (
             WHERE EXISTS (
               SELECT 1
-              FROM evaluaciones_epp e
+              FROM detalle_trabajador_epp e
               WHERE
                 e.trabajador_epp_id = t.id
                 AND (
