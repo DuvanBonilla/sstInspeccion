@@ -201,7 +201,7 @@ function filtrarElementosEpp(card, terminoBusqueda = "") {
   contenedorResultados.hidden = false;
 }
 
-const VALORES_CALIFICACION = ["M", "R", "B", "NA"];
+const VALORES_CALIFICACION = ["B", "R", "M", "NA"];
 
 export function createTrabajadoresEppManager({
   container,

@@ -587,6 +587,93 @@
     },
   });
 
+  /* =========================================================
+   EXPORTAR EXCEL - SEGUIMIENTO EPP
+========================================================= */
+
+  const btnExportarExcelEpp = document.getElementById("btn-exportar-excel-epp");
+
+  if (btnExportarExcelEpp) {
+    btnExportarExcelEpp.addEventListener("click", async () => {
+      const textoOriginal = btnExportarExcelEpp.innerHTML;
+
+      try {
+        /* -----------------------------------------------------
+         ESTADO DE CARGA
+      ----------------------------------------------------- */
+
+        btnExportarExcelEpp.disabled = true;
+        btnExportarExcelEpp.innerHTML = `
+        <span>Generando Excel...</span>
+      `;
+
+        /* -----------------------------------------------------
+         SOLICITAR EXCEL AL BACKEND
+      ----------------------------------------------------- */
+
+        const response = await fetch("/api/excel/epp");
+
+        if (!response.ok) {
+          throw new Error(`Error al generar el Excel (${response.status})`);
+        }
+
+        /* -----------------------------------------------------
+         CONVERTIR RESPUESTA A ARCHIVO
+      ----------------------------------------------------- */
+
+        const blob = await response.blob();
+
+        const url = URL.createObjectURL(blob);
+
+        /* -----------------------------------------------------
+         CREAR DESCARGA
+      ----------------------------------------------------- */
+
+        const enlace = document.createElement("a");
+
+        enlace.href = url;
+        enlace.download = `Seguimiento_EPP_${obtenerFechaArchivo()}.xlsx`;
+
+        document.body.appendChild(enlace);
+
+        enlace.click();
+
+        /* -----------------------------------------------------
+         LIMPIEZA
+      ----------------------------------------------------- */
+
+        enlace.remove();
+
+        URL.revokeObjectURL(url);
+      } catch (error) {
+        console.error("Error descargando Excel EPP:", error);
+
+        alert("No fue posible generar el archivo Excel de seguimiento EPP.");
+      } finally {
+        /* -----------------------------------------------------
+         RESTAURAR BOTÓN
+      ----------------------------------------------------- */
+
+        btnExportarExcelEpp.disabled = false;
+        btnExportarExcelEpp.innerHTML = textoOriginal;
+      }
+    });
+  }
+
+  /* =========================================================
+   FECHA PARA NOMBRE DEL ARCHIVO
+========================================================= */
+
+  function obtenerFechaArchivo() {
+    const ahora = new Date();
+
+    const anio = ahora.getFullYear();
+    const mes = String(ahora.getMonth() + 1).padStart(2, "0");
+    const dia = String(ahora.getDate()).padStart(2, "0");
+
+    return `${anio}-${mes}-${dia}`;
+  }
+
   // =====================================================
   // RESUMEN VISUAL DEL RANGO
   // =====================================================

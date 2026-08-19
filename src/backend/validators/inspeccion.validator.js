@@ -46,15 +46,18 @@ function validarInspeccion(payload) {
   if (!cargoResponsable) errores.push("Cargo del responsable es obligatorio");
 
   // Normaliza cada sección del payload para validación.
-  const extintores = normalizarExtintoresSeccion(payload?.extintores);
-  const camillas = normalizarCamillasSeccion(payload?.camillas);
+  // Normaliza cada sección del payload para validación.
+  const extintores = normalizarExtintoresSeccion(payload);
+
+  const camillas = normalizarCamillasSeccion(payload);
+
   const senalizaciones = normalizarSenalizacionesSeccion(
     payload?.senalizaciones,
   );
-  const equiposTecnologicos = normalizarEquiposTecnologicosSeccion(
-    payload?.equiposTecnologicos,
-  );
-  const botiquines = normalizarBotiquinesSeccion(payload?.botiquines);
+
+  const equiposTecnologicos = normalizarEquiposTecnologicosSeccion(payload);
+
+  const botiquines = normalizarBotiquinesSeccion(payload);
 
   // Sede Urabá: el usuario puede omitir cualquiera de las 5 secciones desde
   // el formulario (botón "Omitir"), que las envía vacías. Para esa sede no

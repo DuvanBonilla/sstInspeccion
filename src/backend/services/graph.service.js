@@ -127,14 +127,18 @@ async function subirArchivoOneDrive({
     `/drive/root:${encodeURI(rutaNormalizada)}:/content` +
     "?@microsoft.graph.conflictBehavior=replace";
 
-  const response = await fetch(url, {
-    method: "PUT",
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": contentType,
+  const response = await fetchConRetry(
+    url,
+    {
+      method: "PUT",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": contentType,
+      },
+      body: buffer,
     },
-    body: buffer,
-  });
+    3,
+  );
 
   const text = await response.text();
 
@@ -169,11 +173,15 @@ async function descargarArchivoOneDrive(ruta) {
     `${GRAPH_BASE}/users/${encodeURIComponent(oneDriveUser)}` +
     `/drive/root:${encodeURI(rutaNormalizada)}:/content`;
 
-  const response = await fetch(url, {
-    headers: {
-      Authorization: `Bearer ${token}`,
+  const response = await fetchConRetry(
+    url,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
     },
-  });
+    3,
+  );
 
   if (!response.ok) {
     return null;

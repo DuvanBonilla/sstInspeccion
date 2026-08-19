@@ -814,6 +814,28 @@ function construirHojaPlanesAccion(workbook, planes) {
     // CONTROL
     { header: "Días Restantes", key: "diasRestantes", width: 18 },
     { header: "Situación", key: "situacion", width: 20 },
+
+    // SEGUIMIENTO LOCAL
+    {
+      header: "Estado Gestión",
+      key: "estadoGestion",
+      width: 20,
+    },
+    {
+      header: "Responsable Gestión",
+      key: "responsableGestion",
+      width: 25,
+    },
+    {
+      header: "Fecha Gestión / Cierre",
+      key: "fechaGestion",
+      width: 22,
+    },
+    {
+      header: "Gestión Realizada",
+      key: "gestionRealizada",
+      width: 40,
+    },
   ]);
 
   /* =========================================================
@@ -840,6 +862,11 @@ function construirHojaPlanesAccion(workbook, planes) {
 
       planAccion: fila.plan_accion || "",
       fechaLimite: fila.fecha_plan_accion || null,
+
+      estadoGestion: "PENDIENTE",
+      responsableGestion: "",
+      fechaGestion: null,
+      gestionRealizada: "",
     });
 
     const numeroFila = row.number;
@@ -849,7 +876,9 @@ function construirHojaPlanesAccion(workbook, planes) {
     ======================================================= */
 
     row.getCell(15).value = {
-      formula: `IF(N${numeroFila}="","",INT(N${numeroFila})-TODAY())`,
+      formula:
+        `IF(Q${numeroFila}="CERRADO",0,` +
+        `IF(N${numeroFila}="","",INT(N${numeroFila})-TODAY()))`,
     };
 
     /* =======================================================
@@ -858,9 +887,10 @@ function construirHojaPlanesAccion(workbook, planes) {
 
     row.getCell(16).value = {
       formula:
+        `IF(Q${numeroFila}="CERRADO","CERRADO",` +
         `IF(N${numeroFila}="","",` +
         `IF(N${numeroFila}<TODAY(),"VENCIDO",` +
-        `IF(N${numeroFila}-TODAY()<=3,"PRÓXIMO A VENCER","EN PLAZO")))`,
+        `IF(N${numeroFila}-TODAY()<=3,"PRÓXIMO A VENCER","EN PLAZO"))))`,
     };
   });
 
@@ -886,6 +916,7 @@ function construirHojaPlanesAccion(workbook, planes) {
 
     aplicarFormatoFecha(hoja, "C", 2, ultimaFila);
     aplicarFormatoFecha(hoja, "N", 2, ultimaFila);
+    aplicarFormatoFecha(hoja, "S", 2, ultimaFila);
 
     /* =======================================================
        EVALUACIÓN EPP
@@ -896,6 +927,22 @@ function construirHojaPlanesAccion(workbook, planes) {
 
     // L = Uso
     aplicarColorPorValor(hoja, "L", 2, ultimaFila, COLORES_EVALUACION);
+
+    /* =======================================================
+   ESTADO DE GESTIÓN
+======================================================= */
+
+    for (let fila = 2; fila <= ultimaFila; fila += 1) {
+      hoja.getCell(`Q${fila}`).dataValidation = {
+        type: "list",
+        allowBlank: false,
+        formulae: ['"PENDIENTE,EN PROCESO,CERRADO"'],
+        showErrorMessage: true,
+        errorStyle: "error",
+        errorTitle: "Estado no válido",
+        error: "Seleccione PENDIENTE, EN PROCESO o CERRADO.",
+      };
+    }
 
     /* =======================================================
        SITUACIÓN DEL PLAN
@@ -972,6 +1019,26 @@ function construirHojaPlanesAccion(workbook, planes) {
             },
           },
         },
+        {
+          type: "cellIs",
+          operator: "equal",
+          formulae: ['"CERRADO"'],
+          style: {
+            fill: {
+              type: "pattern",
+              pattern: "solid",
+              bgColor: {
+                argb: "FFF2F4F7",
+              },
+            },
+            font: {
+              bold: true,
+              color: {
+                argb: "FF667085",
+              },
+            },
+          },
+        },
       ],
     });
   }
@@ -982,7 +1049,7 @@ function construirHojaPlanesAccion(workbook, planes) {
 
   congelarEncabezado(hoja, 1);
 
-  activarFiltro(hoja, `A1:P${ultimaFilaFiltro}`);
+  activarFiltro(hoja, `A1:T${ultimaFilaFiltro}`);
 
   return hoja;
 }
