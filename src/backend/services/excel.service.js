@@ -1,18 +1,11 @@
 const ExcelJS = require("exceljs");
 
+/* =========================================================
+   WORKBOOK
+========================================================= */
+
 function crearWorkbook() {
   return new ExcelJS.Workbook();
-}
-
-async function cargarWorkbook(buffer) {
-  if (!buffer) {
-    throw new Error("Se requiere un archivo Excel para cargar el workbook");
-  }
-
-  const workbook = new ExcelJS.Workbook();
-  await workbook.xlsx.load(buffer);
-
-  return workbook;
 }
 
 async function generarBuffer(workbook) {
@@ -22,6 +15,10 @@ async function generarBuffer(workbook) {
 
   return workbook.xlsx.writeBuffer();
 }
+
+/* =========================================================
+   HOJAS
+========================================================= */
 
 function obtenerOCrearHoja(workbook, nombre, opciones = {}) {
   if (!workbook) {
@@ -41,20 +38,20 @@ function obtenerOCrearHoja(workbook, nombre, opciones = {}) {
   return worksheet;
 }
 
-function eliminarHojaSiExiste(workbook, nombre) {
-  const worksheet = workbook.getWorksheet(nombre);
+/* =========================================================
+   ESTRUCTURA
+========================================================= */
 
-  if (worksheet) {
-    workbook.removeWorksheet(worksheet.id);
-  }
-}
-
-function ocultarHoja(worksheet) {
+function configurarColumnas(worksheet, columnas) {
   if (!worksheet) {
-    return;
+    throw new Error("Se requiere una hoja");
   }
 
-  worksheet.state = "hidden";
+  if (!Array.isArray(columnas)) {
+    throw new Error("Las columnas deben ser un arreglo");
+  }
+
+  worksheet.columns = columnas;
 }
 
 function congelarEncabezado(worksheet, filas = 1) {
@@ -70,18 +67,6 @@ function congelarEncabezado(worksheet, filas = 1) {
   ];
 }
 
-function configurarColumnas(worksheet, columnas) {
-  if (!worksheet) {
-    throw new Error("Se requiere una hoja");
-  }
-
-  if (!Array.isArray(columnas)) {
-    throw new Error("Las columnas deben ser un arreglo");
-  }
-
-  worksheet.columns = columnas;
-}
-
 function activarFiltro(worksheet, rango) {
   if (!worksheet || !rango) {
     return;
@@ -90,29 +75,9 @@ function activarFiltro(worksheet, rango) {
   worksheet.autoFilter = rango;
 }
 
-function aplicarListaDesplegable(
-  worksheet,
-  columna,
-  filaInicio,
-  filaFin,
-  formula,
-) {
-  if (!worksheet) {
-    throw new Error("Se requiere una hoja");
-  }
-
-  for (let fila = filaInicio; fila <= filaFin; fila += 1) {
-    worksheet.getCell(`${columna}${fila}`).dataValidation = {
-      type: "list",
-      allowBlank: true,
-      formulae: [formula],
-      showErrorMessage: true,
-      errorStyle: "error",
-      errorTitle: "Valor no permitido",
-      error: "Seleccione un valor de la lista.",
-    };
-  }
-}
+/* =========================================================
+   FORMATOS
+========================================================= */
 
 function aplicarFormatoFecha(
   worksheet,
@@ -130,19 +95,166 @@ function aplicarFormatoFecha(
   }
 }
 
+/* =========================================================
+   ESTILO GENERAL
+========================================================= */
+
+function aplicarEstiloEncabezado(worksheet, fila = 1) {
+  if (!worksheet) {
+    throw new Error("Se requiere una hoja");
+  }
+
+  const encabezado = worksheet.getRow(fila);
+
+  encabezado.height = 32;
+
+  encabezado.eachCell((cell) => {
+    cell.font = {
+      bold: true,
+      color: {
+        argb: "FFFFFFFF",
+      },
+    };
+
+    cell.fill = {
+      type: "pattern",
+      pattern: "solid",
+      fgColor: {
+        argb: "FF102A5C",
+      },
+    };
+
+    cell.alignment = {
+      horizontal: "center",
+      vertical: "middle",
+      wrapText: true,
+    };
+
+    cell.border = {
+      top: {
+        style: "thin",
+        color: { argb: "FFD9E1F2" },
+      },
+      left: {
+        style: "thin",
+        color: { argb: "FFD9E1F2" },
+      },
+      bottom: {
+        style: "thin",
+        color: { argb: "FFD9E1F2" },
+      },
+      right: {
+        style: "thin",
+        color: { argb: "FFD9E1F2" },
+      },
+    };
+  });
+}
+
+function aplicarFormatoCuerpo(
+  worksheet,
+  filaInicio = 2,
+  filaFin = worksheet.rowCount,
+) {
+  if (!worksheet) {
+    throw new Error("Se requiere una hoja");
+  }
+
+  for (let fila = filaInicio; fila <= filaFin; fila += 1) {
+    const row = worksheet.getRow(fila);
+
+    row.eachCell({ includeEmpty: true }, (cell) => {
+      cell.alignment = {
+        vertical: "middle",
+        wrapText: true,
+      };
+
+      cell.border = {
+        top: {
+          style: "thin",
+          color: { argb: "FFE7E6E6" },
+        },
+        left: {
+          style: "thin",
+          color: { argb: "FFE7E6E6" },
+        },
+        bottom: {
+          style: "thin",
+          color: { argb: "FFE7E6E6" },
+        },
+        right: {
+          style: "thin",
+          color: { argb: "FFE7E6E6" },
+        },
+      };
+    });
+  }
+}
+
+/* =========================================================
+   ALINEACIÓN
+========================================================= */
+
+function centrarColumnas(
+  worksheet,
+  columnas,
+  filaInicio = 2,
+  filaFin = worksheet.rowCount,
+) {
+  if (!worksheet || !Array.isArray(columnas)) {
+    return;
+  }
+
+  columnas.forEach((columna) => {
+    for (let fila = filaInicio; fila <= filaFin; fila += 1) {
+      worksheet.getCell(`${columna}${fila}`).alignment = {
+        horizontal: "center",
+        vertical: "middle",
+        wrapText: true,
+      };
+    }
+  });
+}
+
+function alinearColumnasIzquierda(
+  worksheet,
+  columnas,
+  filaInicio = 2,
+  filaFin = worksheet.rowCount,
+) {
+  if (!worksheet || !Array.isArray(columnas)) {
+    return;
+  }
+
+  columnas.forEach((columna) => {
+    for (let fila = filaInicio; fila <= filaFin; fila += 1) {
+      worksheet.getCell(`${columna}${fila}`).alignment = {
+        horizontal: "left",
+        vertical: "middle",
+        wrapText: true,
+      };
+    }
+  });
+}
+
+/* =========================================================
+   EXPORTS
+========================================================= */
+
 module.exports = {
   crearWorkbook,
-  cargarWorkbook,
   generarBuffer,
 
   obtenerOCrearHoja,
-  eliminarHojaSiExiste,
-  ocultarHoja,
 
-  congelarEncabezado,
   configurarColumnas,
+  congelarEncabezado,
   activarFiltro,
 
-  aplicarListaDesplegable,
   aplicarFormatoFecha,
+
+  aplicarEstiloEncabezado,
+  aplicarFormatoCuerpo,
+  centrarColumnas,
+  alinearColumnasIzquierda,
 };

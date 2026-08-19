@@ -94,9 +94,7 @@ app.get("/estadisticas-epp", (req, res) => {
 });
 
 app.post("/enviar-onedrive-extintor", upload.any(), enviarExtintorOneDrive);
-
 app.post("/enviar-inspeccion-epp", upload.any(), enviarInspeccionEpp);
-
 app.post("/pdf-prueba", upload.any(), generarPdfPrueba);
 app.post("/enviar-pdf-prueba-correo", upload.any(), enviarPdfPruebaCorreo);
 
@@ -109,13 +107,9 @@ app.get("/api/estadisticas-epp/resumen", obtenerResumenEpp);
 app.get("/api/estadisticas-epp/inspecciones", listarInspeccionesEpp);
 app.get("/api/excel/epp", descargarExcelSeguimientoEpp);
 app.get("/api/inspecciones/:id/links", obtenerLinks);
-// =====================================================
-// CATÁLOGO EPP
-// =====================================================
-
 app.get("/api/catalogo-epp", listarCatalogoEpp);
-
 app.get("/api/catalogo-epp/predeterminados", listarEppPredeterminados);
+
 
 app.listen(PORT, () => {
   console.log(`Servidor MVC activo en http://localhost:${PORT}`);

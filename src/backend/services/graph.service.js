@@ -31,18 +31,6 @@ async function getAccessToken() {
     scope: "https://graph.microsoft.com/.default",
   });
 
-  console.log("=== DEBUG GRAPH TOKEN ===");
-  console.log("Node:", process.version);
-  console.log("Tenant cargado:", Boolean(tenantId));
-  console.log("Client ID cargado:", Boolean(clientId));
-  console.log("Secret cargado:", Boolean(clientSecret));
-  console.log("Secret longitud:", clientSecret.length);
-  console.log("Token URL:", tokenUrl);
-  console.log("HTTP_PROXY:", process.env.HTTP_PROXY || "NO");
-  console.log("HTTPS_PROXY:", process.env.HTTPS_PROXY || "NO");
-  console.log("NO_PROXY:", process.env.NO_PROXY || "NO");
-  console.log("=========================");
-
   const response = await fetch(tokenUrl, {
     method: "POST",
     headers: {

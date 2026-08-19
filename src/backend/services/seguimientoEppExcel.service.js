@@ -4,193 +4,122 @@ const {
   crearWorkbook,
   generarBuffer,
   obtenerOCrearHoja,
-  ocultarHoja,
   congelarEncabezado,
   configurarColumnas,
   activarFiltro,
-  aplicarListaDesplegable,
   aplicarFormatoFecha,
 } = require("./excel.service");
 
 /* =========================================================
-   CONFIGURACIÓN
+   CONSULTAS
 ========================================================= */
+async function obtenerResumenInspecciones() {
+  const result = await pool.query(`
+    SELECT
+      i.id AS inspeccion_pk,
+      i.num_inspeccion,
+      i.inspeccion_id,
+      i.fecha,
+      i.sede_operacion,
+      i.area_trabajo,
+      i.estado,
 
-const MAX_FILAS_SEGUIMIENTO = 1000;
+      i.responsable_inspeccion,
+      i.cargo_responsable,
+      i.jefe_responsable,
+      i.cargo_jefe,
 
-const ESTADOS_GESTION = ["PENDIENTE", "EN GESTIÓN", "CERRADO"];
+      COUNT(DISTINCT t.id)::int AS total_trabajadores,
 
-/* =========================================================
-   CONSULTA DE DATOS
-========================================================= */
-
-async function obtenerDatosEpp() {
-  const [seguimientoResult, trabajadoresResult, inspeccionesResult] =
-    await Promise.all([
-      /* ---------------------------------------------------
-         SEGUIMIENTO
-         Solo evaluaciones con R o M
-      --------------------------------------------------- */
-
-      pool.query(`
-          SELECT
-            e.id AS evaluacion_id,
-            t.id AS trabajador_epp_id,
-            i.id AS inspeccion_pk,
-
-            i.num_inspeccion,
-            i.inspeccion_id,
-            i.fecha,
-            i.sede_operacion,
-            i.area_trabajo,
-            i.responsable_inspeccion,
-
-            t.codigo AS codigo_trabajador,
-            t.nombre AS nombre_trabajador,
-            t.cargo,
-
-            e.elemento_epp_id,
-            ep.nombre AS elemento,
-            ep.categoria AS categoria,
-
-            e.condicion,
-            e.uso,
-
-            e.plan_accion,
-            e.fecha_plan_accion,
-
-            t.observaciones
-
-          FROM inspecciones i
-
-          INNER JOIN trabajadores_epp t
-            ON t.inspeccion_pk = i.id
-
-          INNER JOIN detalle_trabajador_epp e
-            ON e.trabajador_epp_id = t.id
-
-          INNER JOIN elementos_epp ep
-            ON ep.id = e.elemento_epp_id
-
-          WHERE
-            i.tipo_inspeccion = 'EPP'
+      COUNT(DISTINCT t.id) FILTER (
+        WHERE EXISTS (
+          SELECT 1
+          FROM detalle_trabajador_epp dx
+          WHERE dx.trabajador_epp_id = t.id
             AND (
-              e.condicion IN ('R', 'M')
-              OR e.uso IN ('R', 'M')
+              dx.condicion IN ('R', 'M')
+              OR dx.uso IN ('R', 'M')
             )
+        )
+      )::int AS trabajadores_con_novedad,
 
-          ORDER BY
-            i.fecha ASC,
-            i.num_inspeccion ASC,
-            t.idx ASC,
-            ep.nombre ASC
-`),
+      (
+        COUNT(DISTINCT t.id)
+        -
+        COUNT(DISTINCT t.id) FILTER (
+          WHERE EXISTS (
+            SELECT 1
+            FROM detalle_trabajador_epp dx
+            WHERE dx.trabajador_epp_id = t.id
+              AND (
+                dx.condicion IN ('R', 'M')
+                OR dx.uso IN ('R', 'M')
+              )
+          )
+        )
+      )::int AS trabajadores_sin_novedad,
 
-      /* ---------------------------------------------------
-         TRABAJADORES
-      --------------------------------------------------- */
+      COUNT(d.id)::int AS total_epp_evaluados,
 
-      pool.query(`
-        SELECT
-          t.id AS trabajador_epp_id,
-          i.id AS inspeccion_pk,
+      COUNT(d.id) FILTER (
+        WHERE
+          d.condicion IN ('R', 'M')
+          OR d.uso IN ('R', 'M')
+      )::int AS epp_con_novedad,
 
-          i.num_inspeccion,
-          i.inspeccion_id,
-          i.fecha,
-          i.sede_operacion,
-          i.area_trabajo,
+      COUNT(d.id) FILTER (
+        WHERE NOT (
+          d.condicion IN ('R', 'M')
+          OR d.uso IN ('R', 'M')
+        )
+      )::int AS epp_sin_novedad,
 
-          t.codigo AS codigo_trabajador,
-          t.nombre AS nombre_trabajador,
-          t.cargo,
+      i.aprobacion_inspector_nombre,
+      i.aprobacion_inspector_at,
 
-          t.observaciones,
+      i.aprobacion_jefe_nombre,
+      i.aprobacion_jefe_at,
 
-          CASE
-            WHEN EXISTS (
-              SELECT 1
-              FROM detalle_trabajador_epp e
-              WHERE
-                e.trabajador_epp_id = t.id
-                AND (
-                  e.condicion IN ('R', 'M')
-                  OR e.uso IN ('R', 'M')
-                )
-            )
-            THEN 'CON NOVEDAD'
-            ELSE 'CONFORME'
-          END AS resultado
+      i.aprobacion_copasst_nombre,
+      i.aprobacion_copasst_at,
 
-        FROM inspecciones i
+      i.pdf_url
 
-        INNER JOIN trabajadores_epp t
-          ON t.inspeccion_pk = i.id
+    FROM inspecciones i
 
-        WHERE i.tipo_inspeccion = 'EPP'
+    LEFT JOIN trabajadores_epp t
+      ON t.inspeccion_pk = i.id
 
-        ORDER BY
-          i.fecha ASC,
-          i.num_inspeccion ASC,
-          t.idx ASC
-      `),
+    LEFT JOIN detalle_trabajador_epp d
+      ON d.trabajador_epp_id = t.id
 
-      /* ---------------------------------------------------
-         INSPECCIONES
-      --------------------------------------------------- */
+    WHERE i.tipo_inspeccion = 'EPP'
 
-      pool.query(`
-        SELECT
-          i.id AS inspeccion_pk,
-          i.num_inspeccion,
-          i.inspeccion_id,
-          i.fecha,
-          i.sede_operacion,
-          i.area_trabajo,
-          i.responsable_inspeccion,
+    GROUP BY
+      i.id,
+      i.num_inspeccion,
+      i.inspeccion_id,
+      i.fecha,
+      i.sede_operacion,
+      i.area_trabajo,
+      i.estado,
+      i.responsable_inspeccion,
+      i.cargo_responsable,
+      i.jefe_responsable,
+      i.cargo_jefe,
+      i.aprobacion_inspector_nombre,
+      i.aprobacion_inspector_at,
+      i.aprobacion_jefe_nombre,
+      i.aprobacion_jefe_at,
+      i.aprobacion_copasst_nombre,
+      i.aprobacion_copasst_at,
+      i.pdf_url
 
-          COUNT(DISTINCT t.id)::int AS total_trabajadores,
+    ORDER BY
+      i.num_inspeccion ASC
+  `);
 
-          COUNT(DISTINCT t.id) FILTER (
-            WHERE EXISTS (
-              SELECT 1
-              FROM detalle_trabajador_epp e
-              WHERE
-                e.trabajador_epp_id = t.id
-                AND (
-                  e.condicion IN ('R', 'M')
-                  OR e.uso IN ('R', 'M')
-                )
-            )
-          )::int AS con_novedad
-
-        FROM inspecciones i
-
-        LEFT JOIN trabajadores_epp t
-          ON t.inspeccion_pk = i.id
-
-        WHERE i.tipo_inspeccion = 'EPP'
-
-        GROUP BY
-          i.id,
-          i.num_inspeccion,
-          i.inspeccion_id,
-          i.fecha,
-          i.sede_operacion,
-          i.area_trabajo,
-          i.responsable_inspeccion
-
-        ORDER BY
-          i.fecha ASC,
-          i.num_inspeccion ASC
-      `),
-    ]);
-
-  return {
-    seguimiento: seguimientoResult.rows,
-    trabajadores: trabajadoresResult.rows,
-    inspecciones: inspeccionesResult.rows,
-  };
+  return result.rows;
 }
 
 /* =========================================================
@@ -198,505 +127,614 @@ async function obtenerDatosEpp() {
 ========================================================= */
 
 /* =========================================================
-   UTILIDADES
+   01 - RESUMEN INSPECCIONES
 ========================================================= */
-
-const COLOR_HEADER = "1F4E78";
-const COLOR_SISTEMA = "D9EAF7";
-const COLOR_SEGUIMIENTO = "FFF2CC";
-const COLOR_CONTROL = "E2F0D9";
-
-function convertirFecha(valor) {
-  if (!valor) {
-    return null;
-  }
-
-  if (valor instanceof Date) {
-    return valor;
-  }
-
-  const fecha = new Date(valor);
-
-  return Number.isNaN(fecha.getTime()) ? null : fecha;
-}
-
-function aplicarEstiloEncabezado(fila) {
-  fila.font = {
-    bold: true,
-    color: {
-      argb: "FFFFFFFF",
-    },
-  };
-
-  fila.fill = {
-    type: "pattern",
-    pattern: "solid",
-    fgColor: {
-      argb: COLOR_HEADER,
-    },
-  };
-
-  fila.alignment = {
-    vertical: "middle",
-    horizontal: "center",
-    wrapText: true,
-  };
-
-  fila.height = 32;
-}
-
-function aplicarColorColumnas(
-  hoja,
-  filaInicio,
-  filaFin,
-  columnaInicio,
-  columnaFin,
-  color,
-) {
-  if (filaFin < filaInicio) {
-    return;
-  }
-
-  for (let fila = filaInicio; fila <= filaFin; fila += 1) {
-    for (let columna = columnaInicio; columna <= columnaFin; columna += 1) {
-      hoja.getCell(fila, columna).fill = {
-        type: "pattern",
-        pattern: "solid",
-        fgColor: {
-          argb: color,
-        },
-      };
-    }
-  }
-}
-
-function aplicarFormatoSituacion(hoja) {
-  hoja.addConditionalFormatting({
-    ref: `X2:X${MAX_FILAS_SEGUIMIENTO}`,
-    rules: [
-      {
-        type: "containsText",
-        operator: "containsText",
-        text: "VENCIDO",
-        style: {
-          fill: {
-            type: "pattern",
-            pattern: "solid",
-            bgColor: {
-              argb: "F4CCCC",
-            },
-          },
-          font: {
-            color: {
-              argb: "9C0006",
-            },
-            bold: true,
-          },
-        },
-      },
-      {
-        type: "containsText",
-        operator: "containsText",
-        text: "PRÓXIMO A VENCER",
-        style: {
-          fill: {
-            type: "pattern",
-            pattern: "solid",
-            bgColor: {
-              argb: "FCE5CD",
-            },
-          },
-          font: {
-            bold: true,
-          },
-        },
-      },
-      {
-        type: "containsText",
-        operator: "containsText",
-        text: "EN PLAZO",
-        style: {
-          fill: {
-            type: "pattern",
-            pattern: "solid",
-            bgColor: {
-              argb: "D9EAD3",
-            },
-          },
-        },
-      },
-      {
-        type: "containsText",
-        operator: "containsText",
-        text: "CERRADO",
-        style: {
-          fill: {
-            type: "pattern",
-            pattern: "solid",
-            bgColor: {
-              argb: "D9EAD3",
-            },
-          },
-          font: {
-            bold: true,
-          },
-        },
-      },
-    ],
-  });
-}
-
-function aplicarFormatoEvaluaciones(hoja) {
-  hoja.addConditionalFormatting({
-    ref: `L2:M${MAX_FILAS_SEGUIMIENTO}`,
-    rules: [
-      {
-        type: "containsText",
-        operator: "containsText",
-        text: "M",
-        style: {
-          fill: {
-            type: "pattern",
-            pattern: "solid",
-            bgColor: {
-              argb: "F4CCCC",
-            },
-          },
-          font: {
-            bold: true,
-          },
-        },
-      },
-      {
-        type: "containsText",
-        operator: "containsText",
-        text: "R",
-        style: {
-          fill: {
-            type: "pattern",
-            pattern: "solid",
-            bgColor: {
-              argb: "FCE5CD",
-            },
-          },
-          font: {
-            bold: true,
-          },
-        },
-      },
-    ],
-  });
-}
-
-/* =========================================================
-   HOJA LISTAS
-========================================================= */
-
-function construirHojaListas(workbook) {
-  const hoja = obtenerOCrearHoja(workbook, "Listas");
-
-  hoja.getCell("A1").value = "Estados Gestión";
-
-  ESTADOS_GESTION.forEach((estado, index) => {
-    hoja.getCell(`A${index + 2}`).value = estado;
-  });
-
-  ocultarHoja(hoja);
-
-  return hoja;
-}
-
-/* =========================================================
-   HOJA SEGUIMIENTO EPP
-========================================================= */
-
-function construirHojaSeguimiento(workbook, seguimiento) {
-  const hoja = obtenerOCrearHoja(workbook, "Seguimiento EPP");
+function construirHojaResumenInspecciones(workbook, inspecciones) {
+  const hoja = obtenerOCrearHoja(workbook, "01 - Resumen Inspecciones");
 
   configurarColumnas(hoja, [
-    { header: "ID Seguimiento", key: "idSeguimiento", width: 25 },
+    // IDENTIFICACIÓN
     { header: "N° Inspección", key: "numInspeccion", width: 14 },
-    { header: "Código Inspección", key: "inspeccionId", width: 25 },
-    { header: "Fecha Inspección", key: "fecha", width: 16 },
+    { header: "Código Inspección", key: "inspeccionId", width: 24 },
+    { header: "Fecha", key: "fecha", width: 16 },
     { header: "Sede", key: "sede", width: 18 },
     { header: "Área", key: "area", width: 22 },
+    { header: "Estado", key: "estado", width: 22 },
+
+    // RESPONSABLES
     {
       header: "Responsable Inspección",
       key: "responsableInspeccion",
       width: 25,
     },
-    { header: "Código Trabajador", key: "codigo", width: 18 },
-    { header: "Nombre Trabajador", key: "nombre", width: 25 },
-    { header: "Cargo", key: "cargo", width: 22 },
-    { header: "Elemento EPP", key: "elemento", width: 24 },
-    { header: "Condición", key: "condicion", width: 12 },
-    { header: "Uso", key: "uso", width: 10 },
-    { header: "Plan de Acción", key: "planAccion", width: 40 },
-    { header: "Fecha Límite", key: "fechaLimite", width: 16 },
     {
-      header: "Observaciones Inspección",
-      key: "observaciones",
-      width: 35,
+      header: "Cargo Responsable",
+      key: "cargoResponsable",
+      width: 22,
+    },
+    {
+      header: "Jefe Responsable",
+      key: "jefeResponsable",
+      width: 25,
+    },
+    {
+      header: "Cargo Jefe",
+      key: "cargoJefe",
+      width: 22,
     },
 
-    // Columnas manuales SST
-    { header: "Estado Gestión", key: "estadoGestion", width: 18 },
+    // RESULTADOS
     {
-      header: "Responsable Gestión",
-      key: "responsableGestion",
+      header: "Total Trabajadores",
+      key: "totalTrabajadores",
+      width: 18,
+    },
+    {
+      header: "Trabajadores con Novedad",
+      key: "trabajadoresConNovedad",
       width: 24,
     },
-    { header: "Fecha Gestión", key: "fechaGestion", width: 16 },
     {
-      header: "Seguimiento / Gestión Realizada",
-      key: "gestionRealizada",
+      header: "Trabajadores sin Novedad",
+      key: "trabajadoresSinNovedad",
+      width: 24,
+    },
+    {
+      header: "Total EPP Evaluados",
+      key: "totalEppEvaluados",
+      width: 20,
+    },
+    {
+      header: "EPP con Novedad",
+      key: "eppConNovedad",
+      width: 18,
+    },
+    {
+      header: "EPP sin Novedad",
+      key: "eppSinNovedad",
+      width: 18,
+    },
+
+    // APROBACIONES
+    {
+      header: "Aprobación Inspector",
+      key: "aprobacionInspector",
+      width: 25,
+    },
+    {
+      header: "Fecha Aprobación Inspector",
+      key: "fechaAprobacionInspector",
+      width: 24,
+    },
+    {
+      header: "Aprobación Jefe",
+      key: "aprobacionJefe",
+      width: 25,
+    },
+    {
+      header: "Fecha Aprobación Jefe",
+      key: "fechaAprobacionJefe",
+      width: 22,
+    },
+    {
+      header: "Aprobación COPASST",
+      key: "aprobacionCopasst",
+      width: 25,
+    },
+    {
+      header: "Fecha Aprobación COPASST",
+      key: "fechaAprobacionCopasst",
+      width: 25,
+    },
+    {
+      header: "PDF",
+      key: "pdf",
       width: 40,
     },
-    { header: "Fecha Cierre", key: "fechaCierre", width: 16 },
-    {
-      header: "Observaciones Cierre",
-      key: "observacionesCierre",
-      width: 35,
-    },
-
-    // Calculadas
-    { header: "Días Restantes", key: "diasRestantes", width: 16 },
-    { header: "Situación", key: "situacion", width: 20 },
   ]);
 
-  aplicarEstiloEncabezado(hoja.getRow(1));
-
-  seguimiento.forEach((fila) => {
+  inspecciones.forEach((fila) => {
     hoja.addRow({
-      idSeguimiento:
-        `EPP-${fila.inspeccion_pk}-` +
-        `${fila.trabajador_epp_id}-` +
-        `${fila.evaluacion_id}`,
-
       numInspeccion: Number(fila.num_inspeccion),
-      inspeccionId: fila.inspeccion_id,
+      inspeccionId: fila.inspeccion_id || "",
+      fecha: fila.fecha || "",
+      sede: fila.sede_operacion || "",
+      area: fila.area_trabajo || "",
+      estado: fila.estado || "",
 
-      fecha: convertirFecha(fila.fecha),
+      responsableInspeccion: fila.responsable_inspeccion || "",
+      cargoResponsable: fila.cargo_responsable || "",
+      jefeResponsable: fila.jefe_responsable || "",
+      cargoJefe: fila.cargo_jefe || "",
 
-      sede: fila.sede_operacion,
-      area: fila.area_trabajo,
+      totalTrabajadores: Number(fila.total_trabajadores || 0),
+      trabajadoresConNovedad: Number(fila.trabajadores_con_novedad || 0),
+      trabajadoresSinNovedad: Number(fila.trabajadores_sin_novedad || 0),
 
-      responsableInspeccion: fila.responsable_inspeccion,
+      totalEppEvaluados: Number(fila.total_epp_evaluados || 0),
+      eppConNovedad: Number(fila.epp_con_novedad || 0),
+      eppSinNovedad: Number(fila.epp_sin_novedad || 0),
 
-      codigo: fila.codigo_trabajador,
-      nombre: fila.nombre_trabajador,
-      cargo: fila.cargo,
+      aprobacionInspector: fila.aprobacion_inspector_nombre || "",
+      fechaAprobacionInspector: fila.aprobacion_inspector_at || null,
 
-      elemento: fila.elemento,
-      condicion: fila.condicion,
-      uso: fila.uso,
+      aprobacionJefe: fila.aprobacion_jefe_nombre || "",
+      fechaAprobacionJefe: fila.aprobacion_jefe_at || null,
 
-      planAccion: fila.plan_accion || "",
-      fechaLimite: convertirFecha(fila.fecha_plan_accion),
-      observaciones: fila.observaciones || "",
+      aprobacionCopasst: fila.aprobacion_copasst_nombre || "",
+      fechaAprobacionCopasst: fila.aprobacion_copasst_at || null,
 
-      estadoGestion: "PENDIENTE",
+      pdf: fila.pdf_url || "",
     });
   });
 
-  const ultimaFilaDatos = hoja.rowCount;
-
-  /*
-   * A:P
-   * Datos provenientes automáticamente del sistema.
-   */
-  aplicarColorColumnas(hoja, 2, ultimaFilaDatos, 1, 16, COLOR_SISTEMA);
-
-  /*
-   * Q:V
-   * Campos manuales de seguimiento SST.
-   */
-  aplicarColorColumnas(hoja, 2, ultimaFilaDatos, 17, 22, COLOR_SEGUIMIENTO);
-
-  /*
-   * W:X
-   * Campos calculados automáticamente.
-   */
-  aplicarColorColumnas(hoja, 2, ultimaFilaDatos, 23, 24, COLOR_CONTROL);
-
-  /*
-   * Dejamos preparadas las fórmulas hasta la fila 1000.
-   * Las filas sin ID Seguimiento permanecen visualmente vacías.
-   */
-
-  for (let fila = 2; fila <= MAX_FILAS_SEGUIMIENTO; fila += 1) {
-    const diasRestantes = hoja.getCell(`W${fila}`);
-    const situacion = hoja.getCell(`X${fila}`);
-
-    diasRestantes.value = {
-      formula:
-        `IF(A${fila}="","",` +
-        `IF(Q${fila}="CERRADO",0,` +
-        `IF(O${fila}="","",INT(O${fila})-TODAY())))`,
-    };
-
-    situacion.value = {
-      formula:
-        `IF(A${fila}="","",` +
-        `IF(Q${fila}="CERRADO","CERRADO",` +
-        `IF(O${fila}="","",` +
-        `IF(O${fila}<TODAY(),"VENCIDO",` +
-        `IF(O${fila}-TODAY()<=3,` +
-        `"PRÓXIMO A VENCER","EN PLAZO")))))`,
-    };
-  }
-
-  aplicarFormatoEvaluaciones(hoja);
-  aplicarFormatoSituacion(hoja);
-
-  aplicarListaDesplegable(
-    hoja,
-    "Q",
-    2,
-    MAX_FILAS_SEGUIMIENTO,
-    "Listas!$A$2:$A$4",
-  );
-
-  aplicarFormatoFecha(hoja, "D", 2, MAX_FILAS_SEGUIMIENTO);
-
-  aplicarFormatoFecha(hoja, "O", 2, MAX_FILAS_SEGUIMIENTO);
-
-  aplicarFormatoFecha(hoja, "S", 2, MAX_FILAS_SEGUIMIENTO);
-
-  aplicarFormatoFecha(hoja, "U", 2, MAX_FILAS_SEGUIMIENTO);
+  const ultimaFila = Math.max(hoja.rowCount, 2);
 
   congelarEncabezado(hoja, 1);
 
-  activarFiltro(hoja, `A1:X${Math.max(hoja.rowCount, 2)}`);
+  activarFiltro(hoja, `A1:W${ultimaFila}`);
+
+  aplicarFormatoFecha(hoja, "R", 2, ultimaFila);
+  aplicarFormatoFecha(hoja, "T", 2, ultimaFila);
+  aplicarFormatoFecha(hoja, "V", 2, ultimaFila);
 
   return hoja;
 }
 
 /* =========================================================
-   HOJA TRABAJADORES
+   02 - TRABAJADORES
 ========================================================= */
+async function obtenerTrabajadores() {
+  const result = await pool.query(`
+    SELECT
+      t.id AS trabajador_epp_id,
+
+      i.num_inspeccion,
+      i.inspeccion_id,
+      i.fecha,
+      i.sede_operacion,
+      i.area_trabajo,
+
+      t.codigo AS codigo_trabajador,
+      t.nombre AS nombre_trabajador,
+      t.cargo,
+
+      COUNT(d.id)::int AS total_epp_evaluados,
+
+      COUNT(d.id) FILTER (
+        WHERE
+          d.condicion IN ('R', 'M')
+          OR d.uso IN ('R', 'M')
+      )::int AS epp_con_novedad,
+
+      COUNT(d.id) FILTER (
+        WHERE NOT (
+          d.condicion IN ('R', 'M')
+          OR d.uso IN ('R', 'M')
+        )
+      )::int AS epp_sin_novedad,
+
+      CASE
+        WHEN COUNT(d.id) = 0
+        THEN 'SIN EVALUACIÓN'
+
+        WHEN COUNT(d.id) FILTER (
+          WHERE
+            d.condicion IN ('R', 'M')
+            OR d.uso IN ('R', 'M')
+        ) > 0
+        THEN 'CON NOVEDAD'
+
+        ELSE 'SIN NOVEDAD'
+      END AS resultado_general,
+
+      t.observaciones,
+      t.evidencia_ruta,
+      t.evidencia_fecha
+
+    FROM trabajadores_epp t
+
+    INNER JOIN inspecciones i
+      ON i.id = t.inspeccion_pk
+
+    LEFT JOIN detalle_trabajador_epp d
+      ON d.trabajador_epp_id = t.id
+
+    WHERE i.tipo_inspeccion = 'EPP'
+
+    GROUP BY
+      t.id,
+      t.idx,
+      i.id,
+      i.num_inspeccion,
+      i.inspeccion_id,
+      i.fecha,
+      i.sede_operacion,
+      i.area_trabajo,
+      t.codigo,
+      t.nombre,
+      t.cargo,
+      t.observaciones,
+      t.evidencia_ruta,
+      t.evidencia_fecha
+
+    ORDER BY
+      i.num_inspeccion ASC,
+      t.idx ASC
+  `);
+
+  return result.rows;
+}
 
 function construirHojaTrabajadores(workbook, trabajadores) {
-  const hoja = obtenerOCrearHoja(workbook, "Trabajadores");
+  const hoja = obtenerOCrearHoja(workbook, "02 - Trabajadores");
 
   configurarColumnas(hoja, [
+    // INSPECCIÓN
     { header: "N° Inspección", key: "numInspeccion", width: 14 },
-    { header: "Código Inspección", key: "inspeccionId", width: 25 },
+    { header: "Código Inspección", key: "inspeccionId", width: 24 },
     { header: "Fecha", key: "fecha", width: 16 },
     { header: "Sede", key: "sede", width: 18 },
     { header: "Área", key: "area", width: 22 },
-    { header: "Código Trabajador", key: "codigo", width: 18 },
-    { header: "Trabajador", key: "trabajador", width: 25 },
-    { header: "Cargo", key: "cargo", width: 22 },
-    { header: "Resultado", key: "resultado", width: 18 },
-    { header: "Plan de Acción", key: "planAccion", width: 40 },
-    { header: "Fecha Límite", key: "fechaLimite", width: 16 },
-  ]);
 
-  aplicarEstiloEncabezado(hoja.getRow(1));
+    // TRABAJADOR
+    { header: "Código Trabajador", key: "codigo", width: 20 },
+    { header: "Nombre Trabajador", key: "nombre", width: 28 },
+    { header: "Cargo", key: "cargo", width: 24 },
+
+    // RESULTADOS
+    {
+      header: "Total EPP Evaluados",
+      key: "totalEppEvaluados",
+      width: 20,
+    },
+    {
+      header: "EPP con Novedad",
+      key: "eppConNovedad",
+      width: 18,
+    },
+    {
+      header: "EPP sin Novedad",
+      key: "eppSinNovedad",
+      width: 18,
+    },
+    {
+      header: "Resultado General",
+      key: "resultadoGeneral",
+      width: 20,
+    },
+
+    // INFORMACIÓN ADICIONAL
+    {
+      header: "Observaciones",
+      key: "observaciones",
+      width: 40,
+    },
+    {
+      header: "Evidencia",
+      key: "evidencia",
+      width: 45,
+    },
+    {
+      header: "Fecha Evidencia",
+      key: "fechaEvidencia",
+      width: 20,
+    },
+  ]);
 
   trabajadores.forEach((fila) => {
     hoja.addRow({
       numInspeccion: Number(fila.num_inspeccion),
-      inspeccionId: fila.inspeccion_id,
-      fecha: convertirFecha(fila.fecha),
+      inspeccionId: fila.inspeccion_id || "",
+      fecha: fila.fecha || "",
+      sede: fila.sede_operacion || "",
+      area: fila.area_trabajo || "",
 
-      sede: fila.sede_operacion,
-      area: fila.area_trabajo,
+      codigo: fila.codigo_trabajador || "",
+      nombre: fila.nombre_trabajador || "",
+      cargo: fila.cargo || "",
 
-      codigo: fila.codigo_trabajador,
-      trabajador: fila.nombre_trabajador,
-      cargo: fila.cargo,
+      totalEppEvaluados: Number(fila.total_epp_evaluados || 0),
+      eppConNovedad: Number(fila.epp_con_novedad || 0),
+      eppSinNovedad: Number(fila.epp_sin_novedad || 0),
+      resultadoGeneral: fila.resultado_general || "",
 
-      resultado: fila.resultado,
-
-      planAccion: fila.plan_accion || "",
-      fechaLimite: convertirFecha(fila.fecha_plan_accion),
+      observaciones: fila.observaciones || "",
+      evidencia: fila.evidencia_ruta || "",
+      fechaEvidencia: fila.evidencia_fecha || null,
     });
   });
 
-  aplicarFormatoFecha(hoja, "C", 2, Math.max(hoja.rowCount, 2));
-  aplicarFormatoFecha(hoja, "K", 2, Math.max(hoja.rowCount, 2));
+  const ultimaFila = Math.max(hoja.rowCount, 2);
 
   congelarEncabezado(hoja, 1);
 
-  activarFiltro(hoja, `A1:K${Math.max(hoja.rowCount, 2)}`);
+  activarFiltro(hoja, `A1:O${ultimaFila}`);
+
+  aplicarFormatoFecha(hoja, "O", 2, ultimaFila);
+
+  return hoja;
+}
+/* =========================================================
+   03 - DETALLE EPP
+========================================================= */
+async function obtenerDetalleEpp() {
+  const result = await pool.query(`
+    SELECT
+      d.id AS detalle_epp_id,
+
+      i.num_inspeccion,
+      i.inspeccion_id,
+      i.fecha,
+      i.sede_operacion,
+      i.area_trabajo,
+
+      t.codigo AS codigo_trabajador,
+      t.nombre AS nombre_trabajador,
+      t.cargo,
+
+      e.nombre AS elemento_epp,
+      e.categoria,
+
+      d.condicion,
+      d.uso,
+
+      CASE
+        WHEN
+          d.condicion IN ('R', 'M')
+          OR d.uso IN ('R', 'M')
+        THEN 'CON NOVEDAD'
+
+        ELSE 'SIN NOVEDAD'
+      END AS resultado,
+
+      d.plan_accion,
+      d.fecha_plan_accion,
+
+      t.observaciones AS observaciones_trabajador
+
+    FROM detalle_trabajador_epp d
+
+    INNER JOIN trabajadores_epp t
+      ON t.id = d.trabajador_epp_id
+
+    INNER JOIN inspecciones i
+      ON i.id = t.inspeccion_pk
+
+    INNER JOIN elementos_epp e
+      ON e.id = d.elemento_epp_id
+
+    WHERE i.tipo_inspeccion = 'EPP'
+
+    ORDER BY
+      i.num_inspeccion ASC,
+      t.idx ASC,
+      e.nombre ASC
+  `);
+
+  return result.rows;
+}
+
+function construirHojaDetalleEpp(workbook, detalle) {
+  const hoja = obtenerOCrearHoja(workbook, "03 - Detalle EPP");
+
+  configurarColumnas(hoja, [
+    // INSPECCIÓN
+    { header: "N° Inspección", key: "numInspeccion", width: 14 },
+    { header: "Código Inspección", key: "inspeccionId", width: 24 },
+    { header: "Fecha", key: "fecha", width: 16 },
+    { header: "Sede", key: "sede", width: 18 },
+    { header: "Área", key: "area", width: 22 },
+
+    // TRABAJADOR
+    { header: "Código Trabajador", key: "codigo", width: 20 },
+    { header: "Nombre Trabajador", key: "nombre", width: 28 },
+    { header: "Cargo", key: "cargo", width: 24 },
+
+    // ELEMENTO EPP
+    { header: "Elemento EPP", key: "elemento", width: 28 },
+    { header: "Categoría", key: "categoria", width: 18 },
+
+    // EVALUACIÓN
+    { header: "Condición", key: "condicion", width: 14 },
+    { header: "Uso", key: "uso", width: 12 },
+    { header: "Resultado", key: "resultado", width: 20 },
+
+    // PLAN DE ACCIÓN
+    { header: "Plan de Acción", key: "planAccion", width: 40 },
+    { header: "Fecha Límite", key: "fechaLimite", width: 18 },
+
+    // INFORMACIÓN ADICIONAL
+    {
+      header: "Observaciones Trabajador",
+      key: "observaciones",
+      width: 40,
+    },
+  ]);
+
+  detalle.forEach((fila) => {
+    hoja.addRow({
+      numInspeccion: Number(fila.num_inspeccion),
+      inspeccionId: fila.inspeccion_id || "",
+      fecha: fila.fecha || "",
+      sede: fila.sede_operacion || "",
+      area: fila.area_trabajo || "",
+
+      codigo: fila.codigo_trabajador || "",
+      nombre: fila.nombre_trabajador || "",
+      cargo: fila.cargo || "",
+
+      elemento: fila.elemento_epp || "",
+      categoria: fila.categoria || "",
+
+      condicion: fila.condicion || "",
+      uso: fila.uso || "",
+      resultado: fila.resultado || "",
+
+      planAccion: fila.plan_accion || "",
+      fechaLimite: fila.fecha_plan_accion || null,
+
+      observaciones: fila.observaciones_trabajador || "",
+    });
+  });
+
+  const ultimaFila = Math.max(hoja.rowCount, 2);
+
+  congelarEncabezado(hoja, 1);
+
+  activarFiltro(hoja, `A1:P${ultimaFila}`);
+
+  aplicarFormatoFecha(hoja, "O", 2, ultimaFila);
 
   return hoja;
 }
 
 /* =========================================================
-   HOJA INSPECCIONES
+   04 - PLANES DE ACCIÓN
 ========================================================= */
+async function obtenerPlanesAccion() {
+  const result = await pool.query(`
+    SELECT
+      d.id AS detalle_epp_id,
 
-function construirHojaInspecciones(workbook, inspecciones) {
-  const hoja = obtenerOCrearHoja(workbook, "Inspecciones");
+      i.num_inspeccion,
+      i.inspeccion_id,
+      i.fecha,
+      i.sede_operacion,
+      i.area_trabajo,
+
+      t.codigo AS codigo_trabajador,
+      t.nombre AS nombre_trabajador,
+      t.cargo,
+
+      e.nombre AS elemento_epp,
+      e.categoria,
+
+      d.condicion,
+      d.uso,
+
+      d.plan_accion,
+      d.fecha_plan_accion
+
+    FROM detalle_trabajador_epp d
+
+    INNER JOIN trabajadores_epp t
+      ON t.id = d.trabajador_epp_id
+
+    INNER JOIN inspecciones i
+      ON i.id = t.inspeccion_pk
+
+    INNER JOIN elementos_epp e
+      ON e.id = d.elemento_epp_id
+
+    WHERE
+      i.tipo_inspeccion = 'EPP'
+      AND (
+        d.condicion IN ('R', 'M')
+        OR d.uso IN ('R', 'M')
+      )
+      AND NULLIF(TRIM(d.plan_accion), '') IS NOT NULL
+
+    ORDER BY
+      d.fecha_plan_accion ASC NULLS LAST,
+      i.num_inspeccion ASC,
+      t.idx ASC,
+      e.nombre ASC
+  `);
+
+  return result.rows;
+}
+
+function construirHojaPlanesAccion(workbook, planes) {
+  const hoja = obtenerOCrearHoja(workbook, "04 - Planes de Acción");
 
   configurarColumnas(hoja, [
+    // INSPECCIÓN
     { header: "N° Inspección", key: "numInspeccion", width: 14 },
-    { header: "Código Inspección", key: "inspeccionId", width: 25 },
-    { header: "Fecha", key: "fecha", width: 16 },
+    { header: "Código Inspección", key: "inspeccionId", width: 24 },
+    { header: "Fecha Inspección", key: "fecha", width: 18 },
     { header: "Sede", key: "sede", width: 18 },
     { header: "Área", key: "area", width: 22 },
-    {
-      header: "Responsable Inspección",
-      key: "responsable",
-      width: 25,
-    },
-    {
-      header: "Total Trabajadores",
-      key: "total",
-      width: 18,
-    },
-    {
-      header: "Con Novedad",
-      key: "conNovedad",
-      width: 16,
-    },
-    {
-      header: "Sin Novedad",
-      key: "sinNovedad",
-      width: 16,
-    },
+
+    // TRABAJADOR
+    { header: "Código Trabajador", key: "codigo", width: 20 },
+    { header: "Nombre Trabajador", key: "nombre", width: 28 },
+    { header: "Cargo", key: "cargo", width: 24 },
+
+    // ELEMENTO
+    { header: "Elemento EPP", key: "elemento", width: 28 },
+    { header: "Categoría", key: "categoria", width: 18 },
+
+    // EVALUACIÓN
+    { header: "Condición", key: "condicion", width: 14 },
+    { header: "Uso", key: "uso", width: 12 },
+
+    // PLAN
+    { header: "Plan de Acción", key: "planAccion", width: 40 },
+    { header: "Fecha Límite", key: "fechaLimite", width: 18 },
+
+    // CONTROL
+    { header: "Días Restantes", key: "diasRestantes", width: 18 },
+    { header: "Situación", key: "situacion", width: 20 },
   ]);
 
-  aplicarEstiloEncabezado(hoja.getRow(1));
-
-  inspecciones.forEach((fila) => {
-    const total = Number(fila.total_trabajadores || 0);
-    const conNovedad = Number(fila.con_novedad || 0);
-
-    hoja.addRow({
+  planes.forEach((fila) => {
+    const row = hoja.addRow({
       numInspeccion: Number(fila.num_inspeccion),
-      inspeccionId: fila.inspeccion_id,
-      fecha: convertirFecha(fila.fecha),
+      inspeccionId: fila.inspeccion_id || "",
+      fecha: fila.fecha || "",
+      sede: fila.sede_operacion || "",
+      area: fila.area_trabajo || "",
 
-      sede: fila.sede_operacion,
-      area: fila.area_trabajo,
+      codigo: fila.codigo_trabajador || "",
+      nombre: fila.nombre_trabajador || "",
+      cargo: fila.cargo || "",
 
-      responsable: fila.responsable_inspeccion,
+      elemento: fila.elemento_epp || "",
+      categoria: fila.categoria || "",
 
-      total,
-      conNovedad,
-      sinNovedad: total - conNovedad,
+      condicion: fila.condicion || "",
+      uso: fila.uso || "",
+
+      planAccion: fila.plan_accion || "",
+      fechaLimite: fila.fecha_plan_accion || null,
     });
+
+    const numeroFila = row.number;
+
+    row.getCell(15).value = {
+      formula: `IF(N${numeroFila}="","",INT(N${numeroFila})-TODAY())`,
+    };
+
+    row.getCell(16).value = {
+      formula:
+        `IF(N${numeroFila}="","",` +
+        `IF(N${numeroFila}<TODAY(),"VENCIDO",` +
+        `IF(N${numeroFila}-TODAY()<=3,"PRÓXIMO A VENCER","EN PLAZO")))`,
+    };
   });
 
-  aplicarFormatoFecha(hoja, "C", 2, Math.max(hoja.rowCount, 2));
+  const ultimaFila = Math.max(hoja.rowCount, 2);
+
+  aplicarFormatoFecha(hoja, "N", 2, ultimaFila);
 
   congelarEncabezado(hoja, 1);
 
-  activarFiltro(hoja, `A1:I${Math.max(hoja.rowCount, 2)}`);
+  activarFiltro(hoja, `A1:P${ultimaFila}`);
 
   return hoja;
 }
-
 /* =========================================================
    GENERADOR
 ========================================================= */
 
 async function generarExcelSeguimientoEpp() {
-  const datos = await obtenerDatosEpp();
+  const [inspecciones, trabajadores, detalle, planes] = await Promise.all([
+    obtenerResumenInspecciones(),
+    obtenerTrabajadores(),
+    obtenerDetalleEpp(),
+    obtenerPlanesAccion(),
+  ]);
 
   const workbook = crearWorkbook();
 
@@ -705,13 +743,10 @@ async function generarExcelSeguimientoEpp() {
   workbook.created = new Date();
   workbook.modified = new Date();
 
-  construirHojaSeguimiento(workbook, datos.seguimiento);
-
-  construirHojaTrabajadores(workbook, datos.trabajadores);
-
-  construirHojaInspecciones(workbook, datos.inspecciones);
-
-  construirHojaListas(workbook);
+  construirHojaResumenInspecciones(workbook, inspecciones);
+  construirHojaTrabajadores(workbook, trabajadores);
+  construirHojaDetalleEpp(workbook, detalle);
+  construirHojaPlanesAccion(workbook, planes);
 
   return generarBuffer(workbook);
 }
