@@ -77,12 +77,17 @@ function crearPanelCatalogoEpp() {
             ></path>
           </svg>
 
-          <input
-            type="text"
-            class="epp-catalogo-buscador"
-            placeholder="Buscar elemento EPP..."
-            autocomplete="off"
-          >
+<input
+  type="text"
+  class="epp-catalogo-buscador"
+  name="epp-catalogo-buscador"
+  placeholder="Buscar elemento EPP..."
+  autocomplete="off"
+  role="combobox"
+  aria-autocomplete="list"
+  aria-expanded="false"
+  aria-label="Buscar elemento EPP"
+>
 
         </div>
 
@@ -100,6 +105,8 @@ function crearPanelCatalogoEpp() {
 function filtrarElementosEpp(card, terminoBusqueda = "") {
   const contenedorResultados = card.querySelector(".epp-catalogo-resultados");
 
+  const buscador = card.querySelector(".epp-catalogo-buscador");
+
   if (!contenedorResultados) {
     return;
   }
@@ -108,21 +115,11 @@ function filtrarElementosEpp(card, terminoBusqueda = "") {
   // NORMALIZAR TEXTO DE BÚSQUEDA
   // =====================================================
 
-  const termino = terminoBusqueda
+  const termino = String(terminoBusqueda || "")
     .trim()
     .toLowerCase()
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "");
-
-  // =====================================================
-  // SI NO HAY BÚSQUEDA, CERRAR DROPDOWN
-  // =====================================================
-
-  if (!termino) {
-    contenedorResultados.innerHTML = "";
-    contenedorResultados.hidden = true;
-    return;
-  }
 
   // =====================================================
   // IDs QUE EL TRABAJADOR YA TIENE AGREGADOS
@@ -145,9 +142,14 @@ function filtrarElementosEpp(card, terminoBusqueda = "") {
   const resultados = ELEMENTOS_EPP.filter((elemento) => {
     const elementoEppId = String(elemento.id);
 
-    // No mostrar elementos que ya están agregados
+    // No mostrar elementos ya agregados al trabajador.
     if (idsActuales.has(elementoEppId)) {
       return false;
+    }
+
+    // Si el buscador está vacío, mostrar todos los disponibles.
+    if (!termino) {
+      return true;
     }
 
     const nombreNormalizado = String(elemento.nombre || "")
@@ -170,6 +172,9 @@ function filtrarElementosEpp(card, terminoBusqueda = "") {
     `;
 
     contenedorResultados.hidden = false;
+
+    buscador?.setAttribute("aria-expanded", "true");
+
     return;
   }
 
@@ -185,6 +190,7 @@ function filtrarElementosEpp(card, terminoBusqueda = "") {
           class="epp-combobox-opcion"
           data-elemento-epp-id="${elemento.id}"
           data-elemento="${elemento.nombre}"
+          role="option"
         >
           <span class="epp-combobox-opcion-nombre">
             ${elemento.nombre}
@@ -199,6 +205,8 @@ function filtrarElementosEpp(card, terminoBusqueda = "") {
     .join("");
 
   contenedorResultados.hidden = false;
+
+  buscador?.setAttribute("aria-expanded", "true");
 }
 
 const VALORES_CALIFICACION = ["B", "R", "M", "NA"];
@@ -232,7 +240,33 @@ export function createTrabajadoresEppManager({
 
     container?.addEventListener("change", manejarCambioCalificacionEpp);
 
-    container.addEventListener("input", (event) => {
+    // =====================================================
+    // AUTOCOMPLETE EPP - MOSTRAR AL RECIBIR FOCO
+    // =====================================================
+
+    container?.addEventListener("focusin", (event) => {
+      const buscador = event.target.closest(".epp-catalogo-buscador");
+
+      if (!buscador) {
+        return;
+      }
+
+      const card = buscador.closest(".trabajador-card");
+
+      if (!card) {
+        return;
+      }
+
+      // Si está vacío, muestra todos los EPP disponibles.
+      // Si tiene texto, muestra los resultados filtrados.
+      filtrarElementosEpp(card, buscador.value);
+    });
+
+    // =====================================================
+    // AUTOCOMPLETE EPP - FILTRAR AL ESCRIBIR
+    // =====================================================
+
+    container?.addEventListener("input", (event) => {
       const buscador = event.target.closest(".epp-catalogo-buscador");
 
       if (!buscador) {
@@ -246,6 +280,143 @@ export function createTrabajadoresEppManager({
       }
 
       filtrarElementosEpp(card, buscador.value);
+    });
+
+    // =====================================================
+    // AUTOCOMPLETE EPP - NAVEGACIÓN CON TECLADO
+    // =====================================================
+
+    container?.addEventListener("keydown", (event) => {
+      const buscador = event.target.closest(".epp-catalogo-buscador");
+
+      if (!buscador) {
+        return;
+      }
+
+      const card = buscador.closest(".trabajador-card");
+
+      if (!card) {
+        return;
+      }
+
+      const resultados = card.querySelector(".epp-catalogo-resultados");
+
+      if (!resultados || resultados.hidden) {
+        return;
+      }
+
+      const opciones = Array.from(
+        resultados.querySelectorAll(".epp-combobox-opcion"),
+      );
+
+      if (opciones.length === 0) {
+        return;
+      }
+
+      let indiceActivo = opciones.findIndex((opcion) =>
+        opcion.classList.contains("epp-combobox-opcion-activa"),
+      );
+
+      // -----------------------------------------------------
+      // FLECHA ABAJO
+      // -----------------------------------------------------
+
+      if (event.key === "ArrowDown") {
+        event.preventDefault();
+
+        indiceActivo =
+          indiceActivo < opciones.length - 1 ? indiceActivo + 1 : 0;
+      }
+
+      // -----------------------------------------------------
+      // FLECHA ARRIBA
+      // -----------------------------------------------------
+      else if (event.key === "ArrowUp") {
+        event.preventDefault();
+
+        indiceActivo =
+          indiceActivo > 0 ? indiceActivo - 1 : opciones.length - 1;
+      }
+
+      // -----------------------------------------------------
+      // ENTER - SELECCIONAR
+      // -----------------------------------------------------
+      else if (event.key === "Enter") {
+        event.preventDefault();
+
+        // Si ya navegó con flechas, selecciona esa opción.
+        // Si no, selecciona el primer resultado.
+        const opcionSeleccionada =
+          indiceActivo >= 0 ? opciones[indiceActivo] : opciones[0];
+
+        opcionSeleccionada?.click();
+
+        return;
+      }
+
+      // -----------------------------------------------------
+      // ESCAPE - CERRAR
+      // -----------------------------------------------------
+      else if (event.key === "Escape") {
+        resultados.hidden = true;
+        resultados.innerHTML = "";
+
+        buscador.setAttribute("aria-expanded", "false");
+
+        return;
+      }
+
+      // -----------------------------------------------------
+      // CUALQUIER OTRA TECLA
+      // -----------------------------------------------------
+      else {
+        return;
+      }
+
+      // -----------------------------------------------------
+      // ACTUALIZAR OPCIÓN ACTIVA
+      // -----------------------------------------------------
+
+      opciones.forEach((opcion) => {
+        opcion.classList.remove("epp-combobox-opcion-activa");
+      });
+
+      const opcionActiva = opciones[indiceActivo];
+
+      opcionActiva.classList.add("epp-combobox-opcion-activa");
+
+      opcionActiva.scrollIntoView({
+        block: "nearest",
+      });
+    });
+
+    // =====================================================
+    // AUTOCOMPLETE EPP - CERRAR AL HACER CLICK FUERA
+    // =====================================================
+
+    document.addEventListener("click", (event) => {
+      // Si hizo click en el buscador o dentro de los
+      // resultados, no cerramos el autocomplete.
+      if (
+        event.target.closest(".epp-catalogo-buscador") ||
+        event.target.closest(".epp-catalogo-resultados")
+      ) {
+        return;
+      }
+
+      // Cerrar cualquier autocomplete EPP abierto.
+      container
+        ?.querySelectorAll(".epp-catalogo-resultados")
+        .forEach((resultados) => {
+          resultados.hidden = true;
+          resultados.innerHTML = "";
+
+          const card = resultados.closest(".trabajador-card");
+
+          const buscador = card?.querySelector(".epp-catalogo-buscador");
+
+          buscador?.setAttribute("aria-expanded", "false");
+        });
     });
   }
 
@@ -538,6 +709,7 @@ export function createTrabajadoresEppManager({
 
       if (buscador) {
         buscador.value = "";
+        buscador.setAttribute("aria-expanded", "false");
       }
 
       if (resultados) {

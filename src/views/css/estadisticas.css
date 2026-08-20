@@ -1389,3 +1389,9 @@ td:nth-child(7){
     padding: 0;
   }
 }
+
+.epp-combobox-opcion-activa {
+  background: #eef4ff;
+  outline: 2px solid #2563eb;
+  outline-offset: -2px;
+}
