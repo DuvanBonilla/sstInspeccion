@@ -32,47 +32,81 @@ function dibujarImagenAjustada(doc, file, x, y, width, height, fontSize = 9) {
       throw new Error("No fue posible obtener las dimensiones de la imagen.");
     }
 
-    /*
-     * Margen interno para evitar que la fotografía
-     * quede pegada a los bordes de la caja.
-     */
+    // =====================================================
+    // ESPACIO DISPONIBLE
+    // =====================================================
+
     const padding = 5;
 
     const availableWidth = Math.max(1, width - padding * 2);
+
     const availableHeight = Math.max(1, height - padding * 2);
 
-    /*
-     * Comparar la relación de aspecto de la fotografía
-     * contra la relación de aspecto del espacio disponible.
-     */
+    // =====================================================
+    // RELACIÓN DE ASPECTO
+    // =====================================================
+
     const imageRatio = img.width / img.height;
+
     const containerRatio = availableWidth / availableHeight;
+
+    const esHorizontal = img.width > img.height;
 
     let finalWidth;
     let finalHeight;
 
-    /*
-     * Ajuste tipo "contain":
-     *
-     * - conserva la proporción;
-     * - no deforma;
-     * - no recorta;
-     * - utiliza el máximo espacio posible.
-     */
-    if (imageRatio > containerRatio) {
-      // Imagen predominantemente horizontal
-      finalWidth = availableWidth;
+    // =====================================================
+    // IMAGEN HORIZONTAL
+    // =====================================================
+
+    if (esHorizontal) {
+      /*
+       * Las evidencias horizontales no necesitan ocupar
+       * todo el ancho de la caja.
+       *
+       * Se limita su tamaño visual al 65 % del ancho
+       * disponible y se conserva la proporción.
+       */
+      const maxHorizontalWidth = availableWidth * 0.55;
+
+      finalWidth = maxHorizontalWidth;
       finalHeight = finalWidth / imageRatio;
-    } else {
-      // Imagen predominantemente vertical o cuadrada
-      finalHeight = availableHeight;
-      finalWidth = finalHeight * imageRatio;
+
+      /*
+       * Protección adicional:
+       * si por alguna relación de aspecto especial la
+       * altura resultara mayor que el espacio disponible,
+       * se limita por altura.
+       */
+      if (finalHeight > availableHeight) {
+        finalHeight = availableHeight;
+        finalWidth = finalHeight * imageRatio;
+      }
     }
 
-    /*
-     * Centrar la fotografía horizontal y verticalmente.
-     */
+    // =====================================================
+    // IMAGEN VERTICAL O CUADRADA
+    // =====================================================
+    else {
+      /*
+       * Conservamos exactamente el comportamiento anterior
+       * para fotografías verticales/cuadradas.
+       */
+      if (imageRatio > containerRatio) {
+        finalWidth = availableWidth;
+        finalHeight = finalWidth / imageRatio;
+      } else {
+        finalHeight = availableHeight;
+        finalWidth = finalHeight * imageRatio;
+      }
+    }
+
+    // =====================================================
+    // CENTRAR EN LA CAJA
+    // =====================================================
+
     const finalX = x + (width - finalWidth) / 2;
+
     const finalY = y + (height - finalHeight) / 2;
 
     doc.image(file.buffer, finalX, finalY, {
@@ -141,23 +175,39 @@ function renderPaginasEvidenciasExtra(
   opts = {},
 ) {
   const { dibujarIdEnUltima = true } = opts;
+
   const extra = Array.isArray(files)
     ? files.filter((f) => f?.buffer?.length).slice(2)
     : [];
-  if (extra.length === 0) return null;
+
+  if (extra.length === 0) {
+    return null;
+  }
 
   const porPagina = 4;
   const gap = 8;
+
   let lastY = null;
 
   for (let inicio = 0; inicio < extra.length; inicio += porPagina) {
     doc.addPage();
+
     let y = 25;
+
+    // =====================================================
+    // TÍTULO
+    // =====================================================
+
     doc
       .font("Helvetica-Bold")
       .fontSize(13)
-      .text("EVIDENCIAS ADICIONALES", 25, y, { width: 545, align: "center" });
+      .text("EVIDENCIAS ADICIONALES", 25, y, {
+        width: 545,
+        align: "center",
+      });
+
     y += 20;
+
     doc
       .font("Helvetica")
       .fontSize(10)
@@ -165,32 +215,49 @@ function renderPaginasEvidenciasExtra(
         width: 545,
         align: "center",
       });
+
     y += 30;
 
+    // =====================================================
+    // LOTE ACTUAL
+    // =====================================================
+
     const lote = extra.slice(inicio, inicio + porPagina);
+
     const esUltimoLote = inicio + porPagina >= extra.length;
+
     let finGrid;
 
-    if (lote.length <= 2) {
-      /*
-       * Una fotografía:
-       * se muestra grande y centrada.
-       *
-       * Dos fotografías:
-       * se divide automáticamente el ancho disponible
-       * para garantizar que ambas permanezcan dentro
-       * de los límites de la página.
-       */
-      const celdaW = lote.length === 1 ? 400 : (545 - gap) / 2;
+    // =====================================================
+    // 1 FOTO
+    // =====================================================
 
-      const celdaH = 400;
+    if (lote.length === 1) {
+      const celdaW = 400;
 
-      const anchoTotal = lote.length * celdaW + (lote.length - 1) * gap;
+      // Antes: 400
+      // Reducimos altura para evitar tanto espacio vacío.
+      const celdaH = 300;
 
-      const xInicio = 25 + (545 - anchoTotal) / 2;
+      const xInicio = 25 + (545 - celdaW) / 2;
+
+      doc.rect(xInicio, y, celdaW, celdaH).stroke();
+
+      dibujarImagenAjustada(doc, lote[0], xInicio, y, celdaW, celdaH, 8);
+
+      finGrid = y + celdaH;
+    }
+
+    // =====================================================
+    // 2 FOTOS
+    // =====================================================
+    else if (lote.length === 2) {
+      const celdaW = (545 - gap) / 2;
+
+      const celdaH = 300;
 
       lote.forEach((file, i) => {
-        const cx = xInicio + i * (celdaW + gap);
+        const cx = 25 + i * (celdaW + gap);
 
         doc.rect(cx, y, celdaW, celdaH).stroke();
 
@@ -198,15 +265,27 @@ function renderPaginasEvidenciasExtra(
       });
 
       finGrid = y + celdaH;
-    } else {
+    }
+
+    // =====================================================
+    // 3 O 4 FOTOS
+    // =====================================================
+    else {
       const celdaW = (545 - gap) / 2;
+
       const celdaH = 220;
+
       lote.forEach((file, i) => {
         const col = i % 2;
+
         const row = Math.floor(i / 2);
+
         const cx = 25 + col * (celdaW + gap);
+
         const cy = y + row * (celdaH + gap);
+
         doc.rect(cx, cy, celdaW, celdaH).stroke();
+
         dibujarImagenAjustada(
           doc,
           file,
@@ -217,18 +296,30 @@ function renderPaginasEvidenciasExtra(
           8,
         );
       });
-      finGrid = y + 2 * celdaH + gap;
+
+      const filas = Math.ceil(lote.length / 2);
+
+      finGrid = y + filas * celdaH + Math.max(0, filas - 1) * gap;
     }
+
+    // =====================================================
+    // PIE
+    // =====================================================
 
     if (esUltimoLote) {
       lastY = finGrid;
-      if (dibujarIdEnUltima) dibujarIdInspeccion(doc, general, finGrid + gap);
+
+      if (dibujarIdEnUltima) {
+        dibujarIdInspeccion(doc, general, finGrid + gap);
+      }
     } else {
       dibujarIdInspeccion(doc, general, finGrid + gap);
     }
   }
 
-  return { lastY };
+  return {
+    lastY,
+  };
 }
 
 async function extraerFechasArchivos(fileMapa, body, prefijo) {
@@ -467,10 +558,22 @@ function renderPaginaCamilla(
 
   const evidenciaArchivos = evidenciasCamillaPorIndex.get(idx) || [];
 
-  dibujarEvidenciasEnCaja(doc, evidenciaArchivos, 30, y + 5, 535, 170);
+  // Caja de evidencia más compacta.
+  const altoCajaEvidencia = 130;
+  const paddingEvidencia = 5;
 
-  y += 180;
+  doc.rect(25, y, 545, altoCajaEvidencia).stroke();
 
+  dibujarEvidenciasEnCaja(
+    doc,
+    evidenciaArchivos,
+    30,
+    y + paddingEvidencia,
+    535,
+    altoCajaEvidencia - paddingEvidencia * 2,
+  );
+
+  y += altoCajaEvidencia;
   const extra = renderPaginasEvidenciasExtra(
     doc,
     general,
@@ -972,22 +1075,52 @@ function renderPaginaEquiposTecnologicos(
       },
     );
   }
-  dibujarIdInspeccion(doc, general, y + 2 * (labelH + celdaH));
+  // =====================================================
+  // POSICIÓN FINAL DEL GRID FIJO DE EVIDENCIAS
+  // =====================================================
+
+  const finGrid = y + 2 * (labelH + celdaH);
+
+  dibujarIdInspeccion(doc, general, finGrid);
+
+  let ultimaPosicion = {
+    lastY: finGrid,
+    tienePaginaExtra: false,
+  };
+
+  // =====================================================
+  // EVIDENCIAS ADICIONALES
+  // =====================================================
 
   for (let i = 0; i < 4; i++) {
     const equipo = equiposTecnologicos[i];
+
     const nombre = equipo
       ? equipo.tipo || `Equipo ${i + 1}`
       : `Equipo ${i + 1}`;
+
     const evidenciasEquipo = evidenciasEquipoPorIndex.get(i) || [];
-    renderPaginasEvidenciasExtra(
+
+    const extra = renderPaginasEvidenciasExtra(
       doc,
       general,
       "EQUIPO TECNOLÓGICO",
       nombre,
       evidenciasEquipo,
+      {
+        dibujarIdEnUltima: false,
+      },
     );
+
+    if (extra?.lastY) {
+      ultimaPosicion = {
+        lastY: extra.lastY,
+        tienePaginaExtra: true,
+      };
+    }
   }
+
+  return ultimaPosicion;
 }
 
 function renderPaginaBotiquin(
@@ -1754,19 +1887,13 @@ async function crearPdfInspeccionExtintor(
     if (equiposTecnologicos.length > 0) {
       nuevaPagina();
 
-      renderPaginaEquiposTecnologicos(
+      ultimaPosicion = renderPaginaEquiposTecnologicos(
         doc,
         general,
         equiposTecnologicos,
         evidenciasEquipoTecnologicoPorIndex,
         exifEquipos,
       );
-
-      /*
-       * Por ahora los equipos mantienen su comportamiento actual.
-       * Después podemos hacer que esta función también retorne lastY.
-       */
-      ultimaPosicion = null;
     }
 
     if (botiquines.length > 0) {
