@@ -1,5 +1,60 @@
 const { normalizarTexto } = require("../utils/texto.util");
 
+const TIPOS_IMAGEN_PERMITIDOS = new Set([
+  "image/jpeg",
+  "image/png",
+]);
+
+const TAMANO_MAXIMO_EVIDENCIA = 10 * 1024 * 1024; // 10 MB
+
+function validarEvidenciaTrabajador(file, numeroTrabajador) {
+  const errores = [];
+
+  if (!file) {
+    errores.push(
+      `Trabajador ${numeroTrabajador}: debe adjuntar una evidencia.`,
+    );
+
+    return {
+      ok: false,
+      errores,
+    };
+  }
+
+  if (!file.buffer?.length) {
+    errores.push(
+      `Trabajador ${numeroTrabajador}: la evidencia está vacía.`,
+    );
+  }
+
+  if (!TIPOS_IMAGEN_PERMITIDOS.has(file.mimetype)) {
+    errores.push(
+      `Trabajador ${numeroTrabajador}: la evidencia debe ser una imagen JPG o PNG.`,
+    );
+  }
+
+  if (
+    Number.isFinite(file.size) &&
+    file.size > TAMANO_MAXIMO_EVIDENCIA
+  ) {
+    errores.push(
+      `Trabajador ${numeroTrabajador}: la evidencia supera el tamaño máximo permitido de 10 MB.`,
+    );
+  }
+
+  if (errores.length > 0) {
+    return {
+      ok: false,
+      errores,
+    };
+  }
+
+  return {
+    ok: true,
+    data: file,
+  };
+}
+
 function validarInspeccionEpp(payload) {
   const errores = [];
 
@@ -120,12 +175,6 @@ function validarInspeccionEpp(payload) {
         --------------------------------------------------- */
 
       const elementoEppId = Number(elemento?.elementoEppId);
-
-      if (!Number.isInteger(elementoEppId) || elementoEppId <= 0) {
-        errores.push(
-          `Trabajador ${numeroTrabajador}, elemento ${elementoIndex + 1}: elemento EPP inválido`,
-        );
-      }
 
       const nombreElemento = normalizarTexto(
         elemento?.elemento || elemento?.nombre,
@@ -295,6 +344,9 @@ function validarInspeccionEpp(payload) {
   };
 }
 
+
+
 module.exports = {
   validarInspeccionEpp,
+  validarEvidenciaTrabajador,
 };

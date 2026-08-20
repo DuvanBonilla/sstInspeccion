@@ -1,13 +1,9 @@
 const path = require("node:path");
 const PDFDocument = require("pdfkit");
 
-const {
-  construirEvidenciasDesdeOneDrive,
-} = require("./evidencia.service");
+const { construirEvidenciasDesdeOneDrive } = require("./evidencia.service");
 
-const {
-  resolverFechaEvidencia
-} = require("../utils/fechaEvidencia");
+const { resolverFechaEvidencia } = require("../utils/fechaEvidencia");
 
 function dibujarIdInspeccion(doc, general, y) {
   const id = general.inspeccionId || "";
@@ -26,20 +22,83 @@ function dibujarIdInspeccion(doc, general, y) {
 
 function dibujarImagenAjustada(doc, file, x, y, width, height, fontSize = 9) {
   try {
+    if (!file?.buffer?.length) {
+      throw new Error("La evidencia no contiene una imagen válida.");
+    }
+
     const img = doc.openImage(file.buffer);
-    const ratio = Math.min(width / img.width, height / img.height);
-    const scaledW = img.width * ratio;
-    const scaledH = img.height * ratio;
-    const cx = x + (width - scaledW) / 2;
-    const cy = y + (height - scaledH) / 2;
-    doc.image(file.buffer, cx, cy, { width: scaledW, height: scaledH });
-  } catch {
+
+    if (!img?.width || !img?.height) {
+      throw new Error("No fue posible obtener las dimensiones de la imagen.");
+    }
+
+    /*
+     * Margen interno para evitar que la fotografía
+     * quede pegada a los bordes de la caja.
+     */
+    const padding = 5;
+
+    const availableWidth = Math.max(1, width - padding * 2);
+    const availableHeight = Math.max(1, height - padding * 2);
+
+    /*
+     * Comparar la relación de aspecto de la fotografía
+     * contra la relación de aspecto del espacio disponible.
+     */
+    const imageRatio = img.width / img.height;
+    const containerRatio = availableWidth / availableHeight;
+
+    let finalWidth;
+    let finalHeight;
+
+    /*
+     * Ajuste tipo "contain":
+     *
+     * - conserva la proporción;
+     * - no deforma;
+     * - no recorta;
+     * - utiliza el máximo espacio posible.
+     */
+    if (imageRatio > containerRatio) {
+      // Imagen predominantemente horizontal
+      finalWidth = availableWidth;
+      finalHeight = finalWidth / imageRatio;
+    } else {
+      // Imagen predominantemente vertical o cuadrada
+      finalHeight = availableHeight;
+      finalWidth = finalHeight * imageRatio;
+    }
+
+    /*
+     * Centrar la fotografía horizontal y verticalmente.
+     */
+    const finalX = x + (width - finalWidth) / 2;
+    const finalY = y + (height - finalHeight) / 2;
+
+    doc.image(file.buffer, finalX, finalY, {
+      width: finalWidth,
+      height: finalHeight,
+    });
+  } catch (error) {
+    console.error(
+      "[PDF SST] Error renderizando evidencia:",
+      error?.message || error,
+    );
+
     doc
       .font("Helvetica")
       .fontSize(fontSize)
-      .text("No fue posible renderizar la evidencia.", x + 3, y + 5, {
-        width: width - 6,
-      });
+      .fillColor("#666666")
+      .text(
+        "No fue posible renderizar la evidencia.",
+        x + 5,
+        y + height / 2 - fontSize,
+        {
+          width: Math.max(1, width - 10),
+          align: "center",
+        },
+      )
+      .fillColor("black");
   }
 }
 
@@ -113,24 +172,31 @@ function renderPaginasEvidenciasExtra(
     let finGrid;
 
     if (lote.length <= 2) {
-      // Pocas fotos: cajas grandes y centradas en vez de una grilla 2x2 con huecos.
-      const celdaW = 340;
+      /*
+       * Una fotografía:
+       * se muestra grande y centrada.
+       *
+       * Dos fotografías:
+       * se divide automáticamente el ancho disponible
+       * para garantizar que ambas permanezcan dentro
+       * de los límites de la página.
+       */
+      const celdaW = lote.length === 1 ? 400 : (545 - gap) / 2;
+
       const celdaH = 400;
+
       const anchoTotal = lote.length * celdaW + (lote.length - 1) * gap;
+
       const xInicio = 25 + (545 - anchoTotal) / 2;
+
       lote.forEach((file, i) => {
         const cx = xInicio + i * (celdaW + gap);
+
         doc.rect(cx, y, celdaW, celdaH).stroke();
-        dibujarImagenAjustada(
-          doc,
-          file,
-          cx + 5,
-          y + 5,
-          celdaW - 10,
-          celdaH - 10,
-          8,
-        );
+
+        dibujarImagenAjustada(doc, file, cx, y, celdaW, celdaH, 8);
       });
+
       finGrid = y + celdaH;
     } else {
       const celdaW = (545 - gap) / 2;

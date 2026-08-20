@@ -60,7 +60,16 @@ function dibujarIdInspeccion(doc, general, y) {
     .fillColor("black");
 }
 
-function dibujarImagenAjustada(doc, file, x, y, width, height, fontSize = 9) {
+function dibujarImagenAjustada(
+  doc,
+  file,
+  x,
+  y,
+  width,
+  maxWidth,
+  maxHeight,
+  fontSize = 9,
+) {
   try {
     if (!file?.buffer?.length) {
       throw new Error("Evidencia vacía");
@@ -68,26 +77,45 @@ function dibujarImagenAjustada(doc, file, x, y, width, height, fontSize = 9) {
 
     const img = doc.openImage(file.buffer);
 
-    const ratio = Math.min(width / img.width, height / img.height);
+    // La imagen nunca podrá superar estos límites.
+    // Mantiene siempre su proporción original.
+    const ratio = Math.min(maxWidth / img.width, maxHeight / img.height, 1);
 
     const scaledW = img.width * ratio;
     const scaledH = img.height * ratio;
 
+    // Centrar horizontalmente
     const cx = x + (width - scaledW) / 2;
-    const cy = y + (height - scaledH) / 2;
+
+    // Centrar verticalmente
+    const cy = y + (maxHeight - scaledH) / 2;
 
     doc.image(file.buffer, cx, cy, {
       width: scaledW,
       height: scaledH,
     });
-  } catch {
+
+    return {
+      width: scaledW,
+      height: scaledH,
+    };
+  } catch (error) {
+    console.error("Error al renderizar evidencia:", error);
+
     doc
       .font("Helvetica")
       .fontSize(fontSize)
-      .text("No fue posible renderizar la evidencia.", x + 5, y + 5, {
-        width: width - 10,
+      .fillColor("#666666")
+      .text("No fue posible renderizar la evidencia.", x, y, {
+        width: width,
         align: "center",
-      });
+      })
+      .fillColor("black");
+
+    return {
+      width: 0,
+      height: 20,
+    };
   }
 }
 
@@ -473,6 +501,19 @@ function renderPlanAccion(doc, trabajador, y) {
 }
 
 function renderEvidencia(doc, evidencia, y) {
+  // =========================================================
+  // TAMAÑO MÁXIMO DE LA IMAGEN
+  // =========================================================
+
+  const MAX_ANCHO_IMAGEN = 300;
+  const MAX_ALTO_IMAGEN = 100;
+
+  const PADDING = 5;
+
+  // =========================================================
+  // ENCABEZADO
+  // =========================================================
+
   doc.rect(MARGEN, y, ANCHO, 20).stroke();
 
   doc
@@ -485,32 +526,69 @@ function renderEvidencia(doc, evidencia, y) {
 
   y += 20;
 
-  const alto = 190;
+  // =========================================================
+  // SIN EVIDENCIA
+  // =========================================================
 
-  doc.rect(MARGEN, y, ANCHO, alto).stroke();
+  if (!evidencia?.buffer?.length) {
+    const altoSinEvidencia = 30;
 
-  if (evidencia?.buffer?.length) {
-    dibujarImagenAjustada(
-      doc,
-      evidencia,
-      MARGEN + 5,
-      y + 5,
-      ANCHO - 10,
-      alto - 10,
-    );
-  } else {
+    doc.rect(MARGEN, y, ANCHO, altoSinEvidencia).stroke();
+
     doc
       .font("Helvetica")
       .fontSize(9)
       .fillColor("#666666")
-      .text("Sin evidencia adjunta.", MARGEN, y + 85, {
+      .text("Sin evidencia adjunta.", MARGEN, y + 10, {
         width: ANCHO,
         align: "center",
       })
       .fillColor("black");
+
+    return y + altoSinEvidencia;
   }
 
-  return y + alto;
+  // =========================================================
+  // ÁREA COMPLETA DEL FORMULARIO
+  // =========================================================
+
+  const areaX = MARGEN + PADDING;
+  const areaY = y + PADDING;
+  const areaWidth = ANCHO - PADDING * 2;
+
+  // =========================================================
+  // DIBUJAR IMAGEN
+  // =========================================================
+
+  const resultado = dibujarImagenAjustada(
+    doc,
+    evidencia,
+    areaX,
+    areaY,
+    areaWidth,
+    MAX_ANCHO_IMAGEN,
+    MAX_ALTO_IMAGEN
+  );
+
+  // =========================================================
+  // CONTENEDOR DEL FORMULARIO
+  // =========================================================
+
+  /*
+   * El ancho del formulario se mantiene COMPLETO.
+   * Solamente la imagen es pequeña.
+   */
+
+  const altoBloque = MAX_ALTO_IMAGEN + PADDING * 2;
+
+  doc.rect(
+    MARGEN,
+    y,
+    ANCHO,
+    altoBloque
+  ).stroke();
+
+  return y + altoBloque;
 }
 
 function renderAprobaciones(doc, y, aprobaciones = null) {

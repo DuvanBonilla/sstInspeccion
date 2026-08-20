@@ -2,6 +2,7 @@ const { leerPayload } = require("../utils/request.utils");
 
 const {
   validarInspeccionEpp,
+  validarEvidenciaTrabajador,
 } = require("../validators/inspeccionEpp.validator");
 
 const { guardarInspeccionEppEnDB } = require("../models/inspeccionEpp.model");
@@ -85,9 +86,17 @@ async function enviarInspeccionEpp(req, res) {
 
       const archivo = archivos.find((file) => file.fieldname === nombreCampo);
 
-      if (!archivo) {
-        throw new Error(`No se recibió la evidencia del trabajador ${i + 1}.`);
+      const validacionEvidencia = validarEvidenciaTrabajador(archivo, i + 1);
+
+      if (!validacionEvidencia.ok) {
+        return res.status(400).json({
+          ok: false,
+          mensaje: "La evidencia EPP contiene información inválida.",
+          errores: validacionEvidencia.errores,
+        });
       }
+
+      const archivoValidado = validacionEvidencia.data;
 
       /* -----------------------------------------------------
      LAST MODIFIED
