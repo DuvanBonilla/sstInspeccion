@@ -447,11 +447,22 @@ function renderTextoBloque(doc, titulo, contenido, y) {
 }
 
 function renderPlanAccion(doc, trabajador, y) {
-  const planAccion = texto(trabajador?.planAccion) || "Sin registro.";
+  // =========================================================
+  // OBTENER PLANES DE ACCIÓN DESDE LOS ELEMENTOS EPP
+  // =========================================================
 
-  const fechaLimite = trabajador?.fechaPlanAccion
-    ? formatearFecha(trabajador.fechaPlanAccion)
-    : "No aplica";
+  const elementos = Array.isArray(trabajador?.elementos)
+    ? trabajador.elementos
+    : [];
+
+  const planes = elementos.filter(
+    (elemento) =>
+      String(elemento?.planAccion || "").trim() || elemento?.fechaPlanAccion,
+  );
+
+  // =========================================================
+  // ENCABEZADO
+  // =========================================================
 
   doc.rect(MARGEN, y, ANCHO, 22).stroke();
 
@@ -465,39 +476,108 @@ function renderPlanAccion(doc, trabajador, y) {
 
   y += 22;
 
-  const altoTexto = Math.max(
-    35,
-    doc.heightOfString(planAccion, {
-      width: ANCHO - 10,
-      font: "Helvetica",
-      fontSize: 8,
-    }) + 16,
-  );
+  // =========================================================
+  // SIN PLANES DE ACCIÓN
+  // =========================================================
 
-  doc.rect(MARGEN, y, ANCHO, altoTexto).stroke();
+  if (planes.length === 0) {
+    const alto = 35;
 
-  doc
-    .font("Helvetica")
-    .fontSize(8)
-    .text(planAccion, MARGEN + 5, y + 7, {
-      width: ANCHO - 10,
+    doc.rect(MARGEN, y, ANCHO, alto).stroke();
+
+    doc
+      .font("Helvetica")
+      .fontSize(8)
+      .text("Sin registro.", MARGEN + 5, y + 12, {
+        width: ANCHO - 10,
+        align: "center",
+      });
+
+    return y + alto;
+  }
+
+  // =========================================================
+  // TABLA
+  // =========================================================
+
+  const columnas = [180, 275, 90];
+
+  const headers = ["ELEMENTO EPP", "PLAN DE ACCIÓN", "FECHA LÍMITE"];
+
+  let x = MARGEN;
+
+  // ---------------------------------------------------------
+  // ENCABEZADOS DE TABLA
+  // ---------------------------------------------------------
+
+  headers.forEach((header, i) => {
+    doc.rect(x, y, columnas[i], 22).stroke();
+
+    doc
+      .font("Helvetica-Bold")
+      .fontSize(8)
+      .text(header, x + 3, y + 7, {
+        width: columnas[i] - 6,
+        align: "center",
+      });
+
+    x += columnas[i];
+  });
+
+  y += 22;
+
+  // ---------------------------------------------------------
+  // FILAS
+  // ---------------------------------------------------------
+
+  planes.forEach((elemento) => {
+    const nombreElemento = texto(elemento.elemento) || "—";
+
+    const planAccion = texto(elemento.planAccion).trim() || "Sin registro.";
+
+    const fechaLimite = elemento.fechaPlanAccion
+      ? formatearFecha(elemento.fechaPlanAccion)
+      : "No aplica";
+
+    // Calcular altura necesaria según el contenido.
+    const altoElemento =
+      doc.heightOfString(nombreElemento, {
+        width: columnas[0] - 10,
+        font: "Helvetica",
+        fontSize: 8,
+      }) + 14;
+
+    const altoPlan =
+      doc.heightOfString(planAccion, {
+        width: columnas[1] - 10,
+        font: "Helvetica",
+        fontSize: 8,
+      }) + 14;
+
+    const rowHeight = Math.max(28, altoElemento, altoPlan);
+
+    x = MARGEN;
+
+    const valores = [nombreElemento, planAccion, fechaLimite];
+
+    valores.forEach((valor, i) => {
+      doc.rect(x, y, columnas[i], rowHeight).stroke();
+
+      doc
+        .font("Helvetica")
+        .fontSize(8)
+        .text(valor, x + 5, y + 7, {
+          width: columnas[i] - 10,
+          align: i === 2 ? "center" : "left",
+        });
+
+      x += columnas[i];
     });
 
-  y += altoTexto;
+    y += rowHeight;
+  });
 
-  doc.rect(MARGEN, y, ANCHO, 25).stroke();
-
-  doc
-    .font("Helvetica-Bold")
-    .fontSize(8)
-    .text("FECHA LÍMITE:", MARGEN + 5, y + 8);
-
-  doc
-    .font("Helvetica")
-    .fontSize(8)
-    .text(fechaLimite, MARGEN + 85, y + 8);
-
-  return y + 25;
+  return y;
 }
 
 function renderEvidencia(doc, evidencia, y) {
@@ -567,7 +647,7 @@ function renderEvidencia(doc, evidencia, y) {
     areaY,
     areaWidth,
     MAX_ANCHO_IMAGEN,
-    MAX_ALTO_IMAGEN
+    MAX_ALTO_IMAGEN,
   );
 
   // =========================================================
@@ -581,12 +661,7 @@ function renderEvidencia(doc, evidencia, y) {
 
   const altoBloque = MAX_ALTO_IMAGEN + PADDING * 2;
 
-  doc.rect(
-    MARGEN,
-    y,
-    ANCHO,
-    altoBloque
-  ).stroke();
+  doc.rect(MARGEN, y, ANCHO, altoBloque).stroke();
 
   return y + altoBloque;
 }
@@ -715,11 +790,7 @@ async function crearPdfInspeccionEpp(
        * con 30+ trabajadores.
        */
 
-      if (index > 0) {
-        nuevaPagina(false);
-      }
-
-      const espacioMinimoTrabajador = 380;
+      const espacioMinimoTrabajador = 300;
 
       if (y + espacioMinimoTrabajador > LIMITE_INFERIOR) {
         nuevaPagina(false);
@@ -739,7 +810,7 @@ async function crearPdfInspeccionEpp(
        * siguiente.
        */
 
-      const altoEvidencia = 210;
+      const altoEvidencia = 130;
 
       if (y + altoEvidencia > LIMITE_INFERIOR) {
         dibujarIdInspeccion(doc, general, Math.min(y + 5, 810));
