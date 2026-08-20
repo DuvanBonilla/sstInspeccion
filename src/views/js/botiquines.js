@@ -20,13 +20,19 @@
       actualizarPreviewArchivo() → maneja la vista previa de imagen (de shared.js)
   - Los datos de leer() son incluidos en el payload enviado al servidor.
 */
-import { crearBloqueEvidencias, inicializarBloqueEvidencias, leerArchivosEvidencia } from "/js/shared.js";
+import {
+  crearBloqueEvidencias,
+  inicializarBloqueEvidencias,
+  leerArchivosEvidencia,
+} from "/js/shared.js";
 
 export function createBotiquinesManager({ itemsBotiquin, crearOpciones }) {
   let botiquinCounter = 0;
 
   function crearBotiquinCard(index) {
-    const filasItems = itemsBotiquin.map(([, etiqueta, cantIdeal, tieneVencimiento], itemIndex) => `
+    const filasItems = itemsBotiquin
+      .map(
+        ([, etiqueta, cantIdeal, tieneVencimiento], itemIndex) => `
       <tr>
         <td class="center">${itemIndex + 1}</td>
         <td class="left">${etiqueta}</td>
@@ -39,9 +45,9 @@ export function createBotiquinesManager({ itemsBotiquin, crearOpciones }) {
         </td>
         <td>
           <div class="fecha-venc-wrap">
-            <input name="botiquin-${index}-item-${itemIndex}-fechaVencimiento" type="date" ${!tieneVencimiento ? 'disabled class="campo-deshabilitado"' : ''} />
+            <input name="botiquin-${index}-item-${itemIndex}-fechaVencimiento" type="date" ${!tieneVencimiento ? 'disabled class="campo-deshabilitado"' : ""} />
             <label class="toggle-na-label" title="Marcar si no aplica fecha de vencimiento">
-              <input type="checkbox" class="toggle-vencimiento" ${!tieneVencimiento ? 'checked' : ''} />
+              <input type="checkbox" class="toggle-vencimiento" ${!tieneVencimiento ? "checked" : ""} />
               <span>N/A</span>
             </label>
           </div>
@@ -70,7 +76,9 @@ export function createBotiquinesManager({ itemsBotiquin, crearOpciones }) {
           </select>
         </td>
       </tr>
-    `).join("");
+    `,
+      )
+      .join("");
 
     return `
       <article class="extintor-card" data-botiquin-index="${index}">
@@ -129,21 +137,56 @@ export function createBotiquinesManager({ itemsBotiquin, crearOpciones }) {
     `;
   }
 
+  function aplicarLogicaPlan(tr) {
+    const plan = tr.querySelector('[name$="-planIntervencion"]');
+    if (!plan) return;
+
+    const bloquear = plan.value === "Ninguna";
+
+    tr.querySelectorAll("[data-campo-condicional]").forEach((el) => {
+      el.disabled = bloquear;
+      el.classList.toggle("campo-deshabilitado", bloquear);
+
+      if (bloquear) {
+        el.value = el.tagName === "SELECT" ? "No" : "";
+      }
+    });
+  }
+
   function aplicarLogicaFila(tr) {
-    const ideal = Number(tr.querySelector('[name$="-cantidadIdeal"]').value) || 0;
-    const realVal = tr.querySelector('[name$="-cantidadReal"]').value;
+    const ideal =
+      Number(tr.querySelector('[name$="-cantidadIdeal"]').value) || 0;
+
+    const realInput = tr.querySelector('[name$="-cantidadReal"]');
+
+    const integridadSelect = tr.querySelector('[name$="-integridad"]');
+
+    const realVal = realInput?.value ?? "";
+    const integridad = integridadSelect?.value ?? "";
+
     if (realVal === "") return;
-    const cumple = Number(realVal) >= ideal;
+
+    const cantidadCumple = Number(realVal) >= ideal;
+
+    const integridadCierraFila =
+      integridad === "B" || integridad === "NA" || integridad === "NC";
+
+    const cumple = cantidadCumple && integridadCierraFila;
 
     // F. Intervención, Cumplimiento, Afectación
-    tr.querySelectorAll("[data-campo-condicional]").forEach(el => {
+    tr.querySelectorAll("[data-campo-condicional]").forEach((el) => {
       el.disabled = cumple;
-      if (cumple) el.value = el.tagName === "SELECT" ? "No" : "";
+
+      if (cumple) {
+        el.value = el.tagName === "SELECT" ? "No" : "";
+      }
+
       el.classList.toggle("campo-deshabilitado", cumple);
     });
 
-    // Plan de intervención: auto "Ninguna" si cumple, libre si no cumple
+    // Plan de intervención
     const plan = tr.querySelector('[name$="-planIntervencion"]');
+
     if (plan) {
       if (cumple) {
         plan.value = "Ninguna";
@@ -152,18 +195,22 @@ export function createBotiquinesManager({ itemsBotiquin, crearOpciones }) {
       } else {
         plan.disabled = false;
         plan.classList.remove("campo-deshabilitado");
-        if (plan.value === "Ninguna") plan.value = "";
+
+        if (plan.value === "Ninguna") {
+          plan.value = "";
+        }
       }
     }
   }
-
   // El botón "Eliminar" solo tiene sentido si hay más de una tarjeta: con una
   // sola, para vaciar la sección se usa el botón "Omitir" (en inspeccion-sst.js).
   function actualizarBotonesEliminar() {
     const container = document.getElementById("botiquines-container");
     const cards = container.querySelectorAll("[data-botiquin-index]");
     cards.forEach((card) => {
-      card.querySelector('[data-action="remove-botiquin"]')?.classList.toggle("hidden", cards.length <= 1);
+      card
+        .querySelector('[data-action="remove-botiquin"]')
+        ?.classList.toggle("hidden", cards.length <= 1);
     });
   }
 
@@ -173,49 +220,105 @@ export function createBotiquinesManager({ itemsBotiquin, crearOpciones }) {
     container.insertAdjacentHTML("beforeend", crearBotiquinCard(index));
     const card = container.querySelector(`[data-botiquin-index="${index}"]`);
 
-    card.querySelectorAll("tbody tr").forEach(tr => {
-      tr.querySelector('[name$="-cantidadReal"]')?.addEventListener("input", () => aplicarLogicaFila(tr));
+    card.querySelectorAll("tbody tr").forEach((tr) => {
+      // Reevaluar la fila cuando cambia la cantidad real
+      tr.querySelector('[name$="-cantidadReal"]')?.addEventListener(
+        "input",
+        () => aplicarLogicaFila(tr),
+      );
+
+      // Reevaluar la fila cuando cambia la integridad
+      tr.querySelector('[name$="-integridad"]')?.addEventListener(
+        "change",
+        () => aplicarLogicaFila(tr),
+      );
+
+      // Reevaluar las columnas posteriores cuando cambia el plan
+      tr.querySelector('[name$="-planIntervencion"]')?.addEventListener(
+        "change",
+        () => aplicarLogicaPlan(tr),
+      );
 
       const toggleNA = tr.querySelector(".toggle-vencimiento");
       const fechaInput = tr.querySelector('[name$="-fechaVencimiento"]');
+
       if (toggleNA && fechaInput) {
         toggleNA.addEventListener("change", () => {
           fechaInput.disabled = toggleNA.checked;
           fechaInput.classList.toggle("campo-deshabilitado", toggleNA.checked);
-          if (toggleNA.checked) fechaInput.value = "";
+
+          if (toggleNA.checked) {
+            fechaInput.value = "";
+          }
         });
       }
     });
 
     inicializarBloqueEvidencias(card, "botiquin-evidencia");
-    card.querySelector('[data-action="remove-botiquin"]')?.addEventListener("click", () => {
-      card.remove();
-      actualizarBotonesEliminar();
-    });
+    card
+      .querySelector('[data-action="remove-botiquin"]')
+      ?.addEventListener("click", () => {
+        card.remove();
+        actualizarBotonesEliminar();
+      });
     actualizarBotonesEliminar();
   }
 
   function leer() {
-    return Array.from(document.querySelectorAll("[data-botiquin-index]")).map((card, botiquinIndex) => ({
-      numero: card.querySelector(`[name="botiquin-${botiquinIndex}-numero"]`).value,
-      ubicacion: card.querySelector(`[name="botiquin-${botiquinIndex}-ubicacion"]`).value,
-      observacionGeneral: card.querySelector(`[name="botiquin-${botiquinIndex}-observacionGeneral"]`)?.value || "",
-      evidenciaGeneralArchivo: leerArchivosEvidencia(card, "botiquin-evidencia").map((f) => f.name).join(", "),
-      items: itemsBotiquin.map(([, etiqueta], itemIndex) => ({
-        no: itemIndex + 1,
-        item: etiqueta,
-        cantidadIdeal: card.querySelector(`[name="botiquin-${botiquinIndex}-item-${itemIndex}-cantidadIdeal"]`).value,
-        cantidadReal: card.querySelector(`[name="botiquin-${botiquinIndex}-item-${itemIndex}-cantidadReal"]`).value,
-        integridadEmpaque: card.querySelector(`[name="botiquin-${botiquinIndex}-item-${itemIndex}-integridad"]`).value,
-        fechaVencimiento: card.querySelector(`[name="botiquin-${botiquinIndex}-item-${itemIndex}-fechaVencimiento"]`).value,
-        planIntervencion: card.querySelector(`[name="botiquin-${botiquinIndex}-item-${itemIndex}-planIntervencion"]`).value,
-        fechaIntervencion: card.querySelector(`[name="botiquin-${botiquinIndex}-item-${itemIndex}-fechaIntervencion"]`).value,
-        cumplimiento: card.querySelector(`[name="botiquin-${botiquinIndex}-item-${itemIndex}-cumplimiento"]`).value,
-        afectacionServicio: card.querySelector(`[name="botiquin-${botiquinIndex}-item-${itemIndex}-afectacion"]`).value,
-        observaciones: card.querySelector(`[name="botiquin-${botiquinIndex}-observacionGeneral"]`)?.value || "",
-        evidenciaArchivo: leerArchivosEvidencia(card, "botiquin-evidencia").map((f) => f.name).join(", ")
-      }))
-    }));
+    return Array.from(document.querySelectorAll("[data-botiquin-index]")).map(
+      (card, botiquinIndex) => ({
+        numero: card.querySelector(`[name="botiquin-${botiquinIndex}-numero"]`)
+          .value,
+        ubicacion: card.querySelector(
+          `[name="botiquin-${botiquinIndex}-ubicacion"]`,
+        ).value,
+        observacionGeneral:
+          card.querySelector(
+            `[name="botiquin-${botiquinIndex}-observacionGeneral"]`,
+          )?.value || "",
+        evidenciaGeneralArchivo: leerArchivosEvidencia(
+          card,
+          "botiquin-evidencia",
+        )
+          .map((f) => f.name)
+          .join(", "),
+        items: itemsBotiquin.map(([, etiqueta], itemIndex) => ({
+          no: itemIndex + 1,
+          item: etiqueta,
+          cantidadIdeal: card.querySelector(
+            `[name="botiquin-${botiquinIndex}-item-${itemIndex}-cantidadIdeal"]`,
+          ).value,
+          cantidadReal: card.querySelector(
+            `[name="botiquin-${botiquinIndex}-item-${itemIndex}-cantidadReal"]`,
+          ).value,
+          integridadEmpaque: card.querySelector(
+            `[name="botiquin-${botiquinIndex}-item-${itemIndex}-integridad"]`,
+          ).value,
+          fechaVencimiento: card.querySelector(
+            `[name="botiquin-${botiquinIndex}-item-${itemIndex}-fechaVencimiento"]`,
+          ).value,
+          planIntervencion: card.querySelector(
+            `[name="botiquin-${botiquinIndex}-item-${itemIndex}-planIntervencion"]`,
+          ).value,
+          fechaIntervencion: card.querySelector(
+            `[name="botiquin-${botiquinIndex}-item-${itemIndex}-fechaIntervencion"]`,
+          ).value,
+          cumplimiento: card.querySelector(
+            `[name="botiquin-${botiquinIndex}-item-${itemIndex}-cumplimiento"]`,
+          ).value,
+          afectacionServicio: card.querySelector(
+            `[name="botiquin-${botiquinIndex}-item-${itemIndex}-afectacion"]`,
+          ).value,
+          observaciones:
+            card.querySelector(
+              `[name="botiquin-${botiquinIndex}-observacionGeneral"]`,
+            )?.value || "",
+          evidenciaArchivo: leerArchivosEvidencia(card, "botiquin-evidencia")
+            .map((f) => f.name)
+            .join(", "),
+        })),
+      }),
+    );
   }
 
   return { agregar, leer };
