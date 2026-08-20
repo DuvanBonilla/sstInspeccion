@@ -5,6 +5,15 @@ const { construirEvidenciasDesdeOneDrive } = require("./evidencia.service");
 
 const { resolverFechaEvidencia } = require("../utils/fechaEvidencia");
 
+const CONFIG_EVIDENCIA_SST = {
+  // Cajas normales de evidencia
+  altoCaja: 130,
+  padding: 5,
+
+  // Las horizontales se muestran más pequeñas
+  escalaHorizontal: 0.5,
+};
+
 function dibujarIdInspeccion(doc, general, y) {
   const id = general.inspeccionId || "";
   if (!id) return;
@@ -554,7 +563,7 @@ function renderPaginaCamilla(
       .text(`Fecha: ${fechaExif}`, 30, y + 7, { width: 535, align: "right" })
       .fillColor("black");
   y += 20;
-  doc.rect(25, y, 545, 180).stroke();
+
 
   const evidenciaArchivos = evidenciasCamillaPorIndex.get(idx) || [];
 
@@ -1806,7 +1815,7 @@ async function crearPdfInspeccionExtintor(
       y += observacionesBoxHeight;
 
       const evidenciaHeaderHeight = 20;
-      const evidenciaBoxHeight = 180;
+      const evidenciaBoxHeight = CONFIG_EVIDENCIA_SST.altoCaja;
 
       doc.rect(25, y, 545, evidenciaHeaderHeight).stroke();
       doc
