@@ -1162,9 +1162,28 @@
    CATÁLOGO EPP - COMBOBOX
 ========================================================= */
 
+/* =========================================================
+   CATÁLOGO EPP - SELECTOR MÚLTIPLE
+========================================================= */
+
 .epp-catalogo-panel {
   margin-top: 12px;
+  padding: 14px;
+
+  background: #f8fafc;
+
+  border: 1px solid #dbe3ec;
+  border-radius: 10px;
 }
+
+.epp-catalogo-panel[hidden] {
+  display: none !important;
+}
+
+
+/* =========================================================
+   COMBOBOX
+========================================================= */
 
 .epp-combobox {
   position: relative;
@@ -1182,9 +1201,9 @@
   gap: 10px;
 
   width: 100%;
-  min-height: 44px;
+  min-height: 42px;
 
-  padding: 0 14px;
+  padding: 0 13px;
 
   background: #ffffff;
 
@@ -1192,6 +1211,16 @@
   border-radius: 8px;
 
   box-sizing: border-box;
+
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.epp-buscador-wrapper:focus-within {
+  border-color: #2563eb;
+
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
 }
 
 
@@ -1200,13 +1229,13 @@
 ========================================================= */
 
 .epp-buscador-icono {
-  width: 18px;
-  height: 18px;
+  width: 17px;
+  height: 17px;
 
-  min-width: 18px;
-  min-height: 18px;
+  min-width: 17px;
+  min-height: 17px;
 
-  flex: 0 0 18px;
+  flex: 0 0 17px;
 
   color: #64748b;
 }
@@ -1217,17 +1246,19 @@
 ========================================================= */
 
 .epp-catalogo-buscador {
+  flex: 1;
   width: 100%;
 
-  padding: 11px 0;
+  padding: 10px 0;
 
   border: none;
   outline: none;
 
   background: transparent;
 
-  font-size: 14px;
   color: #1e293b;
+
+  font-size: 13px;
 
   box-sizing: border-box;
 }
@@ -1238,96 +1269,225 @@
 
 
 /* =========================================================
-   FOCUS
+   BARRA DE SELECCIÓN
 ========================================================= */
 
-.epp-buscador-wrapper:focus-within {
-  border-color: #2563eb;
+.epp-catalogo-seleccion {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
 
-  box-shadow:
-    0 0 0 3px rgba(37, 99, 235, 0.1);
+  gap: 10px;
+
+  min-height: 44px;
+
+  padding: 8px 0 0;
+}
+
+
+/* CONTADOR */
+
+.epp-catalogo-contador {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  min-height: 34px;
+
+  margin: 0;
+
+  color: #64748b;
+
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+
+  white-space: nowrap;
 }
 
 
 /* =========================================================
-   DROPDOWN DE RESULTADOS
+   BOTÓN AGREGAR SELECCIONADOS
+========================================================= */
+
+.epp-catalogo-agregar-seleccionados {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  min-height: 34px;
+
+  padding: 7px 13px;
+
+  border: 1px solid #2563eb;
+  border-radius: 7px;
+
+  background: #2563eb;
+
+  color: #ffffff;
+
+  font-size: 12px;
+  font-weight: 700;
+
+  cursor: pointer;
+
+  white-space: nowrap;
+
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    transform 0.1s ease;
+}
+
+.epp-catalogo-agregar-seleccionados:hover:not(:disabled) {
+  background: #1d4ed8;
+  border-color: #1d4ed8;
+}
+
+.epp-catalogo-agregar-seleccionados:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.epp-catalogo-agregar-seleccionados:disabled {
+  background: #e2e8f0;
+  border-color: #e2e8f0;
+
+  color: #94a3b8;
+
+  cursor: not-allowed;
+}
+
+
+/* =========================================================
+   RESULTADOS
 ========================================================= */
 
 .epp-catalogo-resultados {
-  position: absolute;
+  position: relative;
 
-  top: calc(100% + 6px);
-  left: 0;
-  right: 0;
+  width: 100%;
+  max-height: 240px;
 
-  z-index: 50;
+  margin-top: 8px;
 
-  max-height: 260px;
   overflow-y: auto;
 
   background: #ffffff;
 
-  border: 1px solid #d7deea;
+  border: 1px solid #e2e8f0;
   border-radius: 8px;
-
-  box-shadow:
-    0 10px 25px rgba(15, 23, 42, 0.12);
-
-  padding: 5px;
 
   box-sizing: border-box;
 }
 
 
+/* SCROLL */
+
+.epp-catalogo-resultados::-webkit-scrollbar {
+  width: 7px;
+}
+
+.epp-catalogo-resultados::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.epp-catalogo-resultados::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 10px;
+}
+
+.epp-catalogo-resultados::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+
 /* =========================================================
-   OPCIÓN DEL DROPDOWN
+   OPCIÓN DEL CATÁLOGO
 ========================================================= */
 
 .epp-combobox-opcion {
   display: flex;
   align-items: center;
-  justify-content: space-between;
 
-  gap: 12px;
+  gap: 10px;
 
   width: 100%;
 
-  padding: 10px 12px;
+  min-height: 38px;
 
-  border: none;
-  border-radius: 6px;
+  padding: 8px 11px;
 
-  background: transparent;
+  border-bottom: 1px solid #f1f5f9;
 
-  text-align: left;
+  background: #ffffff;
+
   cursor: pointer;
 
+  box-sizing: border-box;
+
   transition:
-    background 0.15s ease,
+    background-color 0.15s ease,
     color 0.15s ease;
 }
 
-
-/* =========================================================
-   HOVER OPCIÓN
-========================================================= */
+.epp-combobox-opcion:last-child {
+  border-bottom: none;
+}
 
 .epp-combobox-opcion:hover {
-  background: #f1f5f9;
+  background: #f8fafc;
 }
 
 
 /* =========================================================
-   NOMBRE ELEMENTO
+   CHECKBOX
+========================================================= */
+
+.epp-catalogo-checkbox {
+  width: 15px;
+  height: 15px;
+
+  margin: 0;
+
+  flex-shrink: 0;
+
+  accent-color: #2563eb;
+
+  cursor: pointer;
+}
+
+
+/* =========================================================
+   OPCIÓN SELECCIONADA
+========================================================= */
+
+.epp-combobox-opcion:has(.epp-catalogo-checkbox:checked) {
+  background: #eff6ff;
+}
+
+.epp-combobox-opcion:has(.epp-catalogo-checkbox:checked)
+  .epp-combobox-opcion-nombre {
+  color: #1d4ed8;
+}
+
+
+/* =========================================================
+   NOMBRE DEL ELEMENTO
 ========================================================= */
 
 .epp-combobox-opcion-nombre {
   flex: 1;
 
-  font-size: 13px;
-  font-weight: 600;
+  min-width: 0;
 
   color: #1e293b;
+
+  font-size: 12.5px;
+  font-weight: 600;
+
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 
@@ -1344,12 +1504,13 @@
 
   background: #eff6ff;
 
-  font-size: 11px;
-  font-weight: 600;
-
   color: #2563eb;
 
+  font-size: 10px;
+  font-weight: 700;
+
   text-transform: uppercase;
+  letter-spacing: 0.02em;
 }
 
 
@@ -1358,10 +1519,41 @@
 ========================================================= */
 
 .epp-combobox-sin-resultados {
-  padding: 14px;
+  padding: 18px;
 
   text-align: center;
 
-  font-size: 13px;
   color: #64748b;
+
+  font-size: 12px;
+}
+
+
+/* =========================================================
+   RESPONSIVE
+========================================================= */
+
+@media (max-width: 600px) {
+
+  .epp-catalogo-panel {
+    padding: 10px;
+  }
+
+  .epp-catalogo-seleccion {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 7px;
+  }
+
+  .epp-catalogo-contador {
+    text-align: right;
+  }
+
+  .epp-catalogo-agregar-seleccionados {
+    width: 100%;
+  }
+
+  .epp-combobox-opcion {
+    padding: 9px 10px;
+  }
 }

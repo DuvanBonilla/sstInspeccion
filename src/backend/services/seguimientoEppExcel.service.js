@@ -214,9 +214,7 @@ async function obtenerResumenInspecciones(filtros = {}) {
       i.aprobacion_jefe_at,
 
       i.aprobacion_copasst_nombre,
-      i.aprobacion_copasst_at,
-
-      i.pdf_url
+      i.aprobacion_copasst_at
 
     FROM inspecciones i
 
@@ -244,8 +242,7 @@ async function obtenerResumenInspecciones(filtros = {}) {
       i.aprobacion_jefe_nombre,
       i.aprobacion_jefe_at,
       i.aprobacion_copasst_nombre,
-      i.aprobacion_copasst_at,
-      i.pdf_url
+      i.aprobacion_copasst_at
 
     ORDER BY
       i.inspecciones_id ASC
@@ -550,11 +547,7 @@ function construirHojaResumenInspecciones(workbook, inspecciones) {
       key: "fechaAprobacionCopasst",
       width: 25,
     },
-    {
-      header: "PDF",
-      key: "pdf",
-      width: 40,
-    },
+
   ]);
 
   inspecciones.forEach((fila) => {
@@ -588,7 +581,6 @@ function construirHojaResumenInspecciones(workbook, inspecciones) {
       aprobacionCopasst: fila.aprobacion_copasst_nombre || "",
       fechaAprobacionCopasst: fila.aprobacion_copasst_at || null,
 
-      pdf: fila.pdf_url || "",
     });
   });
 
@@ -655,18 +647,7 @@ function construirHojaTrabajadores(workbook, trabajadores) {
       key: "eppSinNovedad",
       width: 18,
     },
-    {
-      header: "Resultado General",
-      key: "resultadoGeneral",
-      width: 20,
-    },
 
-    // INFORMACIÓN ADICIONAL
-    {
-      header: "Observaciones",
-      key: "observaciones",
-      width: 40,
-    },
     {
       header: "Evidencia",
       key: "evidencia",
@@ -765,10 +746,6 @@ function construirHojaDetalleEpp(workbook, detalle) {
     { header: "Condición", key: "condicion", width: 14 },
     { header: "Uso", key: "uso", width: 12 },
     { header: "Resultado", key: "resultado", width: 20 },
-
-    // PLAN DE ACCIÓN
-    { header: "Plan de Acción", key: "planAccion", width: 40 },
-    { header: "Fecha Límite", key: "fechaLimite", width: 18 },
 
     // INFORMACIÓN ADICIONAL
     {
