@@ -78,7 +78,76 @@ const COLORES_SITUACION = {
 /* =========================================================
    CONSULTAS
 ========================================================= */
-async function obtenerResumenInspecciones() {
+function construirFiltrosExcelEpp(filtros = {}) {
+  const condiciones = [`i.tipo_inspeccion = 'EPP'`];
+  const valores = [];
+
+  const agregarParametro = (valor) => {
+    valores.push(valor);
+    return `$${valores.length}`;
+  };
+
+  if (filtros.fechaDesde) {
+    const parametro = agregarParametro(filtros.fechaDesde);
+
+    condiciones.push(`
+      i.fecha::date >= ${parametro}::date
+    `);
+  }
+
+  if (filtros.fechaHasta) {
+    const parametro = agregarParametro(filtros.fechaHasta);
+
+    condiciones.push(`
+      i.fecha::date <= ${parametro}::date
+    `);
+  }
+
+  if (filtros.sedeOperacion) {
+    const parametro = agregarParametro(filtros.sedeOperacion);
+
+    condiciones.push(`
+      LOWER(TRIM(i.sede_operacion)) = LOWER(TRIM(${parametro}))
+    `);
+  }
+
+  if (filtros.estado) {
+    const parametro = agregarParametro(filtros.estado);
+
+    condiciones.push(`
+      LOWER(TRIM(i.estado)) = LOWER(TRIM(${parametro}))
+    `);
+  }
+
+  if (filtros.q) {
+    const parametro = agregarParametro(`%${filtros.q.trim()}%`);
+
+    condiciones.push(`
+      (
+        i.inspeccion_id ILIKE ${parametro}
+        OR i.responsable_inspeccion ILIKE ${parametro}
+        OR i.jefe_responsable ILIKE ${parametro}
+        OR EXISTS (
+          SELECT 1
+          FROM evaluaciones_epp busqueda_epp
+          WHERE busqueda_epp.inspecciones_id = i.inspecciones_id
+            AND (
+              busqueda_epp.nombre ILIKE ${parametro}
+              OR busqueda_epp.codigo ILIKE ${parametro}
+              OR busqueda_epp.cargo ILIKE ${parametro}
+            )
+        )
+      )
+    `);
+  }
+
+  return {
+    where: condiciones.join("\n AND "),
+    valores,
+  };
+}
+async function obtenerResumenInspecciones(filtros = {}) {
+  const { where, valores } = construirFiltrosExcelEpp(filtros);
   const result = await pool.query(`
     SELECT
       i.inspecciones_id AS inspecciones_id,
@@ -157,7 +226,7 @@ async function obtenerResumenInspecciones() {
     LEFT JOIN detalle_evaluacion_epp d
       ON d.evaluacion_epp_id = t.id
 
-    WHERE i.tipo_inspeccion = 'EPP'
+    WHERE ${where}
 
     GROUP BY
       i.inspecciones_id,
@@ -180,11 +249,12 @@ async function obtenerResumenInspecciones() {
 
     ORDER BY
       i.inspecciones_id ASC
-  `);
+  `,valores);
 
   return result.rows;
 }
-async function obtenerTrabajadores() {
+async function obtenerTrabajadores(filtros = {}) {
+  const { where, valores } = construirFiltrosExcelEpp(filtros);
   const result = await pool.query(`
     SELECT
       t.id AS evaluacion_epp_id,
@@ -240,9 +310,10 @@ async function obtenerTrabajadores() {
     LEFT JOIN detalle_evaluacion_epp d
       ON d.evaluacion_epp_id = t.id
 
-    WHERE i.tipo_inspeccion = 'EPP'
+    WHERE ${where}
 
     GROUP BY
+      t.id,
       t.inspecciones_id,
       t.idx,
       i.inspecciones_id,
@@ -260,11 +331,12 @@ async function obtenerTrabajadores() {
     ORDER BY
       i.inspecciones_id ASC,
       t.idx ASC
-  `);
+  `, valores);
 
   return result.rows;
 }
-async function obtenerDetalleEpp() {
+async function obtenerDetalleEpp(filtros = {}) {
+  const { where, valores } = construirFiltrosExcelEpp(filtros);
   const result = await pool.query(`
     SELECT
       d.id AS detalle_epp_id,
@@ -310,17 +382,18 @@ async function obtenerDetalleEpp() {
     INNER JOIN elementos_epp e
       ON e.id = d.elemento_epp_id
 
-    WHERE i.tipo_inspeccion = 'EPP'
+    WHERE ${where}
 
     ORDER BY
       i.inspecciones_id ASC,
       t.idx ASC,
       e.nombre ASC
-  `);
+  `,valores);
 
   return result.rows;
 }
-async function obtenerPlanesAccion() {
+async function obtenerPlanesAccion(filtros = {}) {
+  const { where, valores } = construirFiltrosExcelEpp(filtros);
   const result = await pool.query(`
     SELECT
       d.id AS detalle_epp_id,
@@ -356,7 +429,7 @@ async function obtenerPlanesAccion() {
       ON e.id = d.elemento_epp_id
 
     WHERE
-      i.tipo_inspeccion = 'EPP'
+      ${where}
       AND (
         d.condicion IN ('R', 'M')
         OR d.uso IN ('R', 'M')
@@ -368,10 +441,11 @@ async function obtenerPlanesAccion() {
       i.inspecciones_id ASC,
       t.idx ASC,
       e.nombre ASC
-  `);
+  ` ,valores);
 
   return result.rows;
 }
+
 /* =========================================================
    UTILIDADES
 ========================================================= */
@@ -1053,12 +1127,12 @@ function construirHojaPlanesAccion(workbook, planes) {
 /* =========================================================
    GENERADOR
 ========================================================= */
-async function generarExcelSeguimientoEpp() {
+async function generarExcelSeguimientoEpp(filtros = {}) {
   const [inspecciones, trabajadores, detalle, planes] = await Promise.all([
-    obtenerResumenInspecciones(),
-    obtenerTrabajadores(),
-    obtenerDetalleEpp(),
-    obtenerPlanesAccion(),
+    obtenerResumenInspecciones(filtros),
+    obtenerTrabajadores(filtros),
+    obtenerDetalleEpp(filtros),
+    obtenerPlanesAccion(filtros),
   ]);
 
   const workbook = crearWorkbook();

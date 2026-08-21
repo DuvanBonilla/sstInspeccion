@@ -163,7 +163,7 @@ function renderEncabezado(doc) {
   doc
     .font("Helvetica")
     .fontSize(9)
-    .text("CODIGO: ST-FST EPP", 425, y + 7)
+    .text("CÓDIGO: ST-FST EPP", 425, y + 7)
     .text("VERSIÓN: 01", 425, y + 30)
     .text("FECHA DE VERSIÓN: 2026", 425, y + 53);
 
@@ -218,7 +218,7 @@ function renderInformacionGeneral(doc, general, y) {
   doc
     .font("Helvetica-Bold")
     .fontSize(9)
-    .text("RESPONSABLE INSPECCIÓN:", 302, y + 8);
+    .text("RESPONSABLE DE LA INSPECCIÓN", 302, y + 8);
 
   doc
     .font("Helvetica")

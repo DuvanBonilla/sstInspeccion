@@ -404,7 +404,7 @@ function renderPaginaCamilla(
   doc
     .font("Helvetica")
     .fontSize(9)
-    .text("CODIGO: ST-FST 25", 425, y + 7)
+    .text("CÓDIGO: ST-FST 25", 425, y + 7)
     .text("VERSIÓN: 01", 425, y + 30)
     .text("FECHA DE VERSIÓN: 4/6/2026", 425, y + 53);
 
@@ -436,15 +436,15 @@ function renderPaginaCamilla(
   doc
     .font("Helvetica-Bold")
     .fontSize(9)
-    .text("AREA DE TRABAJO:", 30, y + 8);
+    .text("ÁREA DE TRABAJO:", 30, y + 8);
   doc
     .font("Helvetica")
     .fontSize(9)
-    .text(general.areaTrabajo || "", 130, y + 8, { width: 160 });
+    .text(general.ÁREATrabajo || "", 130, y + 8, { width: 160 });
   doc
     .font("Helvetica-Bold")
     .fontSize(9)
-    .text("RESPONSABLE INSPECCIÓN:", 302, y + 8);
+    .text("RESPONSABLE DE LA INSPECCIÓN", 302, y + 8);
   doc
     .font("Helvetica")
     .fontSize(9)
@@ -457,7 +457,7 @@ function renderPaginaCamilla(
   doc
     .font("Helvetica-Bold")
     .fontSize(9)
-    .text("RESPONSABLE DEL AREA A INSPECCIONAR:", 30, y + 8);
+    .text("RESPONSABLE DEL ÁREA A INSPECCIONAR:", 30, y + 8);
   doc
     .font("Helvetica")
     .fontSize(9)
@@ -638,7 +638,7 @@ function renderPaginaSenalizacion(
   doc
     .font("Helvetica")
     .fontSize(9)
-    .text("CODIGO: ST-FST 25", 425, y + 7)
+    .text("CÓDIGO: ST-FST 25", 425, y + 7)
     .text("VERSIÓN: 01", 425, y + 30)
     .text("FECHA DE VERSIÓN: 4/6/2026", 425, y + 53);
 
@@ -669,15 +669,15 @@ function renderPaginaSenalizacion(
   doc
     .font("Helvetica-Bold")
     .fontSize(9)
-    .text("AREA DE TRABAJO:", 30, y + 8);
+    .text("ÁREA DE TRABAJO:", 30, y + 8);
   doc
     .font("Helvetica")
     .fontSize(9)
-    .text(general.areaTrabajo || "", 130, y + 8);
+    .text(general.ÁREATrabajo || "", 130, y + 8);
   doc
     .font("Helvetica-Bold")
     .fontSize(9)
-    .text("RESPONSABLE INSPECCIÓN:", 302, y + 8);
+    .text("RESPONSABLE DE LA INSPECCIÓN", 302, y + 8);
   doc
     .font("Helvetica")
     .fontSize(9)
@@ -688,7 +688,7 @@ function renderPaginaSenalizacion(
   doc
     .font("Helvetica-Bold")
     .fontSize(9)
-    .text("RESPONSABLE DEL AREA A INSPECCIONAR:", 30, y + 8);
+    .text("RESPONSABLE DEL ÁREA A INSPECCIONAR:", 30, y + 8);
   doc
     .font("Helvetica")
     .fontSize(9)
@@ -856,7 +856,7 @@ function renderPaginaEquiposTecnologicos(
   doc
     .font("Helvetica")
     .fontSize(9)
-    .text("CODIGO: ST-FST 25", 425, y + 7)
+    .text("CÓDIGO: ST-FST 25", 425, y + 7)
     .text("VERSIÓN: 01", 425, y + 30)
     .text("FECHA DE VERSIÓN: 4/6/2026", 425, y + 53);
 
@@ -887,15 +887,15 @@ function renderPaginaEquiposTecnologicos(
   doc
     .font("Helvetica-Bold")
     .fontSize(9)
-    .text("AREA DE TRABAJO:", 30, y + 8);
+    .text("ÁREA DE TRABAJO:", 30, y + 8);
   doc
     .font("Helvetica")
     .fontSize(9)
-    .text(general.areaTrabajo || "", 130, y + 8);
+    .text(general.ÁREATrabajo || "", 130, y + 8);
   doc
     .font("Helvetica-Bold")
     .fontSize(9)
-    .text("RESPONSABLE INSPECCIÓN:", 302, y + 8);
+    .text("RESPONSABLE DE LA INSPECCIÓN", 302, y + 8);
   doc
     .font("Helvetica")
     .fontSize(9)
@@ -906,7 +906,7 @@ function renderPaginaEquiposTecnologicos(
   doc
     .font("Helvetica-Bold")
     .fontSize(9)
-    .text("RESPONSABLE DEL AREA A INSPECCIONAR:", 30, y + 8);
+    .text("RESPONSABLE DEL ÁREA A INSPECCIONAR:", 30, y + 8);
   doc
     .font("Helvetica")
     .fontSize(9)
@@ -1155,7 +1155,7 @@ function renderPaginaBotiquin(
   doc
     .font("Helvetica-Bold")
     .fontSize(15)
-    .text("INSPECCION DE BOTIQUIN", 175, y + 24, {
+    .text("INSPECCIÓN DE BOTIQUÍN", 175, y + 24, {
       width: 245,
       align: "center",
     });
@@ -1165,9 +1165,9 @@ function renderPaginaBotiquin(
   doc
     .font("Helvetica")
     .fontSize(9)
-    .text("CODIGO: ST-FST 25", 425, y + 7)
-    .text("VERSION: 01", 425, y + 30)
-    .text("FECHA DE VERSION: 4/6/2026", 425, y + 53);
+    .text("CÓDIGO: ST-FST 25", 425, y + 7)
+    .text("VERSIÓN: 01", 425, y + 30)
+    .text("FECHA DE VERSIÓN: 4/6/2026", 425, y + 53);
 
   y += 70;
 
@@ -1176,7 +1176,7 @@ function renderPaginaBotiquin(
   doc
     .font("Helvetica-Bold")
     .fontSize(9)
-    .text("FECHA DE INSPECCION:", 30, y + 8, { width: 120 });
+    .text("FECHA DE INSPECCIÓN:", 30, y + 8, { width: 120 });
   doc
     .font("Helvetica")
     .fontSize(9)
@@ -1196,15 +1196,15 @@ function renderPaginaBotiquin(
   doc
     .font("Helvetica-Bold")
     .fontSize(9)
-    .text("AREA DE TRABAJO:", 30, y + 8, { width: 90 });
+    .text("ÁREA DE TRABAJO:", 30, y + 8, { width: 90 });
   doc
     .font("Helvetica")
     .fontSize(9)
-    .text(general.areaTrabajo || "", 123, y + 8, { width: 167 });
+    .text(general.ÁREATrabajo || "", 123, y + 8, { width: 167 });
   doc
     .font("Helvetica-Bold")
     .fontSize(9)
-    .text("RESPONSABLE INSPECCION:", 302, y + 8, { width: 140 });
+    .text("RESPONSABLE DE LA INSPECCIÓN", 302, y + 8, { width: 140 });
   doc
     .font("Helvetica")
     .fontSize(9)
@@ -1215,7 +1215,7 @@ function renderPaginaBotiquin(
   doc
     .font("Helvetica-Bold")
     .fontSize(9)
-    .text("RESPONSABLE DEL AREA A INSPECCIONAR:", 30, y + 8, { width: 230 });
+    .text("RESPONSABLE DEL ÁREA A INSPECCIONAR:", 30, y + 8, { width: 230 });
   doc
     .font("Helvetica")
     .fontSize(9)
@@ -1227,7 +1227,7 @@ function renderPaginaBotiquin(
   doc
     .font("Helvetica-Bold")
     .fontSize(9)
-    .text("N. DE BOTIQUIN:", 30, y + 8, { width: 90 });
+    .text("N. DE BOTIQUÍN:", 30, y + 8, { width: 90 });
   doc
     .font("Helvetica")
     .fontSize(9)
@@ -1235,7 +1235,7 @@ function renderPaginaBotiquin(
   doc
     .font("Helvetica-Bold")
     .fontSize(9)
-    .text("UBICACION:", 302, y + 8, { width: 65 });
+    .text("UBICACIÓN:", 302, y + 8, { width: 65 });
   doc
     .font("Helvetica")
     .fontSize(9)
@@ -1257,7 +1257,7 @@ function renderPaginaBotiquin(
   const columnas = [20, 180, 32, 32, 42, 52, 52, 42, 35, 58];
   const encabezados = [
     "No",
-    "ITEM",
+    "ITÉM",
     "IDEAL",
     "REAL",
     "INTEG.",
@@ -1342,7 +1342,7 @@ function renderPaginaBotiquin(
         doc
           .font("Helvetica")
           .fontSize(6.5)
-          .text("Sin items registrados", xs + 2, y + 3, { width: col - 4 });
+          .text("Sin ítems registrados", xs + 2, y + 3, { width: col - 4 });
       xs += col;
     });
     y += 14;
@@ -1359,14 +1359,14 @@ function renderPaginaBotiquin(
   doc
     .font("Helvetica-Bold")
     .fontSize(9)
-    .text("OBSERVACION GENERAL", 25, y + 6, { width: 545, align: "center" });
+    .text("OBSERVACIÓN GENERAL", 25, y + 6, { width: 545, align: "center" });
   y += 20;
 
   const observacionGeneral =
     botiquin?.observacionGeneral ||
     items.find((item) => String(item?.observaciones || "").trim())
       ?.observaciones ||
-    "Sin observacion registrada.";
+    "Sin observación registrada.";
 
   doc.rect(25, y, 545, 35).stroke();
   doc
@@ -1449,7 +1449,7 @@ function renderAprobaciones(doc, y, aprobaciones = null) {
 
   const roles = [
     { key: "inspector", label: "APROBADO POR INSPECTOR" },
-    { key: "jefe", label: "APROBADO POR JEFE DE AREA" },
+    { key: "jefe", label: "APROBADO POR JEFE DE ÁREA" },
     { key: "copasst", label: "APROBADO POR COPASST" },
   ];
 
@@ -1606,7 +1606,7 @@ async function crearPdfInspeccionExtintor(
       doc
         .font("Helvetica")
         .fontSize(9)
-        .text("CODIGO: ST-FST 25", 425, y + 7)
+        .text("CÓDIGO: ST-FST 25", 425, y + 7)
         .text("VERSIÓN: 01", 425, y + 30)
         .text("FECHA DE VERSIÓN: 4/6/2026", 425, y + 53);
 
@@ -1637,15 +1637,15 @@ async function crearPdfInspeccionExtintor(
       doc
         .font("Helvetica-Bold")
         .fontSize(9)
-        .text("AREA DE TRABAJO:", 30, y + 8);
+        .text("ÁREA DE TRABAJO:", 30, y + 8);
       doc
         .font("Helvetica")
         .fontSize(9)
-        .text(general.areaTrabajo || "", 130, y + 8, { width: 160 });
+        .text(general.ÁREATrabajo || "", 130, y + 8, { width: 160 });
       doc
         .font("Helvetica-Bold")
         .fontSize(9)
-        .text("RESPONSABLE INSPECCIÓN:", 302, y + 8);
+        .text("RESPONSABLE DE LA INSPECCIÓN", 302, y + 8);
       doc
         .font("Helvetica")
         .fontSize(9)
@@ -1656,7 +1656,7 @@ async function crearPdfInspeccionExtintor(
       doc
         .font("Helvetica-Bold")
         .fontSize(9)
-        .text("RESPONSABLE DEL AREA:", 30, y + 8);
+        .text("RESPONSABLE DEL ÁREA:", 30, y + 8);
       doc
         .font("Helvetica")
         .fontSize(9)
@@ -1967,7 +1967,7 @@ function construirDatosGenerales(row) {
     numInspeccion: Number(row.inspecciones_id),
     fecha: row.fecha,
     sedeOperacion: row.sede_operacion,
-    areaTrabajo: row.area_trabajo,
+    ÁREATrabajo: row.ÁREA_trabajo,
     jefeResponsable: row.jefe_responsable,
     cargoJefe: row.cargo_jefe,
     responsableInspeccion: row.responsable_inspeccion,

@@ -4,7 +4,15 @@ const {
 
 async function descargarExcelSeguimientoEpp(req, res) {
   try {
-    const buffer = await generarExcelSeguimientoEpp();
+    const filtros = {
+      fechaDesde: req.query.fechaDesde || "",
+      fechaHasta: req.query.fechaHasta || "",
+      sedeOperacion: req.query.sedeOperacion || "",
+      estado: req.query.estado || "",
+      q: req.query.q || "",
+    };
+
+    const buffer = await generarExcelSeguimientoEpp(filtros);
 
     const fecha = new Date()
       .toISOString()

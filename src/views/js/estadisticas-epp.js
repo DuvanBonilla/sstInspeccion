@@ -611,7 +611,13 @@
          SOLICITAR EXCEL AL BACKEND
       ----------------------------------------------------- */
 
-        const response = await fetch("/api/excel/epp");
+        const filtros = leerFiltros();
+
+        const query = crearQuery(filtros);
+
+        const urlExcel = query ? `/api/excel/epp?${query}` : "/api/excel/epp";
+
+        const response = await fetch(urlExcel);
 
         if (!response.ok) {
           throw new Error(`Error al generar el Excel (${response.status})`);
