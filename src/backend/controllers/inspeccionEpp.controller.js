@@ -108,12 +108,15 @@ async function enviarInspeccionEpp(req, res) {
      SUBIR A ONEDRIVE
   ----------------------------------------------------- */
 
-      const evidenciaRuta = await uploadEvidenceToOneDrive(
+      const evidenciaOneDrive = await uploadEvidenceToOneDrive(
         archivo,
         "EPP",
         i + 1,
         general.inspeccionId,
       );
+
+      const evidenciaRuta = evidenciaOneDrive.ruta || "";
+      const evidenciaUrl = evidenciaOneDrive.webUrl || "";
 
       /* -----------------------------------------------------
      FECHA DE LA EVIDENCIA
@@ -130,6 +133,8 @@ async function enviarInspeccionEpp(req, res) {
   ----------------------------------------------------- */
 
       trabajador.evidenciaRuta = evidenciaRuta || "";
+
+      trabajador.evidenciaUrl = evidenciaUrl || "";
 
       trabajador.evidenciaArchivo = evidenciaRuta
         ? evidenciaRuta.split("/").pop() || ""

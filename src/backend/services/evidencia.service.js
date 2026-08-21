@@ -124,13 +124,16 @@ async function uploadEvidenceToOneDrive(
 
   const evidencePath = `${evidenceFolderPath}/${fileName}`;
 
-  await subirArchivoOneDrive({
+  const driveItem = await subirArchivoOneDrive({
     ruta: evidencePath,
     buffer: file.buffer,
     contentType: file.mimetype || "application/octet-stream",
   });
 
-  return evidencePath;
+  return {
+    ruta: evidencePath,
+    webUrl: driveItem?.webUrl || "",
+  };
 }
 
 // Descarga una evidencia ya subida a OneDrive por su ruta. Devuelve un Buffer o null si falla.

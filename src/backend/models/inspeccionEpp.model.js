@@ -99,6 +99,7 @@ async function guardarInspeccionEppEnDB(data) {
     ------------------------------------------------------- */
 
     for (const [idx, trabajador] of trabajadores.entries()) {
+
       const { rows: trabajadorRows } = await client.query(
         `
         INSERT INTO evaluaciones_epp (
@@ -109,11 +110,12 @@ async function guardarInspeccionEppEnDB(data) {
           cargo,
           observaciones,
           evidencia_ruta,
+          evidencia_url,
           evidencia_archivo,
           evidencia_fecha
         )
         VALUES (
-          $1,$2,$3,$4,$5,$6,$7,$8,$9
+          $1,$2,$3,$4,$5,$6,$7,$8,$9,$10
         )
         RETURNING id
         `,
@@ -125,8 +127,9 @@ async function guardarInspeccionEppEnDB(data) {
           trabajador.cargo || "", // $5
           trabajador.observaciones || "", // $6
           trabajador.evidenciaRuta || "", // $7
-          trabajador.evidenciaArchivo || "", // $8
-          trabajador.evidenciaFecha || null, // $9
+          trabajador.evidenciaUrl || "", // $8
+          trabajador.evidenciaArchivo || "", // $9
+          trabajador.evidenciaFecha || null, // $10
         ],
       );
 
