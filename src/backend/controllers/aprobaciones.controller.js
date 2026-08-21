@@ -124,7 +124,7 @@ async function obtenerResumenAprobacion(req, res) {
 
       inspeccion: {
         inspeccionId: row.inspeccion_id,
-        numInspeccion: Number(row.num_inspeccion),
+        numInspeccion: Number(row.inspecciones_id),
 
         tipoInspeccion,
 
@@ -480,7 +480,7 @@ async function finalizarInspeccion(inspeccionId) {
       html = construirHtmlCorreoEpp({
         inspeccionId: row.inspeccion_id,
 
-        numInspeccion: Number(row.num_inspeccion),
+        numInspeccion: Number(row.inspecciones_id),
 
         fecha: row.fecha,
 
@@ -511,7 +511,7 @@ async function finalizarInspeccion(inspeccionId) {
       html = construirHtmlCorreo({
         inspeccionId: row.inspeccion_id,
 
-        numInspeccion: Number(row.num_inspeccion),
+        numInspeccion: Number(row.inspecciones_id),
 
         fecha: row.fecha,
 
@@ -538,7 +538,7 @@ async function finalizarInspeccion(inspeccionId) {
     await enviarCorreoPorGraph({
       to: correoDestino,
 
-      subject: `Inspección ${tipoInspeccion} aprobada N.° ${row.num_inspeccion} – ${row.inspeccion_id}`,
+      subject: `Inspección ${tipoInspeccion} aprobada N.° ${row.inspecciones_id} – ${row.inspeccion_id}`,
 
       html,
 

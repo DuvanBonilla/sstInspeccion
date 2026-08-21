@@ -6,8 +6,8 @@
   Responsabilidades:
   - Normalizar y validar la información recibida desde el frontend EPP.
   - Guardar la cabecera de la inspección en `inspecciones`.
-  - Guardar los trabajadores en `trabajadores_epp`.
-  - Guardar las evaluaciones de cada trabajador en `detalle_trabajador_epp`.
+  - Guardar los trabajadores en `evaluaciones_epp`.
+  - Guardar las evaluaciones de cada trabajador en `detalle_evaluacion_epp`.
   - Ejecutar todo el guardado dentro de una transacción.
 */
 const { normalizarTexto } = require("../utils/texto.util");
@@ -71,8 +71,7 @@ async function guardarInspeccionEppEnDB(data) {
         now()
       )
       RETURNING
-        id,
-        num_inspeccion,
+        inspecciones_id,
         token_inspector,
         token_jefe,
         token_copasst
@@ -93,7 +92,7 @@ async function guardarInspeccionEppEnDB(data) {
 
     const inspeccion = rows[0];
 
-    const inspeccionPk = inspeccion.id;
+    const inspeccionPk = inspeccion.inspecciones_id;
 
     /* -------------------------------------------------------
        TRABAJADORES
@@ -102,8 +101,8 @@ async function guardarInspeccionEppEnDB(data) {
     for (const [idx, trabajador] of trabajadores.entries()) {
       const { rows: trabajadorRows } = await client.query(
         `
-        INSERT INTO trabajadores_epp (
-          inspeccion_pk,
+        INSERT INTO evaluaciones_epp (
+          inspecciones_id,
           idx,
           nombre,
           codigo,
@@ -140,8 +139,8 @@ async function guardarInspeccionEppEnDB(data) {
       for (const elemento of trabajador.elementos || []) {
         await client.query(
           `
-    INSERT INTO detalle_trabajador_epp (
-      trabajador_epp_id,
+    INSERT INTO detalle_evaluacion_epp (
+      evaluacion_epp_id,
       elemento_epp_id,
       condicion,
       uso,
@@ -171,7 +170,7 @@ async function guardarInspeccionEppEnDB(data) {
     return {
       inspeccionId: general.inspeccionId || "",
 
-      numInspeccion: Number(inspeccion.num_inspeccion),
+      numInspeccion: Number(inspeccion.inspecciones_id),
 
       tokens: {
         inspector: inspeccion.token_inspector,

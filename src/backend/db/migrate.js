@@ -5,7 +5,6 @@ const DDL = `
 CREATE TABLE IF NOT EXISTS inspecciones (
   id                      BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   inspeccion_id           TEXT UNIQUE NOT NULL,
-  num_inspeccion          BIGINT GENERATED ALWAYS AS IDENTITY,
 
   fecha                   TEXT,
   sede_operacion          TEXT,

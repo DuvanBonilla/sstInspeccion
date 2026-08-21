@@ -188,7 +188,7 @@
               type="button"
               class="btn-recuperar accion-btn accion-btn-links"
               data-inspeccion-id="${it.inspeccion_id}"
-              data-num-inspeccion="${it.num_inspeccion}"
+              data-num-inspeccion="${it.inspecciones_id}"
               ${it.estado === "pendiente_aprobacion" ? "" : "disabled"}>
 
               <svg
@@ -248,7 +248,7 @@
             <tr>
 
               <td>
-                ${it.num_inspeccion ?? "-"}
+                ${it.inspecciones_id ?? "-"}
               </td>
 
               <td>

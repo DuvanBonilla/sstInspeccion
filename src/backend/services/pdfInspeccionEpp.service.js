@@ -886,7 +886,7 @@ async function generarPdfEppAprobacion(
 
   const general = {
     inspeccionId: row.inspeccion_id,
-    numInspeccion: Number(row.num_inspeccion),
+    numInspeccion: Number(row.inspecciones_id),
     fecha: row.fecha,
     sedeOperacion: row.sede_operacion,
     areaTrabajo: row.area_trabajo,

@@ -307,7 +307,7 @@ Estas tablas mantienen relación con la inspección correspondiente.
 El módulo EPP utiliza principalmente:
 
 ```text
-trabajadores_epp
+
 evaluaciones_epp
 ```
 

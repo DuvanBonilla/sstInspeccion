@@ -81,8 +81,7 @@ const COLORES_SITUACION = {
 async function obtenerResumenInspecciones() {
   const result = await pool.query(`
     SELECT
-      i.id AS inspeccion_pk,
-      i.num_inspeccion,
+      i.inspecciones_id AS inspecciones_id,
       i.inspeccion_id,
       i.fecha,
       i.sede_operacion,
@@ -99,8 +98,8 @@ async function obtenerResumenInspecciones() {
       COUNT(DISTINCT t.id) FILTER (
         WHERE EXISTS (
           SELECT 1
-          FROM detalle_trabajador_epp dx
-          WHERE dx.trabajador_epp_id = t.id
+          FROM detalle_evaluacion_epp dx
+          WHERE dx.evaluacion_epp_id = t.id
             AND (
               dx.condicion IN ('R', 'M')
               OR dx.uso IN ('R', 'M')
@@ -114,8 +113,8 @@ async function obtenerResumenInspecciones() {
         COUNT(DISTINCT t.id) FILTER (
           WHERE EXISTS (
             SELECT 1
-            FROM detalle_trabajador_epp dx
-            WHERE dx.trabajador_epp_id = t.id
+            FROM detalle_evaluacion_epp dx
+            WHERE dx.evaluacion_epp_id = t.id
               AND (
                 dx.condicion IN ('R', 'M')
                 OR dx.uso IN ('R', 'M')
@@ -152,17 +151,16 @@ async function obtenerResumenInspecciones() {
 
     FROM inspecciones i
 
-    LEFT JOIN trabajadores_epp t
-      ON t.inspeccion_pk = i.id
+    LEFT JOIN evaluaciones_epp t
+      ON t.inspecciones_id = i.inspecciones_id
 
-    LEFT JOIN detalle_trabajador_epp d
-      ON d.trabajador_epp_id = t.id
+    LEFT JOIN detalle_evaluacion_epp d
+      ON d.evaluacion_epp_id = t.id
 
     WHERE i.tipo_inspeccion = 'EPP'
 
     GROUP BY
-      i.id,
-      i.num_inspeccion,
+      i.inspecciones_id,
       i.inspeccion_id,
       i.fecha,
       i.sede_operacion,
@@ -181,7 +179,7 @@ async function obtenerResumenInspecciones() {
       i.pdf_url
 
     ORDER BY
-      i.num_inspeccion ASC
+      i.inspecciones_id ASC
   `);
 
   return result.rows;
@@ -189,9 +187,9 @@ async function obtenerResumenInspecciones() {
 async function obtenerTrabajadores() {
   const result = await pool.query(`
     SELECT
-      t.id AS trabajador_epp_id,
+      t.id AS evaluacion_epp_id,
 
-      i.num_inspeccion,
+      i.inspecciones_id,
       i.inspeccion_id,
       i.fecha,
       i.sede_operacion,
@@ -234,21 +232,20 @@ async function obtenerTrabajadores() {
       t.evidencia_ruta,
       t.evidencia_fecha
 
-    FROM trabajadores_epp t
+    FROM evaluaciones_epp t
 
     INNER JOIN inspecciones i
-      ON i.id = t.inspeccion_pk
+      ON i.inspecciones_id = t.inspecciones_id
 
-    LEFT JOIN detalle_trabajador_epp d
-      ON d.trabajador_epp_id = t.id
+    LEFT JOIN detalle_evaluacion_epp d
+      ON d.evaluacion_epp_id = t.id
 
     WHERE i.tipo_inspeccion = 'EPP'
 
     GROUP BY
-      t.id,
+      t.inspecciones_id,
       t.idx,
-      i.id,
-      i.num_inspeccion,
+      i.inspecciones_id,
       i.inspeccion_id,
       i.fecha,
       i.sede_operacion,
@@ -261,7 +258,7 @@ async function obtenerTrabajadores() {
       t.evidencia_fecha
 
     ORDER BY
-      i.num_inspeccion ASC,
+      i.inspecciones_id ASC,
       t.idx ASC
   `);
 
@@ -272,7 +269,7 @@ async function obtenerDetalleEpp() {
     SELECT
       d.id AS detalle_epp_id,
 
-      i.num_inspeccion,
+      i.inspecciones_id,
       i.inspeccion_id,
       i.fecha,
       i.sede_operacion,
@@ -302,13 +299,13 @@ async function obtenerDetalleEpp() {
 
       t.observaciones AS observaciones_trabajador
 
-    FROM detalle_trabajador_epp d
+    FROM detalle_evaluacion_epp d
 
-    INNER JOIN trabajadores_epp t
-      ON t.id = d.trabajador_epp_id
+    INNER JOIN evaluaciones_epp t
+      ON t.id = d.evaluacion_epp_id
 
     INNER JOIN inspecciones i
-      ON i.id = t.inspeccion_pk
+      ON i.inspecciones_id = t.inspecciones_id
 
     INNER JOIN elementos_epp e
       ON e.id = d.elemento_epp_id
@@ -316,7 +313,7 @@ async function obtenerDetalleEpp() {
     WHERE i.tipo_inspeccion = 'EPP'
 
     ORDER BY
-      i.num_inspeccion ASC,
+      i.inspecciones_id ASC,
       t.idx ASC,
       e.nombre ASC
   `);
@@ -328,7 +325,7 @@ async function obtenerPlanesAccion() {
     SELECT
       d.id AS detalle_epp_id,
 
-      i.num_inspeccion,
+      i.inspecciones_id,
       i.inspeccion_id,
       i.fecha,
       i.sede_operacion,
@@ -347,13 +344,13 @@ async function obtenerPlanesAccion() {
       d.plan_accion,
       d.fecha_plan_accion
 
-    FROM detalle_trabajador_epp d
+    FROM detalle_evaluacion_epp d
 
-    INNER JOIN trabajadores_epp t
-      ON t.id = d.trabajador_epp_id
+    INNER JOIN evaluaciones_epp t
+      ON t.id = d.evaluacion_epp_id
 
     INNER JOIN inspecciones i
-      ON i.id = t.inspeccion_pk
+      ON i.inspecciones_id = t.inspecciones_id
 
     INNER JOIN elementos_epp e
       ON e.id = d.elemento_epp_id
@@ -368,7 +365,7 @@ async function obtenerPlanesAccion() {
 
     ORDER BY
       d.fecha_plan_accion ASC NULLS LAST,
-      i.num_inspeccion ASC,
+      i.inspecciones_id ASC,
       t.idx ASC,
       e.nombre ASC
   `);
@@ -488,7 +485,7 @@ function construirHojaResumenInspecciones(workbook, inspecciones) {
 
   inspecciones.forEach((fila) => {
     hoja.addRow({
-      numInspeccion: Number(fila.num_inspeccion),
+      numInspeccion: Number(fila.inspecciones_id),
       inspeccionId: fila.inspeccion_id || "",
       fecha: fila.fecha || "",
       sede: fila.sede_operacion || "",
@@ -610,7 +607,7 @@ function construirHojaTrabajadores(workbook, trabajadores) {
 
   trabajadores.forEach((fila) => {
     hoja.addRow({
-      numInspeccion: Number(fila.num_inspeccion),
+      numInspeccion: Number(fila.inspecciones_id),
       inspeccionId: fila.inspeccion_id || "",
       fecha: fila.fecha || "",
       sede: fila.sede_operacion || "",
@@ -709,7 +706,7 @@ function construirHojaDetalleEpp(workbook, detalle) {
 
   detalle.forEach((fila) => {
     hoja.addRow({
-      numInspeccion: Number(fila.num_inspeccion),
+      numInspeccion: Number(fila.inspecciones_id),
       inspeccionId: fila.inspeccion_id || "",
       fecha: fila.fecha || "",
       sede: fila.sede_operacion || "",
@@ -844,7 +841,7 @@ function construirHojaPlanesAccion(workbook, planes) {
 
   planes.forEach((fila) => {
     const row = hoja.addRow({
-      numInspeccion: Number(fila.num_inspeccion),
+      numInspeccion: Number(fila.inspecciones_id),
       inspeccionId: fila.inspeccion_id || "",
       fecha: fila.fecha || "",
       sede: fila.sede_operacion || "",

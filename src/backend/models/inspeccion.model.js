@@ -24,7 +24,7 @@ async function guardarInspeccionEnDB(data) {
         jefe_responsable, cargo_jefe, responsable_inspeccion, cargo_responsable,
         aprobacion_inspector_nombre, aprobacion_inspector_cedula, aprobacion_inspector_at
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, now())
-      RETURNING id, num_inspeccion, token_inspector, token_jefe, token_copasst`,
+      RETURNING inspecciones_id, token_inspector, token_jefe, token_copasst`,
       [
         general.inspeccionId || "",
         general.fecha || "",
@@ -39,11 +39,12 @@ async function guardarInspeccionEnDB(data) {
       ],
     );
     const inspeccion = rows[0];
-    const pk = inspeccion.id;
+    const pk = inspeccion.inspecciones_id;
 
     for (const [idx, e] of (data?.extintores || []).entries()) {
       await client.query(
-        `INSERT INTO extintores (inspeccion_pk, idx, numero, ubicacion, tipo, capacidad, mes_recarga, ano_recarga, observaciones, evidencia_ruta, evidencia_archivo, evidencia_fecha, condiciones)
+        `INSERT INTO extintores (inspecciones_id, idx, numero, ubicacion, tipo, capacidad, mes_recarga, ano_recarga, observaciones, evidencia_ruta, evidencia_archivo, evidencia_fecha, condiciones)
+        
          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)`,
         [
           pk,
@@ -65,7 +66,7 @@ async function guardarInspeccionEnDB(data) {
 
     for (const [idx, c] of (data?.camillas || []).entries()) {
       await client.query(
-        `INSERT INTO camillas (inspeccion_pk, idx, numero, ubicacion, observaciones, afectacion_productividad, evidencia_ruta, evidencia_archivo, evidencia_fecha, condiciones)
+        `INSERT INTO camillas (inspecciones_id, idx, numero, ubicacion, observaciones, afectacion_productividad, evidencia_ruta, evidencia_archivo, evidencia_fecha, condiciones)
          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
         [
           pk,
@@ -84,7 +85,7 @@ async function guardarInspeccionEnDB(data) {
 
     for (const [idx, s] of (data?.senalizaciones || []).entries()) {
       await client.query(
-        `INSERT INTO senalizaciones (inspeccion_pk, idx, tipo, ubicacion, cantidad, estado, aseo, observaciones, evidencia_ruta, evidencia_archivo, evidencia_fecha)
+        `INSERT INTO senalizaciones (inspecciones_id, idx, tipo, ubicacion, cantidad, estado, aseo, observaciones, evidencia_ruta, evidencia_archivo, evidencia_fecha)
          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,
         [
           pk,
@@ -104,7 +105,7 @@ async function guardarInspeccionEnDB(data) {
 
     for (const [idx, eq] of (data?.equiposTecnologicos || []).entries()) {
       await client.query(
-        `INSERT INTO equipos_tecnologicos (inspeccion_pk, idx, no, equipo_tecnologico, ubicacion, cantidad, estado, mantenimiento, observaciones, afectacion_servicio, evidencia_ruta, evidencia_archivo, evidencia_fecha)
+        `INSERT INTO equipos_tecnologicos (inspecciones_id, idx, no, equipo_tecnologico, ubicacion, cantidad, estado, mantenimiento, observaciones, afectacion_servicio, evidencia_ruta, evidencia_archivo, evidencia_fecha)
          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)`,
         [
           pk,
@@ -126,7 +127,7 @@ async function guardarInspeccionEnDB(data) {
 
     for (const [idx, b] of (data?.botiquines || []).entries()) {
       const { rows: botRows } = await client.query(
-        `INSERT INTO botiquines (inspeccion_pk, idx, numero, ubicacion, observacion_general, evidencia_ruta, evidencia_archivo, evidencia_fecha)
+        `INSERT INTO botiquines (inspecciones_id, idx, numero, ubicacion, observacion_general, evidencia_ruta, evidencia_archivo, evidencia_fecha)
          VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id`,
         [
           pk,
@@ -168,7 +169,7 @@ async function guardarInspeccionEnDB(data) {
 
     return {
       inspeccionId: general.inspeccionId || "",
-      numInspeccion: Number(inspeccion.num_inspeccion),
+      numInspeccion: Number(inspeccion.inspecciones_id),
       tokens: {
         inspector: inspeccion.token_inspector,
         jefe: inspeccion.token_jefe,
@@ -199,7 +200,7 @@ async function obtenerInspeccionCompleta(inspeccionId) {
     return null;
   }
 
-  const pk = inspeccion.id;
+  const pk = inspeccion.inspecciones_id;
 
   /* =====================================================
      INSPECCIÓN EPP
@@ -209,8 +210,8 @@ async function obtenerInspeccionCompleta(inspeccionId) {
     const { rows: trabajadoresRows } = await query(
       `
     SELECT *
-    FROM trabajadores_epp
-    WHERE inspeccion_pk = $1
+    FROM evaluaciones_epp
+    WHERE inspecciones_id = $1
     ORDER BY idx
     `,
       [pk],
@@ -222,7 +223,7 @@ async function obtenerInspeccionCompleta(inspeccionId) {
           `
         SELECT
           ee.id,
-          ee.trabajador_epp_id,
+          ee.evaluacion_epp_id,
           ee.elemento_epp_id,
           e.nombre AS elemento,
           e.categoria AS categoria,
@@ -230,10 +231,10 @@ async function obtenerInspeccionCompleta(inspeccionId) {
           ee.uso,
           ee.plan_accion,
           ee.fecha_plan_accion
-        FROM detalle_trabajador_epp ee
+        FROM detalle_evaluacion_epp ee
         INNER JOIN elementos_epp e
           ON e.id = ee.elemento_epp_id
-        WHERE ee.trabajador_epp_id = $1
+        WHERE ee.evaluacion_epp_id = $1
         `,
           [trabajador.id],
         );
@@ -253,7 +254,6 @@ async function obtenerInspeccionCompleta(inspeccionId) {
           evidenciaFecha: trabajador.evidencia_fecha || null,
 
           elementos: evaluacionesRows.map((evaluacion) => ({
-            
             elementoEppId: evaluacion.elemento_epp_id,
 
             elemento: evaluacion.elemento || "",
@@ -287,35 +287,35 @@ async function obtenerInspeccionCompleta(inspeccionId) {
   const [extRes, camRes, senRes, eqpRes, botRes] = await Promise.all([
     query(
       `SELECT * FROM extintores
-         WHERE inspeccion_pk = $1
+         WHERE inspecciones_id = $1
          ORDER BY idx`,
       [pk],
     ),
 
     query(
       `SELECT * FROM camillas
-         WHERE inspeccion_pk = $1
+         WHERE inspecciones_id = $1
          ORDER BY idx`,
       [pk],
     ),
 
     query(
       `SELECT * FROM senalizaciones
-         WHERE inspeccion_pk = $1
+         WHERE inspecciones_id = $1
          ORDER BY idx`,
       [pk],
     ),
 
     query(
       `SELECT * FROM equipos_tecnologicos
-         WHERE inspeccion_pk = $1
+         WHERE inspecciones_id = $1
          ORDER BY idx`,
       [pk],
     ),
 
     query(
       `SELECT * FROM botiquines
-         WHERE inspeccion_pk = $1
+         WHERE inspecciones_id = $1
          ORDER BY idx`,
       [pk],
     ),
@@ -554,7 +554,7 @@ async function listarInspeccionesConFiltros(filtros = {}, paginacion = {}) {
   const sortOrder = paginacion.sortOrder === "desc" ? "DESC" : "ASC";
 
   const columnasOrdenables = {
-    numero: "i.num_inspeccion",
+    numero: "i.inspecciones_id",
     codigo: "i.inspeccion_id",
     registro: "i.created_at",
     sedeOperacion: "i.sede_operacion",
@@ -580,7 +580,7 @@ async function listarInspeccionesConFiltros(filtros = {}, paginacion = {}) {
   const datosSql = `
     SELECT
       i.inspeccion_id,
-      i.num_inspeccion,
+      i.inspecciones_id,
       i.fecha,
       i.created_at,
       i.sede_operacion,
@@ -594,21 +594,21 @@ async function listarInspeccionesConFiltros(filtros = {}, paginacion = {}) {
       COALESCE(eqp.cantidad, 0)::int AS equipos,
       COALESCE(bot.cantidad, 0)::int AS botiquines
     FROM inspecciones i
-    LEFT JOIN (
-      SELECT inspeccion_pk, COUNT(*)::int AS cantidad FROM extintores GROUP BY inspeccion_pk
-    ) ext ON ext.inspeccion_pk = i.id
-    LEFT JOIN (
-      SELECT inspeccion_pk, COUNT(*)::int AS cantidad FROM camillas GROUP BY inspeccion_pk
-    ) cam ON cam.inspeccion_pk = i.id
-    LEFT JOIN (
-      SELECT inspeccion_pk, COUNT(*)::int AS cantidad FROM senalizaciones GROUP BY inspeccion_pk
-    ) sen ON sen.inspeccion_pk = i.id
-    LEFT JOIN (
-      SELECT inspeccion_pk, COUNT(*)::int AS cantidad FROM equipos_tecnologicos GROUP BY inspeccion_pk
-    ) eqp ON eqp.inspeccion_pk = i.id
-    LEFT JOIN (
-      SELECT inspeccion_pk, COUNT(*)::int AS cantidad FROM botiquines GROUP BY inspeccion_pk
-    ) bot ON bot.inspeccion_pk = i.id
+      LEFT JOIN (
+        SELECT inspecciones_id, COUNT(*)::int AS cantidad FROM extintores GROUP BY inspecciones_id
+      ) ext ON ext.inspecciones_id = i.inspecciones_id
+      LEFT JOIN (
+        SELECT inspecciones_id, COUNT(*)::int AS cantidad FROM camillas GROUP BY inspecciones_id
+      ) cam ON cam.inspecciones_id = i.inspecciones_id
+      LEFT JOIN (
+        SELECT inspecciones_id, COUNT(*)::int AS cantidad FROM senalizaciones GROUP BY inspecciones_id
+      ) sen ON sen.inspecciones_id = i.inspecciones_id
+      LEFT JOIN (
+        SELECT inspecciones_id, COUNT(*)::int AS cantidad FROM equipos_tecnologicos GROUP BY inspecciones_id
+      ) eqp ON eqp.inspecciones_id = i.inspecciones_id
+      LEFT JOIN (
+        SELECT inspecciones_id, COUNT(*)::int AS cantidad FROM botiquines GROUP BY inspecciones_id
+      ) bot ON bot.inspecciones_id = i.inspecciones_id
     WHERE ${whereSql}
     ORDER BY ${columnaOrden} ${sortOrder}
     LIMIT $${valores.length + 1}
@@ -650,7 +650,7 @@ async function listarInspeccionesEppConFiltros(filtros = {}, paginacion = {}) {
   // =====================================================
 
   const columnasOrdenables = {
-    numero: "i.num_inspeccion",
+    numero: "i.inspecciones_id",
 
     codigo: "i.inspeccion_id",
 
@@ -701,7 +701,7 @@ async function listarInspeccionesEppConFiltros(filtros = {}, paginacion = {}) {
   const datosSql = `
     SELECT
       i.inspeccion_id,
-      i.num_inspeccion,
+      i.inspecciones_id,
       i.fecha,
       i.created_at,
       i.sede_operacion,
@@ -719,14 +719,14 @@ async function listarInspeccionesEppConFiltros(filtros = {}, paginacion = {}) {
 
     LEFT JOIN (
       SELECT
-        inspeccion_pk,
+        inspecciones_id,
         COUNT(*)::int AS cantidad
 
-      FROM trabajadores_epp
+      FROM evaluaciones_epp
 
-      GROUP BY inspeccion_pk
+      GROUP BY inspecciones_id
     ) tra
-      ON tra.inspeccion_pk = i.id
+      ON tra.inspecciones_id = i.inspecciones_id
 
     WHERE ${whereSql}
 
@@ -772,7 +772,7 @@ async function obtenerLinksInspeccion(inspeccionId) {
   const { rows } = await query(
     `SELECT
       inspeccion_id,
-      num_inspeccion,
+      inspecciones_id,
 
       token_inspector,
       token_jefe,
@@ -810,7 +810,7 @@ async function obtenerLinksInspeccion(inspeccionId) {
 
   return {
     inspeccionId: inspeccion.inspeccion_id,
-    numInspeccion: inspeccion.num_inspeccion,
+    numInspeccion: inspeccion.inspecciones_id,
 
     // Token exclusivo para generar el PDF
     previewToken: inspeccion.token_inspector,

@@ -121,7 +121,7 @@
     type="button"
     class="btn-recuperar accion-btn accion-btn-links"
     data-inspeccion-id="${it.inspeccion_id}"
-    data-num-inspeccion="${it.num_inspeccion}"
+    data-num-inspeccion="${it.inspecciones_id}"
     ${it.estado === "pendiente_aprobacion" ? "" : "disabled"}>
 
 <svg xmlns="http://www.w3.org/2000/svg"
@@ -165,7 +165,7 @@
 `;
         return `
           <tr>
-            <td>${it.num_inspeccion ?? "-"}</td>
+            <td>${it.inspecciones_id ?? "-"}</td>
             <td>${it.inspeccion_id || "-"}</td>
             <td>${formatearFecha(it.created_at)}</td>
             <td>${it.sede_operacion || "-"}</td>
