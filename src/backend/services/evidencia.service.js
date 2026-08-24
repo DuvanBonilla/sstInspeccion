@@ -177,9 +177,17 @@ async function subirEvidenciasMultiples(
   body,
 ) {
   const archivos = obtenerArchivosMultiples(files, prefix, index);
-  if (archivos.length === 0) return { ruta: "", nombre: "", fecha: null };
 
-  const rutas = await Promise.all(
+  if (archivos.length === 0) {
+    return {
+      ruta: "",
+      url: "",
+      nombre: "",
+      fecha: null,
+    };
+  }
+
+  const evidencias = await Promise.all(
     archivos.map((file, subIdx) =>
       uploadEvidenceToOneDrive(
         file,
@@ -191,13 +199,28 @@ async function subirEvidenciasMultiples(
     ),
   );
 
-  const rutasValidas = rutas.filter(Boolean);
+  const evidenciasValidas = evidencias.filter(
+    (evidencia) => evidencia && evidencia.ruta,
+  );
+
+  const rutas = evidenciasValidas
+    .map((evidencia) => evidencia.ruta)
+    .filter(Boolean);
+
+  const urls = evidenciasValidas
+    .map((evidencia) => evidencia.webUrl || "")
+    .filter(Boolean);
+
+  const nombres = rutas.map((ruta) => ruta.split("/").pop() || "");
+
   const lastmod = body?.[`${prefix}-${index}-0-lastmod`];
+
   const fecha = await resolverFechaEvidencia(archivos[0], lastmod);
 
   return {
-    ruta: rutasValidas.join("\n"),
-    nombre: rutasValidas.map((ruta) => ruta.split("/").pop() || "").join("\n"),
+    ruta: rutas.join("\n"),
+    url: urls.join("\n"),
+    nombre: nombres.join("\n"),
     fecha,
   };
 }

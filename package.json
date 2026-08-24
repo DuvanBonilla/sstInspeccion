@@ -13,6 +13,7 @@
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
+    "adm-zip": "^0.6.0",
     "dotenv": "^17.4.2",
     "exceljs": "^4.4.0",
     "exifr": "^7.1.3",
