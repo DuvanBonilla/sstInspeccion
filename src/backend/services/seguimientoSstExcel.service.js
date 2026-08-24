@@ -2,33 +2,27 @@ const AdmZip = require("adm-zip");
 
 const {
   descargarArchivoOneDrive,
+  subirArchivoOneDrive,
 } = require("./graph.service");
 
-const COLUMNAS_CONDICION_EXTINTOR = [
-  ["S", "acceso"],
-  ["T", "visibilidad"],
-  ["U", "senalizacion"],
-  ["V", "paredAltura"],
-  ["W", "piso"],
-  ["X", "limpieza"],
-  ["Y", "rotulo"],
-  ["Z", "cilindro"],
-  ["AA", "manometro"],
-  ["AB", "presion"],
-  ["AC", "pin"],
-  ["AD", "manguera"],
-  ["AE", "boquilla"],
-  ["AF", "corneta"],
-  ["AG", "pintura"],
-  ["AH", "manija"],
-  ["AI", "sello"],
-  ["AJ", "llaveSpanner"],
-  ["AK", "otros"],
-];
+const {
+  generarBufferExcel,
+} = require("../utils/excelXml.util");
 
-/**
- * Ruta del Excel SST configurado en OneDrive.
- */
+const {
+  actualizarExtintores,
+
+  diagnosticarTablaExtintores:
+    diagnosticarTablaExtintoresModulo,
+} = require("./seguimientoSstExcel/extintores.service");
+
+const {
+  actualizarCamillas,
+} = require("./seguimientoSstExcel/camillas.service");
+
+const CONTENT_TYPE_XLSM =
+  "application/vnd.ms-excel.sheet.macroEnabled.12";
+
 function obtenerRutaExcelSst() {
   const ruta = process.env.ONEDRIVE_EXCEL_PATH;
 
@@ -41,16 +35,12 @@ function obtenerRutaExcelSst() {
   return ruta;
 }
 
-/**
- * Descarga el XLSM SST desde OneDrive y lo abre como paquete ZIP.
- *
- * Todo el procesamiento se realiza en memoria.
- * No genera archivos temporales.
- */
 async function cargarExcelSst() {
   const rutaExcel = obtenerRutaExcelSst();
 
-  const buffer = await descargarArchivoOneDrive(rutaExcel);
+  const buffer = await descargarArchivoOneDrive(
+    rutaExcel,
+  );
 
   if (!buffer) {
     throw new Error(
@@ -61,148 +51,150 @@ async function cargarExcelSst() {
   return new AdmZip(buffer);
 }
 
-/**
- * Obtiene el contenido XML de un archivo interno del XLSM.
- */
-function obtenerXml(zip, rutaInterna) {
-  const entrada = zip.getEntry(rutaInterna);
-
-  if (!entrada) {
-    throw new Error(
-      `No se encontró ${rutaInterna} dentro del Excel SST`,
-    );
-  }
-
-  return entrada.getData().toString("utf8");
-}
-
-/**
- * Reemplaza un XML dentro del XLSM.
- */
-function reemplazarXml(zip, rutaInterna, contenidoXml) {
-  const entrada = zip.getEntry(rutaInterna);
-
-  if (!entrada) {
-    throw new Error(
-      `No se encontró ${rutaInterna} dentro del Excel SST`,
-    );
-  }
-
-  zip.updateFile(
-    rutaInterna,
-    Buffer.from(contenidoXml, "utf8"),
+function validarMacrosExcel(zip) {
+  const macrosConservadas = Boolean(
+    zip.getEntry("xl/vbaProject.bin"),
   );
-}
 
-/**
- * Convierte nuevamente el XLSM modificado en un Buffer.
- */
-function generarBufferExcel(zip) {
-  return zip.toBuffer();
+  if (!macrosConservadas) {
+    throw new Error(
+      "El archivo XLSM perdió su proyecto de macros VBA",
+    );
+  }
+
+  return macrosConservadas;
 }
 
 async function diagnosticarTablaExtintores() {
   const zip = await cargarExcelSst();
 
-  const rutaTabla = "xl/tables/table1.xml";
-  const rutaHoja = "xl/worksheets/sheet2.xml";
+  return diagnosticarTablaExtintoresModulo(zip);
+}
 
-  const tablaXml = obtenerXml(zip, rutaTabla);
-  const hojaXml = obtenerXml(zip, rutaHoja);
+async function actualizarExtintoresEnMemoria() {
+  const zip = await cargarExcelSst();
 
-  // Rango actual de TablaExtintores.
-  const rango = tablaXml.match(/<table\b[^>]*\bref="([^"]+)"/)?.[1] || null;
+  const resultadoExtintores =
+    await actualizarExtintores(zip);
 
-  // Encabezados definidos en table1.xml.
-  const columnas = [...tablaXml.matchAll(/<tableColumn\b[^>]*\bid="([^"]+)"[^>]*\bname="([^"]*)"/g)]
-    .map((match, index) => ({
-      posicion: index + 1,
-      id: match[1],
-      nombre: match[2],
-    }));
-
-  // XML correspondiente a la fila 2 existente.
-  const fila2 =
-    hojaXml.match(/<row\b[^>]*\br="2"[^>]*>[\s\S]*?<\/row>/)?.[0] || null;
+  const macrosConservadas =
+    validarMacrosExcel(zip);
 
   return {
-    rango,
-    totalColumnas: columnas.length,
-    columnas,
-    fila2,
+    buffer: generarBufferExcel(zip),
+
+    totalExtintores:
+      resultadoExtintores.totalExtintores,
+
+    rango: resultadoExtintores.rango,
+
+    macrosConservadas,
+
+    inspecciones:
+      resultadoExtintores.inspecciones,
   };
 }
 
-function mapearTipoExtintor(tipo) {
-  const valor = String(tipo || "").trim().toLowerCase();
+async function actualizarExtintoresEnOneDrive() {
+  const rutaExcel = obtenerRutaExcelSst();
+
+  const resultado =
+    await actualizarExtintoresEnMemoria();
+
+  await subirArchivoOneDrive({
+    ruta: rutaExcel,
+
+    buffer: resultado.buffer,
+
+    contentType: CONTENT_TYPE_XLSM,
+  });
 
   return {
-    L: valor === "solkaflam" ? "X" : "",
-    M: valor === "co2" ? "X" : "",
-    N: valor === "multiproposito" ? "X" : "",
-    O: valor === "agua" ? "X" : "",
+    rutaExcel,
+
+    totalExtintores:
+      resultado.totalExtintores,
+
+    rango: resultado.rango,
+
+    macrosConservadas:
+      resultado.macrosConservadas,
+
+    inspecciones:
+      resultado.inspecciones,
   };
 }
 
-function mapearExtintorAExcel(inspeccion, extintor) {
-  const fila = {
-    // Información general de la inspección
-    A: inspeccion.inspeccion_id || "",
-    B: inspeccion.inspecciones_id || "",
-    C: inspeccion.fecha || "",
-    D: inspeccion.sede_operacion || "",
-    E: inspeccion.area_trabajo || "",
-    F: inspeccion.jefe_responsable || "",
-    G: inspeccion.cargo_jefe || "",
-    H: inspeccion.responsable_inspeccion || "",
-    I: inspeccion.cargo_responsable || "",
+async function actualizarExcelSeguimientoSstEnMemoria() {
+  const zip = await cargarExcelSst();
 
-    // Información propia del extintor
-    J: extintor.numero || "",
-    K: extintor.ubicacion || "",
+  const extintores =
+    await actualizarExtintores(zip);
 
-    // Tipo de extintor
-    ...mapearTipoExtintor(extintor.tipo),
+  const camillas =
+    await actualizarCamillas(zip);
 
-    P: extintor.capacidad || "",
-    Q: extintor.mes_recarga || "",
-    R: extintor.ano_recarga || "",
+  const macrosConservadas =
+    validarMacrosExcel(zip);
 
-    // Información final
-    AL: extintor.observaciones || "",
-    AM: extintor.evidencia_archivo || "",
+  return {
+    buffer:
+      generarBufferExcel(zip),
 
-    // Pendiente de definir comportamiento del XLSM
-    AN: "",
+    macrosConservadas,
+
+    extintores,
+
+    camillas,
   };
-
-  const condiciones = extintor.condiciones || {};
-
-  for (const [columna, campo] of COLUMNAS_CONDICION_EXTINTOR) {
-    fila[columna] = condiciones[campo] || "";
-  }
-
-  return fila;
 }
 
-function mapearExtintoresAExcel(inspeccion) {
-  const extintores = Array.isArray(inspeccion?.extintores)
-    ? inspeccion.extintores
-    : [];
+async function actualizarExcelSeguimientoSstEnOneDrive() {
+  const rutaExcel =
+    obtenerRutaExcelSst();
 
-  return extintores.map((extintor) =>
-    mapearExtintorAExcel(inspeccion, extintor),
-  );
+  const resultado =
+    await actualizarExcelSeguimientoSstEnMemoria();
+
+  await subirArchivoOneDrive({
+    ruta:
+      rutaExcel,
+
+    buffer:
+      resultado.buffer,
+
+    contentType:
+      CONTENT_TYPE_XLSM,
+  });
+
+  return {
+    rutaExcel,
+
+    macrosConservadas:
+      resultado.macrosConservadas,
+
+    extintores:
+      resultado.extintores,
+
+    camillas:
+      resultado.camillas,
+  };
 }
 
 module.exports = {
+  obtenerRutaExcelSst,
+
   cargarExcelSst,
-  obtenerXml,
-  reemplazarXml,
-  generarBufferExcel,
+
+  validarMacrosExcel,
+
   diagnosticarTablaExtintores,
- 
-  mapearTipoExtintor,
-  mapearExtintorAExcel,
-  mapearExtintoresAExcel,
+
+  actualizarExtintoresEnMemoria,
+
+  actualizarExtintoresEnOneDrive,
+
+  actualizarExcelSeguimientoSstEnMemoria,
+
+  actualizarExcelSeguimientoSstEnOneDrive,
 };
