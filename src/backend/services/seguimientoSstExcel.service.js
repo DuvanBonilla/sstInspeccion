@@ -32,6 +32,14 @@ const {
   actualizarBotiquines,
 } = require("./seguimientoSstExcel/botiquines.service");
 
+const {
+  actualizarResumen,
+} = require("./seguimientoSstExcel/resumen.service");
+
+const {
+  actualizarGeneral,
+} = require("./seguimientoSstExcel/general.service");
+
 const CONTENT_TYPE_XLSM =
   "application/vnd.ms-excel.sheet.macroEnabled.12";
 
@@ -155,9 +163,15 @@ async function actualizarExcelSeguimientoSstEnMemoria() {
   const botiquines =
     await actualizarBotiquines(zip);
 
+  const resumen =
+    await actualizarResumen(zip);
+
+  const general =
+    await actualizarGeneral(zip);  
+
   const macrosConservadas =
     validarMacrosExcel(zip);
-
+  
   return {
     buffer:
       generarBufferExcel(zip),
@@ -173,6 +187,10 @@ async function actualizarExcelSeguimientoSstEnMemoria() {
     equiposTecnologicos,
 
     botiquines,
+
+    resumen,
+
+    general,
   };
 }
 
@@ -214,8 +232,16 @@ async function actualizarExcelSeguimientoSstEnOneDrive() {
 
     botiquines:
       resultado.botiquines,
+
+    resumen:
+      resultado.resumen,
+
+    general:
+      resultado.general,
   };
 }
+
+
 
 module.exports = {
   obtenerRutaExcelSst,

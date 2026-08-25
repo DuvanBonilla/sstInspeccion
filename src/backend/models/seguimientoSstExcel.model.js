@@ -212,6 +212,34 @@ async function obtenerBotiquinItemsSstAprobados() {
 
   return rows;
 }
+
+async function obtenerResumenInspeccionesSstAprobadas() {
+  const sql = `
+    SELECT
+      i.inspeccion_id,
+      i.fecha,
+      i.sede_operacion,
+      i.area_trabajo,
+      i.responsable_inspeccion,
+      i.cargo_responsable
+
+    FROM inspecciones i
+
+    WHERE i.tipo_inspeccion = $1
+      AND i.estado = $2
+
+    ORDER BY
+      i.fecha DESC,
+      i.inspecciones_id DESC
+  `;
+
+  const { rows } = await query(sql, [
+    "SST",
+    "enviada",
+  ]);
+
+  return rows;
+}
     
 module.exports = {
   obtenerExtintoresSstAprobados,
@@ -219,4 +247,5 @@ module.exports = {
   obtenerSenalizacionesSstAprobadas,
   obtenerEquiposTecnologicosSstAprobados,
   obtenerBotiquinItemsSstAprobados,
+  obtenerResumenInspeccionesSstAprobadas,
 };
