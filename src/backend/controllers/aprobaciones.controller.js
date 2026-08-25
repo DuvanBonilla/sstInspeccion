@@ -51,6 +51,10 @@ const {
   construirHtmlCorreoEpp,
 } = require("../services/correoEpp.service");
 
+const {
+  actualizarExcelSeguimientoSstEnOneDrive,
+} = require("../services/seguimientoSstExcel.service");
+
 const { calcularResumenEpp } = require("../services/resumenEpp.service");
 
 const { optimizarPdf } = require("../utils/pdfOptimizer");

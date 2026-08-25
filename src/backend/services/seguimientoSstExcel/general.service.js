@@ -102,6 +102,15 @@ const RANGOS_DESPLAZADOS = [
   },
 ];
 
+const RUTA_RELACIONES_WORKBOOK =
+  "xl/_rels/workbook.xml.rels";
+
+const RUTA_TIPOS_CONTENIDO =
+  "[Content_Types].xml";
+
+const RUTA_CADENA_CALCULO =
+  "xl/calcChain.xml";
+
 function escaparExpresionRegular(texto) {
   return String(texto).replace(
     /[.*+?^${}()|[\]\\]/g,
@@ -321,6 +330,50 @@ function activarRecalculoAutomatico(workbookXml) {
   );
 }
 
+function eliminarCadenaCalculo(zip) {
+  const relacionesWorkbookXml =
+    obtenerXml(
+      zip,
+      RUTA_RELACIONES_WORKBOOK,
+    );
+
+  const tiposContenidoXml =
+    obtenerXml(
+      zip,
+      RUTA_TIPOS_CONTENIDO,
+    );
+
+  const relacionesActualizadas =
+    relacionesWorkbookXml.replace(
+      /<Relationship\b[^>]*Type="http:\/\/schemas\.openxmlformats\.org\/officeDocument\/2006\/relationships\/calcChain"[^>]*\/>/g,
+      "",
+    );
+
+  const tiposContenidoActualizados =
+    tiposContenidoXml.replace(
+      /<Override\b[^>]*PartName="\/xl\/calcChain\.xml"[^>]*\/>/g,
+      "",
+    );
+
+  reemplazarXml(
+    zip,
+    RUTA_RELACIONES_WORKBOOK,
+    relacionesActualizadas,
+  );
+
+  reemplazarXml(
+    zip,
+    RUTA_TIPOS_CONTENIDO,
+    tiposContenidoActualizados,
+  );
+
+  if (zip.getEntry(RUTA_CADENA_CALCULO)) {
+    zip.deleteFile(RUTA_CADENA_CALCULO);
+  }
+
+  return true;
+}
+
 function actualizarGeneral(zip) {
   const hojaXml = obtenerXml(
     zip,
@@ -366,6 +419,9 @@ function actualizarGeneral(zip) {
     workbookActualizado,
   );
 
+  const cadenaCalculoEliminada =
+  eliminarCadenaCalculo(zip);
+
   return {
     hoja:
       "General",
@@ -380,6 +436,8 @@ function actualizarGeneral(zip) {
 
     recalculoAutomatico:
       true,
+
+    cadenaCalculoEliminada,
   };
 }
 
