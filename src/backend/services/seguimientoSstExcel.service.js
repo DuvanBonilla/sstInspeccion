@@ -20,6 +20,18 @@ const {
   actualizarCamillas,
 } = require("./seguimientoSstExcel/camillas.service");
 
+const {
+  actualizarSenalizaciones,
+} = require("./seguimientoSstExcel/senalizaciones.service");
+
+const {
+  actualizarEquiposTecnologicos,
+} = require("./seguimientoSstExcel/equiposTecnologicos.service");
+
+const {
+  actualizarBotiquines,
+} = require("./seguimientoSstExcel/botiquines.service");
+
 const CONTENT_TYPE_XLSM =
   "application/vnd.ms-excel.sheet.macroEnabled.12";
 
@@ -134,6 +146,15 @@ async function actualizarExcelSeguimientoSstEnMemoria() {
   const camillas =
     await actualizarCamillas(zip);
 
+  const senalizaciones =
+    await actualizarSenalizaciones(zip);
+
+  const equiposTecnologicos =
+    await actualizarEquiposTecnologicos(zip);
+
+  const botiquines =
+    await actualizarBotiquines(zip);
+
   const macrosConservadas =
     validarMacrosExcel(zip);
 
@@ -146,6 +167,12 @@ async function actualizarExcelSeguimientoSstEnMemoria() {
     extintores,
 
     camillas,
+
+    senalizaciones,
+
+    equiposTecnologicos,
+
+    botiquines,
   };
 }
 
@@ -178,6 +205,15 @@ async function actualizarExcelSeguimientoSstEnOneDrive() {
 
     camillas:
       resultado.camillas,
+
+    senalizaciones:
+      resultado.senalizaciones, 
+    
+    equiposTecnologicos:
+      resultado.equiposTecnologicos,
+
+    botiquines:
+      resultado.botiquines,
   };
 }
 
