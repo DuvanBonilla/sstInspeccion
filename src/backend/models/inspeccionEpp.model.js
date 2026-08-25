@@ -99,7 +99,6 @@ async function guardarInspeccionEppEnDB(data) {
     ------------------------------------------------------- */
 
     for (const [idx, trabajador] of trabajadores.entries()) {
-
       const { rows: trabajadorRows } = await client.query(
         `
         INSERT INTO evaluaciones_epp (
@@ -138,8 +137,28 @@ async function guardarInspeccionEppEnDB(data) {
       /* -----------------------------------------------------
          EVALUACIONES DEL TRABAJADOR
       ----------------------------------------------------- */
+      console.log("[EPP] Trabajador recibido:", {
+        nombre: trabajador.nombre,
+
+        codigo: trabajador.codigo,
+
+        elementosEsArreglo: Array.isArray(trabajador.elementos),
+
+        totalElementos: Array.isArray(trabajador.elementos)
+          ? trabajador.elementos.length
+          : 0,
+
+        elementos: trabajador.elementos,
+      });
 
       for (const elemento of trabajador.elementos || []) {
+        const planAccion =
+          typeof elemento.planAccion === "string"
+            ? elemento.planAccion.trim()
+            : "";
+
+        const tienePlanAccion = planAccion.length > 0;
+
         await client.query(
           `
     INSERT INTO detalle_evaluacion_epp (
@@ -148,17 +167,33 @@ async function guardarInspeccionEppEnDB(data) {
       condicion,
       uso,
       plan_accion,
-      fecha_plan_accion
+      fecha_plan_accion,
+      estado_plan
     )
-    VALUES ($1,$2,$3,$4,$5,$6)
+    VALUES (
+      $1,
+      $2,
+      $3,
+      $4,
+      $5,
+      $6,
+      $7
+    )
     `,
           [
             trabajadorEppId,
+
             elemento.elementoEppId,
+
             elemento.condicion || "",
+
             elemento.uso || "",
-            elemento.planAccion || null,
-            elemento.fechaPlanAccion || null,
+
+            tienePlanAccion ? planAccion : null,
+
+            tienePlanAccion ? elemento.fechaPlanAccion || null : null,
+
+            tienePlanAccion ? "PENDIENTE" : null,
           ],
         );
       }

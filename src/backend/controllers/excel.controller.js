@@ -14,12 +14,9 @@ async function descargarExcelSeguimientoEpp(req, res) {
 
     const buffer = await generarExcelSeguimientoEpp(filtros);
 
-    const fecha = new Date()
-      .toISOString()
-      .slice(0, 10);
+    const fecha = new Date().toISOString().slice(0, 10);
 
-    const nombreArchivo =
-      `Seguimiento_EPP_${fecha}.xlsx`;
+    const nombreArchivo = `Seguimiento_EPP_${fecha}.xlsx`;
 
     res.setHeader(
       "Content-Type",
