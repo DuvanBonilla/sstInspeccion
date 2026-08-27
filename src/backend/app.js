@@ -40,8 +40,10 @@ const {
 const {
   enviarInspeccionEpp,
 } = require("./controllers/inspeccionEpp.controller");
+
 const {
-  descargarExcelSeguimientoEpp,
+  actualizarExcelSeguimientoEpp,
+  sincronizarCierresExcelEpp,
 } = require("./controllers/excel.controller");
 
 const {
@@ -105,11 +107,11 @@ app.get("/api/estadisticas/resumen", obtenerResumen);
 app.get("/api/estadisticas/inspecciones", listarInspecciones);
 app.get("/api/estadisticas-epp/resumen", obtenerResumenEpp);
 app.get("/api/estadisticas-epp/inspecciones", listarInspeccionesEpp);
-app.get("/api/excel/epp", descargarExcelSeguimientoEpp);
+app.post("/api/excel/epp/actualizar-onedrive", actualizarExcelSeguimientoEpp);
+app.post("/api/excel/epp/sincronizar-cierres", sincronizarCierresExcelEpp);
 app.get("/api/inspecciones/:id/links", obtenerLinks);
 app.get("/api/catalogo-epp", listarCatalogoEpp);
 app.get("/api/catalogo-epp/predeterminados", listarEppPredeterminados);
-
 
 app.listen(PORT, () => {
   console.log(`Servidor MVC activo en http://localhost:${PORT}`);

@@ -354,9 +354,126 @@ async function obtenerPlanesAccion(filtros = {}) {
   return result.rows;
 }
 
+async function cerrarPlanesAccionDesdeExcel(cierres = []) {
+  if (!Array.isArray(cierres) || cierres.length === 0) {
+    return {
+      solicitados: 0,
+      actualizados: [],
+      yaCumplidos: [],
+      noEncontrados: [],
+    };
+  }
+
+  const client = await pool.connect();
+
+  const actualizados = [];
+  const yaCumplidos = [];
+  const noEncontrados = [];
+
+  try {
+    await client.query("BEGIN");
+
+    for (const cierre of cierres) {
+      const detalleEppId = String(cierre.detalleEppId || "").trim();
+
+      const responsableCierre = String(cierre.responsableCierre || "").trim();
+
+      if (!/^\d+$/.test(detalleEppId)) {
+        throw new Error(`ID de plan no válido: ${detalleEppId || "vacío"}`);
+      }
+
+      if (!responsableCierre) {
+        throw new Error(
+          `El responsable es obligatorio para el plan ${detalleEppId}`,
+        );
+      }
+
+      const resultado = await client.query(
+        `
+        UPDATE detalle_evaluacion_epp d
+        SET
+          estado_plan = 'CUMPLIDO',
+          fecha_cierre = now(),
+          responsable_cierre = $2
+        WHERE
+          d.id = $1
+          AND COALESCE(
+            UPPER(TRIM(d.estado_plan)),
+            'PENDIENTE'
+          ) <> 'CUMPLIDO'
+          AND EXISTS (
+            SELECT 1
+            FROM evaluaciones_epp t
+            INNER JOIN inspecciones i
+              ON i.inspecciones_id = t.inspecciones_id
+            WHERE
+              t.id = d.evaluacion_epp_id
+              AND i.tipo_inspeccion = 'EPP'
+              AND i.estado = 'enviada'
+          )
+        RETURNING
+          d.id,
+          d.estado_plan,
+          d.fecha_cierre,
+          d.responsable_cierre
+        `,
+        [detalleEppId, responsableCierre],
+      );
+
+      if (resultado.rowCount > 0) {
+        actualizados.push(resultado.rows[0]);
+        continue;
+      }
+
+      const existente = await client.query(
+        `
+        SELECT
+          d.id,
+          d.estado_plan
+        FROM detalle_evaluacion_epp d
+        INNER JOIN evaluaciones_epp t
+          ON t.id = d.evaluacion_epp_id
+        INNER JOIN inspecciones i
+          ON i.inspecciones_id = t.inspecciones_id
+        WHERE
+          d.id = $1
+          AND i.tipo_inspeccion = 'EPP'
+          AND i.estado = 'enviada'
+        `,
+        [detalleEppId],
+      );
+
+      if (existente.rowCount === 0) {
+        noEncontrados.push(detalleEppId);
+      } else if (
+        String(existente.rows[0].estado_plan || "")
+          .trim()
+          .toUpperCase() === "CUMPLIDO"
+      ) {
+        yaCumplidos.push(detalleEppId);
+      }
+    }
+
+    await client.query("COMMIT");
+
+    return {
+      solicitados: cierres.length,
+      actualizados,
+      yaCumplidos,
+      noEncontrados,
+    };
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
 module.exports = {
   construirFiltrosExcelEpp,
   obtenerInspecciones,
   obtenerSeguimientoEpp,
   obtenerPlanesAccion,
+  cerrarPlanesAccionDesdeExcel,
 };

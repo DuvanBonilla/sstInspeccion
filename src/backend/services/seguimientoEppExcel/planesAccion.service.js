@@ -9,9 +9,7 @@ const {
   aplicarColorPorValor,
 } = require("../excel.service");
 
-const {
-  COLORES_EVALUACION,
-} = require("./estilos.service");
+const { COLORES_EVALUACION } = require("./estilos.service");
 
 function construirHojaPlanesAccion(workbook, planes) {
   const hoja = obtenerOCrearHoja(workbook, "03 - Planes de Acción");
@@ -126,8 +124,24 @@ function construirHojaPlanesAccion(workbook, planes) {
       key: "cumplido",
       width: 18,
     },
+    {
+      header: "ID Plan",
+      key: "detalleEppId",
+      width: 14,
+    },
+    {
+      header: "Responsable del Cierre",
+      key: "responsableCierre",
+      width: 28,
+    },
+    {
+      header: "Fecha de Cierre",
+      key: "fechaCierre",
+      width: 22,
+    },
   ]);
 
+  hoja.getColumn("Q").hidden = true;
   /* =========================================================
      DATOS
   ========================================================= */
@@ -154,6 +168,12 @@ function construirHojaPlanesAccion(workbook, planes) {
 
       // Este valor es manual en el Excel.
       cumplido: fila.estado_plan === "CUMPLIDO" ? "☑ CUMPLIDO" : "☐ PENDIENTE",
+
+      detalleEppId: fila.detalle_epp_id || "",
+
+      responsableCierre: fila.responsable_cierre || "",
+
+      fechaCierre: fila.fecha_cierre || null,
     });
 
     const numeroFila = row.number;
@@ -219,27 +239,20 @@ function construirHojaPlanesAccion(workbook, planes) {
     /* =======================================================
        FECHAS
     ======================================================= */
-
-    // B = Fecha Inspección
     aplicarFormatoFecha(hoja, "B", 2, ultimaFila);
 
-    // M = Fecha Compromiso
     aplicarFormatoFecha(hoja, "M", 2, ultimaFila);
 
+    aplicarFormatoFecha(hoja, "S", 2, ultimaFila);
     /* =======================================================
        EVALUACIÓN EPP
     ======================================================= */
-
-    // J = Condición
     aplicarColorPorValor(hoja, "J", 2, ultimaFila, COLORES_EVALUACION);
 
-    // K = Uso
     aplicarColorPorValor(hoja, "K", 2, ultimaFila, COLORES_EVALUACION);
-
     /* =======================================================
        CUMPLIMIENTO MANUAL
     ======================================================= */
-
     for (let fila = 2; fila <= ultimaFila; fila += 1) {
       const celdaCumplido = hoja.getCell(`P${fila}`);
 
@@ -258,19 +271,16 @@ function construirHojaPlanesAccion(workbook, planes) {
         vertical: "middle",
       };
     }
-
     /* =======================================================
        COLOR SITUACIÓN
        O = Situación
     ======================================================= */
-
     hoja.addConditionalFormatting({
       ref: `O2:O${ultimaFila}`,
       rules: [
         // ---------------------------------------------------
         // VENCIDO
         // ---------------------------------------------------
-
         {
           type: "cellIs",
           operator: "equal",

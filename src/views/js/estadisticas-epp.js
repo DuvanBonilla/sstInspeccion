@@ -588,96 +588,47 @@
   });
 
   /* =========================================================
-   EXPORTAR EXCEL - SEGUIMIENTO EPP
+   ACTUALIZAR EXCEL EPP EN ONEDRIVE
 ========================================================= */
 
   const btnExportarExcelEpp = document.getElementById("btn-exportar-excel-epp");
 
   if (btnExportarExcelEpp) {
     btnExportarExcelEpp.addEventListener("click", async () => {
-      const textoOriginal = btnExportarExcelEpp.innerHTML;
+      const contenidoOriginal = btnExportarExcelEpp.innerHTML;
 
       try {
-        /* -----------------------------------------------------
-         ESTADO DE CARGA
-      ----------------------------------------------------- */
-
         btnExportarExcelEpp.disabled = true;
+
         btnExportarExcelEpp.innerHTML = `
-        <span>Generando Excel...</span>
-      `;
+          <span>Actualizando Excel...</span>
+        `;
 
-        /* -----------------------------------------------------
-         SOLICITAR EXCEL AL BACKEND
-      ----------------------------------------------------- */
+        const response = await fetch("/api/excel/epp/actualizar-onedrive", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
 
-        const filtros = leerFiltros();
+        const data = await response.json();
 
-        const query = crearQuery(filtros);
-
-        const urlExcel = query ? `/api/excel/epp?${query}` : "/api/excel/epp";
-
-        const response = await fetch(urlExcel);
-
-        if (!response.ok) {
-          throw new Error(`Error al generar el Excel (${response.status})`);
+        if (!response.ok || !data.ok) {
+          throw new Error(
+            data.mensaje || "No fue posible actualizar el Excel EPP.",
+          );
         }
 
-        /* -----------------------------------------------------
-         CONVERTIR RESPUESTA A ARCHIVO
-      ----------------------------------------------------- */
-
-        const blob = await response.blob();
-
-        const url = URL.createObjectURL(blob);
-
-        /* -----------------------------------------------------
-         CREAR DESCARGA
-      ----------------------------------------------------- */
-
-        const enlace = document.createElement("a");
-
-        enlace.href = url;
-        enlace.download = `Seguimiento_EPP_${obtenerFechaArchivo()}.xlsx`;
-
-        document.body.appendChild(enlace);
-
-        enlace.click();
-
-        /* -----------------------------------------------------
-         LIMPIEZA
-      ----------------------------------------------------- */
-
-        enlace.remove();
-
-        URL.revokeObjectURL(url);
+        alert("Excel EPP actualizado correctamente en OneDrive.");
       } catch (error) {
-        console.error("Error descargando Excel EPP:", error);
+        console.error("Error actualizando Excel EPP:", error);
 
-        alert("No fue posible generar el archivo Excel de seguimiento EPP.");
+        alert(error.message || "No fue posible actualizar el Excel EPP.");
       } finally {
-        /* -----------------------------------------------------
-         RESTAURAR BOTÓN
-      ----------------------------------------------------- */
-
         btnExportarExcelEpp.disabled = false;
-        btnExportarExcelEpp.innerHTML = textoOriginal;
+        btnExportarExcelEpp.innerHTML = contenidoOriginal;
       }
     });
-  }
-
-  /* =========================================================
-   FECHA PARA NOMBRE DEL ARCHIVO
-========================================================= */
-
-  function obtenerFechaArchivo() {
-    const ahora = new Date();
-
-    const anio = ahora.getFullYear();
-    const mes = String(ahora.getMonth() + 1).padStart(2, "0");
-    const dia = String(ahora.getDate()).padStart(2, "0");
-
-    return `${anio}-${mes}-${dia}`;
   }
 
   // =====================================================

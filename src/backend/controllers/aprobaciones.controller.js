@@ -55,6 +55,10 @@ const {
   actualizarExcelSeguimientoSstEnOneDrive,
 } = require("../services/seguimientoSstExcel.service");
 
+const {
+  actualizarExcelSeguimientoEppEnOneDrive,
+} = require("../services/seguimientoEppExcel.service");
+
 const { calcularResumenEpp } = require("../services/resumenEpp.service");
 
 const { optimizarPdf } = require("../utils/pdfOptimizer");
@@ -563,34 +567,57 @@ async function finalizarInspeccion(inspeccionId) {
   // - correo procesado
   // =======================================================
 
-  await marcarInspeccionEnviada(row.inspeccion_id, webUrl);
+  await marcarInspeccionEnviada(
+    row.inspeccion_id,
+    webUrl,
+  );
 
   if (tipoInspeccion === "SST") {
     try {
-      const resultadoExcel = await actualizarExcelSeguimientoSstEnOneDrive();
+      const resultadoExcel =
+        await actualizarExcelSeguimientoSstEnOneDrive();
 
-      console.log("[aprobaciones] Excel SST actualizado:", {
-        inspeccionId: row.inspeccion_id,
-
-        rutaExcel: resultadoExcel.rutaExcel,
-
-        extintores: resultadoExcel.extintores,
-
-        camillas: resultadoExcel.camillas,
-
-        senalizaciones: resultadoExcel.senalizaciones,
-
-        equiposTecnologicos: resultadoExcel.equiposTecnologicos,
-
-        botiquines: resultadoExcel.botiquines,
-
-        resumen: resultadoExcel.resumen,
-
-        general: resultadoExcel.general,
-      });
+      console.log(
+        "[aprobaciones] Excel SST actualizado:",
+        {
+          inspeccionId: row.inspeccion_id,
+          rutaExcel: resultadoExcel.rutaExcel,
+          extintores: resultadoExcel.extintores,
+          camillas: resultadoExcel.camillas,
+          senalizaciones:
+            resultadoExcel.senalizaciones,
+          equiposTecnologicos:
+            resultadoExcel.equiposTecnologicos,
+          botiquines: resultadoExcel.botiquines,
+          resumen: resultadoExcel.resumen,
+          general: resultadoExcel.general,
+        },
+      );
     } catch (error) {
       console.error(
         `[aprobaciones] No se pudo actualizar el Excel SST para ${row.inspeccion_id}:`,
+        error,
+      );
+    }
+  } else if (tipoInspeccion === "EPP") {
+    try {
+      const resultadoExcel =
+        await actualizarExcelSeguimientoEppEnOneDrive();
+
+      console.log(
+        "[aprobaciones] Excel EPP actualizado:",
+        {
+          inspeccionId: row.inspeccion_id,
+          rutaExcel: resultadoExcel.rutaExcel,
+          estadoInspecciones:
+            resultadoExcel.estadoInspecciones,
+          tamañoBytes:
+            resultadoExcel.tamañoBytes,
+        },
+      );
+    } catch (error) {
+      console.error(
+        `[aprobaciones] No se pudo actualizar el Excel EPP para ${row.inspeccion_id}:`,
         error,
       );
     }
@@ -602,3 +629,4 @@ module.exports = {
   previsualizarAprobacion,
   registrarAprobacion,
 };
+

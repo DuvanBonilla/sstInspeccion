@@ -28,6 +28,12 @@ const {
   construirHojaGeneralEpp,
 } = require("./seguimientoEppExcel/general.service");
 
+const { obtenerRutaExcelEpp } = require("./seguimientoEppExcel/ruta.service");
+
+const {
+  sincronizarCierresDesdeExcelEpp,
+} = require("./sincronizacionEppExcel.service");
+
 const CONTENT_TYPE_XLSX =
   "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
 
@@ -85,24 +91,15 @@ async function generarExcelSeguimientoEpp(filtros = {}) {
   return generarBuffer(workbook);
 }
 
-function obtenerRutaExcelEpp() {
-  const ruta = String(process.env.ONEDRIVE_EPP_EXCEL_PATH || "").trim();
-
-  if (!ruta) {
-    throw new Error(
-      "Falta configurar ONEDRIVE_EPP_EXCEL_PATH en el archivo .env",
-    );
-  }
-
-  if (!ruta.toLowerCase().endsWith(".xlsx")) {
-    throw new Error("ONEDRIVE_EPP_EXCEL_PATH debe terminar en .xlsx");
-  }
-
-  return ruta;
-}
-
 async function actualizarExcelSeguimientoEppEnOneDrive() {
   const rutaExcel = obtenerRutaExcelEpp();
+
+  // Antes de regenerar el archivo, guardar en la BD
+  // los cierres realizados manualmente desde Excel.
+  const sincronizacion = await sincronizarCierresDesdeExcelEpp({
+    detenerSiHayErrores: true,
+    permitirArchivoInexistente: true,
+  });
 
   const buffer = await generarExcelSeguimientoEpp({
     estado: "enviada",
@@ -118,6 +115,11 @@ async function actualizarExcelSeguimientoEppEnOneDrive() {
     rutaExcel,
     estadoInspecciones: "enviada",
     tamañoBytes: buffer.length,
+    sincronizacion: {
+      actualizados: sincronizacion.actualizados.length,
+      yaCumplidos: sincronizacion.yaCumplidos.length,
+      erroresExcel: sincronizacion.erroresExcel.length,
+    },
   };
 }
 
