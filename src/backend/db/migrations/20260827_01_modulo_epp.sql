@@ -210,10 +210,6 @@ CREATE TABLE IF NOT EXISTS public.alertas_epp_envios (
     CHECK (intentos >= 1)
 );
 
-COMMIT;
-
-BEGIN;
-
 DO $$
 DECLARE
   tabla TEXT;
