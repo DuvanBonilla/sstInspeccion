@@ -50,6 +50,13 @@ const {
   listarCatalogoEpp,
   listarEppPredeterminados,
 } = require("./controllers/catalogoEpp.controller");
+const {
+  autorizarAzureEpp,
+} = require("./middlewares/autorizarAzureEpp.middleware");
+
+const {
+  ejecutarAlertasEppDiarias,
+} = require("./controllers/alertasEpp.controller");
 
 const app = express();
 app.set("trust proxy", true);
@@ -108,7 +115,16 @@ app.get("/api/estadisticas/inspecciones", listarInspecciones);
 app.get("/api/estadisticas-epp/resumen", obtenerResumenEpp);
 app.get("/api/estadisticas-epp/inspecciones", listarInspeccionesEpp);
 app.post("/api/excel/epp/actualizar-onedrive", actualizarExcelSeguimientoEpp);
-app.post("/api/excel/epp/sincronizar-cierres", sincronizarCierresExcelEpp);
+app.post(
+  "/api/excel/epp/sincronizar-cierres",
+  autorizarAzureEpp,
+  sincronizarCierresExcelEpp,
+);
+app.post(
+  "/api/alertas-epp/ejecutar-diario",
+  autorizarAzureEpp,
+  ejecutarAlertasEppDiarias,
+);
 app.get("/api/inspecciones/:id/links", obtenerLinks);
 app.get("/api/catalogo-epp", listarCatalogoEpp);
 app.get("/api/catalogo-epp/predeterminados", listarEppPredeterminados);

@@ -470,10 +470,109 @@ async function cerrarPlanesAccionDesdeExcel(cierres = []) {
   }
 }
 
+async function obtenerPlanesEppParaAlertas() {
+  const result = await pool.query(`
+    WITH parametros AS (
+      SELECT
+        (
+          CURRENT_TIMESTAMP
+          AT TIME ZONE 'America/Bogota'
+        )::date AS fecha_hoy
+    )
+
+    SELECT
+      d.id AS detalle_epp_id,
+
+      i.inspecciones_id,
+      i.inspeccion_id,
+      i.fecha,
+      i.sede_operacion,
+      i.area_trabajo,
+
+      t.codigo AS codigo_trabajador,
+      t.nombre AS nombre_trabajador,
+      t.cargo,
+
+      e.nombre AS elemento_epp,
+      e.categoria,
+
+      d.condicion,
+      d.uso,
+      d.plan_accion,
+      d.fecha_plan_accion,
+      d.estado_plan,
+
+      parametros.fecha_hoy,
+
+      (
+        d.fecha_plan_accion
+        - parametros.fecha_hoy
+      )::int AS dias_restantes,
+
+      CASE
+        WHEN
+          d.fecha_plan_accion
+          < parametros.fecha_hoy
+          THEN 'VENCIDO'
+
+        WHEN
+          d.fecha_plan_accion
+          = parametros.fecha_hoy
+          THEN 'VENCE HOY'
+
+        ELSE 'PRÓXIMO A VENCER'
+      END AS tipo_alerta
+
+    FROM detalle_evaluacion_epp d
+
+    INNER JOIN evaluaciones_epp t
+      ON t.id = d.evaluacion_epp_id
+
+    INNER JOIN inspecciones i
+      ON i.inspecciones_id =
+        t.inspecciones_id
+
+    INNER JOIN elementos_epp e
+      ON e.id = d.elemento_epp_id
+
+    CROSS JOIN parametros
+
+    WHERE
+      i.tipo_inspeccion = 'EPP'
+
+      AND i.estado = 'enviada'
+
+      AND NULLIF(
+        TRIM(d.plan_accion),
+        ''
+      ) IS NOT NULL
+
+      AND d.fecha_plan_accion IS NOT NULL
+
+      AND COALESCE(
+        UPPER(TRIM(d.estado_plan)),
+        'PENDIENTE'
+      ) <> 'CUMPLIDO'
+
+      AND d.fecha_plan_accion
+        <= parametros.fecha_hoy + 3
+
+    ORDER BY
+      i.sede_operacion ASC,
+      d.fecha_plan_accion ASC,
+      i.inspecciones_id ASC,
+      t.idx ASC,
+      e.nombre ASC
+  `);
+
+  return result.rows;
+}
+
 module.exports = {
   construirFiltrosExcelEpp,
   obtenerInspecciones,
   obtenerSeguimientoEpp,
   obtenerPlanesAccion,
   cerrarPlanesAccionDesdeExcel,
+  obtenerPlanesEppParaAlertas,
 };

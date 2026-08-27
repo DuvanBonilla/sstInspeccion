@@ -2,56 +2,92 @@ const { getAccessToken, getRequiredEnv } = require("./graph.service");
 
 const LOGO_URL = "https://sstinspeccion.onrender.com/img/Cargo.png";
 
-
-
 async function enviarCorreoPorGraph({
   to,
   subject,
   html,
-  pdfBuffer,
+  pdfBuffer = null,
   nombre = "inspeccion-sst.pdf",
 }) {
   const token = await getAccessToken();
+
   const remitente = getRequiredEnv("ONEDRIVE_USER_ID");
 
-  const emailBody = {
-    message: {
-      subject,
-      body: {
-        contentType: "HTML",
-        content: html,
+  const destinatarios = (Array.isArray(to) ? to : String(to || "").split(","))
+    .map((direccion) => String(direccion).trim())
+    .filter(Boolean)
+    .map((direccion) => ({
+      emailAddress: {
+        address: direccion,
       },
-      toRecipients: (Array.isArray(to) ? to : to.split(","))
-        .map((addr) => addr.trim())
-        .filter(Boolean)
-        .map((addr) => ({ emailAddress: { address: addr } })),
-      attachments: [
-        {
-          "@odata.type": "#microsoft.graph.fileAttachment",
-          name: nombre,
-          contentBytes: pdfBuffer.toString("base64"),
-        },
-      ],
+    }));
+
+  if (destinatarios.length === 0) {
+    throw new Error("Debe indicar al menos un destinatario");
+  }
+
+  const message = {
+    subject,
+
+    body: {
+      contentType: "HTML",
+      content: html,
     },
-    saveToSentItems: true,
+
+    toRecipients: destinatarios,
   };
 
-  // Enviar correo
+  // Los correos de inspecciones continúan enviando
+  // su PDF. Las alertas EPP no necesitan adjunto.
+  if (pdfBuffer) {
+    if (!Buffer.isBuffer(pdfBuffer)) {
+      throw new Error("El archivo adjunto debe ser un Buffer");
+    }
+
+    message.attachments = [
+      {
+        "@odata.type": "#microsoft.graph.fileAttachment",
+
+        name: nombre,
+
+        contentBytes: pdfBuffer.toString("base64"),
+      },
+    ];
+  }
+
   const response = await fetch(
     `https://graph.microsoft.com/v1.0/users/${encodeURIComponent(remitente)}/sendMail`,
     {
       method: "POST",
+
       headers: {
         Authorization: `Bearer ${token}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify(emailBody),
+
+      body: JSON.stringify({
+        message,
+        saveToSentItems: true,
+      }),
     },
   );
 
   if (!response.ok) {
-    const errorData = await response.json();
-    const detail = errorData?.error?.message || `HTTP ${response.status}`;
+    const text = await response.text();
+
+    let errorData;
+
+    try {
+      errorData = text ? JSON.parse(text) : {};
+    } catch {
+      errorData = {
+        raw: text,
+      };
+    }
+
+    const detail =
+      errorData?.error?.message || errorData?.raw || `HTTP ${response.status}`;
+
     throw new Error(`Error enviando correo por Graph: ${detail}`);
   }
 }

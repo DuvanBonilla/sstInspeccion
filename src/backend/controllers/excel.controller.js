@@ -48,39 +48,6 @@ async function actualizarExcelSeguimientoEpp(req, res) {
 
 async function sincronizarCierresExcelEpp(req, res) {
   try {
-    const secretoConfigurado =
-      process.env.AZURE_EPP_SYNC_SECRET;
-
-    if (!secretoConfigurado) {
-      console.error(
-        "[EPP Sync] AZURE_EPP_SYNC_SECRET no está configurado",
-      );
-
-      return res.status(500).json({
-        ok: false,
-        mensaje:
-          "La sincronización EPP no está configurada",
-      });
-    }
-
-    const autorizacion =
-      String(req.headers.authorization || "");
-
-    const secretoRecibido =
-      autorizacion.startsWith("Bearer ")
-        ? autorizacion.slice(7).trim()
-        : "";
-
-    if (
-      !secretoRecibido
-      || secretoRecibido !== secretoConfigurado
-    ) {
-      return res.status(401).json({
-        ok: false,
-        mensaje: "No autorizado",
-      });
-    }
-
     const resultado =
       await sincronizarCierresDesdeExcelEpp();
 
