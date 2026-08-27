@@ -48,45 +48,26 @@ async function actualizarExcelSeguimientoEpp(req, res) {
 
 async function sincronizarCierresExcelEpp(req, res) {
   try {
-    const resultado =
-      await sincronizarCierresDesdeExcelEpp();
+    const resultado = await sincronizarCierresDesdeExcelEpp();
 
-    console.log(
-      "[EPP Sync] Sincronización terminada:",
-      resultado,
-    );
+    const cantidadActualizados = resultado.actualizados?.length || 0;
 
-    return res.status(200).json({
+    return res.json({
       ok: true,
       mensaje:
-        resultado.actualizados.length > 0
-          ? `${resultado.actualizados.length} plan(es) actualizado(s)`
+        cantidadActualizados > 0
+          ? `${cantidadActualizados} plan(es) actualizado(s)`
           : "No se encontraron nuevos cierres",
       ...resultado,
     });
   } catch (error) {
-    console.error(
-      "[EPP Sync] No fue posible sincronizar:",
-      error,
-    );
+    console.error("[Excel EPP] Error sincronizando cierres:", error);
 
-    const mensaje =
-      error instanceof Error
-        ? error.message
-        : "No fue posible sincronizar el Excel EPP";
-
-    const archivoBloqueado =
-      mensaje.toLowerCase().includes("locked")
-      || mensaje.toLowerCase().includes("bloqueado");
-
-    return res
-      .status(archivoBloqueado ? 423 : 500)
-      .json({
-        ok: false,
-        mensaje: archivoBloqueado
-          ? "El Excel EPP está abierto o bloqueado. Guarda los cambios, ciérralo e inténtalo nuevamente."
-          : mensaje,
-      });
+    return res.status(500).json({
+      ok: false,
+      mensaje: error.message || "No se pudieron sincronizar los cierres EPP",
+      erroresExcel: error.erroresExcel || [],
+    });
   }
 }
 
