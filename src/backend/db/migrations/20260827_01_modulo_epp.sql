@@ -211,3 +211,41 @@ CREATE TABLE IF NOT EXISTS public.alertas_epp_envios (
 );
 
 COMMIT;
+
+BEGIN;
+
+DO $$
+DECLARE
+  tabla TEXT;
+BEGIN
+  FOREACH tabla IN ARRAY ARRAY[
+    'extintores',
+    'camillas',
+    'senalizaciones',
+    'botiquines',
+    'equipos_tecnologicos'
+  ]
+  LOOP
+    IF EXISTS (
+      SELECT 1
+      FROM information_schema.columns
+      WHERE table_schema = 'public'
+        AND table_name = tabla
+        AND column_name = 'inspeccion_pk'
+    ) AND NOT EXISTS (
+      SELECT 1
+      FROM information_schema.columns
+      WHERE table_schema = 'public'
+        AND table_name = tabla
+        AND column_name = 'inspecciones_id'
+    ) THEN
+      EXECUTE format(
+        'ALTER TABLE public.%I RENAME COLUMN inspeccion_pk TO inspecciones_id',
+        tabla
+      );
+    END IF;
+  END LOOP;
+END
+$$;
+
+COMMIT;
