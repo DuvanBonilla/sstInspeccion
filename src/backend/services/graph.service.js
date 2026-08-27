@@ -184,7 +184,24 @@ async function descargarArchivoOneDrive(ruta) {
   );
 
   if (!response.ok) {
-    return null;
+    const text = await response.text();
+
+    let data;
+
+    try {
+      data = text ? JSON.parse(text) : {};
+    } catch {
+      data = {
+        raw: text,
+      };
+    }
+
+    const detail =
+      data?.error?.message || data?.raw || `HTTP ${response.status}`;
+
+    throw new Error(
+      `Error OneDrive/Graph al descargar archivo (${response.status}): ${detail}`,
+    );
   }
 
   const arrayBuffer = await response.arrayBuffer();

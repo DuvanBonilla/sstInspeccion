@@ -42,6 +42,7 @@ const {
 } = require("./controllers/inspeccionEpp.controller");
 
 const {
+  actualizarExcelSeguimientoSst,
   actualizarExcelSeguimientoEpp,
   sincronizarCierresExcelEpp,
 } = require("./controllers/excel.controller");
@@ -115,6 +116,7 @@ app.get("/api/estadisticas/inspecciones", listarInspecciones);
 app.get("/api/estadisticas-epp/resumen", obtenerResumenEpp);
 app.get("/api/estadisticas-epp/inspecciones", listarInspeccionesEpp);
 app.post("/api/excel/epp/actualizar-onedrive", actualizarExcelSeguimientoEpp);
+app.post("/api/excel/sst/actualizar-onedrive", actualizarExcelSeguimientoSst);
 app.post(
   "/api/excel/epp/sincronizar-cierres",
   autorizarAzureEpp,

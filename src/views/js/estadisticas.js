@@ -108,7 +108,6 @@
 
     tablaBody.innerHTML = items
       .map((it) => {
-
         const totalItems =
           Number(it.extintores || 0) +
           Number(it.camillas || 0) +
@@ -420,5 +419,49 @@
     actualizarFiltros();
   });
 
+  const btnActualizarExcelSst = document.getElementById(
+    "btn-actualizar-excel-sst",
+  );
+
+  if (btnActualizarExcelSst) {
+    btnActualizarExcelSst.addEventListener("click", async () => {
+      const contenidoOriginal = btnActualizarExcelSst.innerHTML;
+
+      try {
+        btnActualizarExcelSst.disabled = true;
+
+        btnActualizarExcelSst.innerHTML = "<span>Actualizando...</span>";
+
+        const response = await fetch("/api/excel/sst/actualizar-onedrive", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
+
+        const data = await response.json();
+
+        if (!response.ok || !data.ok) {
+          const error = new Error(
+            data.mensaje || "No fue posible actualizar el Excel SST.",
+          );
+
+          error.codigo = data.codigo || "";
+
+          throw error;
+        }
+
+        alert("El Excel SST fue actualizado correctamente en OneDrive.");
+      } catch (error) {
+        console.error("[Excel SST] Error actualizando:", error);
+
+        alert(error.message || "No fue posible actualizar el Excel SST.");
+      } finally {
+        btnActualizarExcelSst.disabled = false;
+        btnActualizarExcelSst.innerHTML = contenidoOriginal;
+      }
+    });
+  }
+  
   cargarTodo();
 })();

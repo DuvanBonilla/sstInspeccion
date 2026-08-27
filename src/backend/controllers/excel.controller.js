@@ -6,6 +6,10 @@ const {
   sincronizarCierresDesdeExcelEpp,
 } = require("../services/sincronizacionEppExcel.service");
 
+const {
+  actualizarExcelSeguimientoSstEnOneDrive,
+} = require("../services/seguimientoSstExcel.service");
+
 async function actualizarExcelSeguimientoEpp(req, res) {
   try {
     const resultado = await actualizarExcelSeguimientoEppEnOneDrive();
@@ -46,6 +50,43 @@ async function actualizarExcelSeguimientoEpp(req, res) {
   }
 }
 
+async function actualizarExcelSeguimientoSst(req, res) {
+  try {
+    const resultado = await actualizarExcelSeguimientoSstEnOneDrive();
+
+    return res.status(200).json({
+      ok: true,
+      mensaje: "Excel SST actualizado correctamente en OneDrive.",
+      resultado: {
+        rutaExcel: resultado.rutaExcel,
+        macrosConservadas: resultado.macrosConservadas,
+      },
+    });
+  } catch (error) {
+    console.error("[Excel SST] Error en actualización manual:", error);
+
+    const mensaje =
+      error instanceof Error
+        ? error.message
+        : "No fue posible actualizar el Excel SST";
+
+    if (mensaje.toLowerCase().includes("locked")) {
+      return res.status(423).json({
+        ok: false,
+        codigo: "ARCHIVO_BLOQUEADO",
+        mensaje:
+          "El archivo SST está abierto o bloqueado en OneDrive. Ciérrelo y vuelva a intentarlo.",
+      });
+    }
+
+    return res.status(500).json({
+      ok: false,
+      codigo: "ERROR_ACTUALIZACION_SST",
+      mensaje: "No fue posible actualizar el Excel SST en OneDrive.",
+    });
+  }
+}
+
 async function sincronizarCierresExcelEpp(req, res) {
   try {
     const resultado = await sincronizarCierresDesdeExcelEpp();
@@ -73,5 +114,6 @@ async function sincronizarCierresExcelEpp(req, res) {
 
 module.exports = {
   actualizarExcelSeguimientoEpp,
+  actualizarExcelSeguimientoSst,
   sincronizarCierresExcelEpp,
 };
