@@ -1,0 +1,71 @@
+name: Alertas EPP diarias
+
+on:
+  schedule:
+    # 13:00 UTC equivale a las 8:00 a. m. en Colombia.
+    - cron: "0 13 * * *"
+
+  workflow_dispatch:
+
+  push:
+    branches:
+      - feature/epp
+    paths:
+      - ".github/workflows/alertas-epp-diarias.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: alertas-epp-diarias
+  cancel-in-progress: false
+
+jobs:
+  enviar-alertas:
+    name: Sincronizar cierres y enviar alertas
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Ejecutar proceso diario EPP
+        shell: bash
+        env:
+          EPP_SYNC_SECRET: ${{ secrets.AZURE_EPP_SYNC_SECRET }}
+          EPP_ALERTAS_URL: https://sstinspeccion.onrender.com/api/alertas-epp/ejecutar-diario
+        run: |
+          if [ -z "$EPP_SYNC_SECRET" ]; then
+            echo "No está configurado AZURE_EPP_SYNC_SECRET."
+            exit 1
+          fi
+
+          response_file="$(mktemp)"
+
+          http_code="$(
+            curl \
+              --silent \
+              --show-error \
+              --location \
+              --max-time 180 \
+              --retry 3 \
+              --retry-delay 10 \
+              --retry-all-errors \
+              --request POST \
+              --header "Authorization: Bearer $EPP_SYNC_SECRET" \
+              --header "Content-Type: application/json" \
+              --output "$response_file" \
+              --write-out "%{http_code}" \
+              "$EPP_ALERTAS_URL"
+          )"
+
+          echo "Estado HTTP: $http_code"
+          echo "Respuesta:"
+          cat "$response_file"
+
+          if [[ "$http_code" -lt 200 || "$http_code" -ge 300 ]]; then
+            echo
+            echo "El proceso diario de alertas EPP falló."
+            exit 1
+          fi
+
+          echo
+          echo "Proceso diario de alertas EPP completado correctamente."
