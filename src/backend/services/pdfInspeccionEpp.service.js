@@ -217,16 +217,22 @@ function renderInformacionGeneral(doc, general, y) {
 
   doc
     .font("Helvetica-Bold")
-    .fontSize(9)
-    .text("RESPONSABLE DE LA INSPECCIÓN", 302, y + 8);
+    .fontSize(7.5)
+    .text("RESPONSABLE DE LA INSPECCIÓN:", 302, y + 8, {
+      width: 142,
+      height: 12,
+      lineBreak: false,
+    });
 
   doc
     .font("Helvetica")
-    .fontSize(9)
-    .text(texto(general.responsableInspeccion), 445, y + 8, {
-      width: 115,
+    .fontSize(8.5)
+    .text(texto(general.responsableInspeccion), 448, y + 8, {
+      width: 107,
+      height: 12,
+      lineBreak: false,
+      ellipsis: true,
     });
-
   y += 25;
 
   doc.rect(MARGEN, y, ANCHO, 25).stroke();
@@ -331,62 +337,84 @@ function renderDatosTrabajador(doc, trabajador, numero, y) {
   return y + 25;
 }
 
-function renderTablaEpp(doc, trabajador, y) {
-  doc.rect(MARGEN, y, ANCHO, 38).stroke();
-
-  doc
-    .font("Helvetica-Bold")
-    .fontSize(9)
-    .text("EVALUACIÓN DE ELEMENTOS DE PROTECCIÓN PERSONAL", MARGEN, y + 5, {
-      width: ANCHO,
-      align: "center",
-    });
-
-  doc
-    .font("Helvetica")
-    .fontSize(7.5)
-    .text(
-      "CONVENCIONES: B: Bueno   R: Regular   M: Malo   NA: No aplica",
-      MARGEN,
-      y + 21,
-      {
-        width: ANCHO,
-        align: "center",
-      },
-    );
-
-  y += 38;
-
+function renderTablaEpp(doc, trabajador, y, nuevaPagina) {
   const columnas = [365, 90, 90];
-
   const headers = ["ELEMENTO EPP", "CONDICIÓN", "USO"];
+  const rowHeight = 22;
 
-  let x = MARGEN;
-
-  headers.forEach((header, i) => {
-    doc.rect(x, y, columnas[i], 22).stroke();
+  function dibujarEncabezadoTabla(esContinuacion = false) {
+    doc.rect(MARGEN, y, ANCHO, 38).stroke();
 
     doc
       .font("Helvetica-Bold")
-      .fontSize(8)
-      .text(header, x, y + 7, {
-        width: columnas[i],
-        align: "center",
-      });
+      .fontSize(9)
+      .text(
+        esContinuacion
+          ? "EVALUACIÓN DE EPP - CONTINUACIÓN"
+          : "EVALUACIÓN DE ELEMENTOS DE PROTECCIÓN PERSONAL",
+        MARGEN,
+        y + 5,
+        {
+          width: ANCHO,
+          align: "center",
+        },
+      );
 
-    x += columnas[i];
-  });
+    doc
+      .font("Helvetica")
+      .fontSize(7.5)
+      .text(
+        "CONVENCIONES: B: Bueno   R: Regular   M: Malo   NA: No aplica",
+        MARGEN,
+        y + 21,
+        {
+          width: ANCHO,
+          align: "center",
+        },
+      );
 
-  y += 22;
+    y += 38;
+
+    let x = MARGEN;
+
+    headers.forEach((header, i) => {
+      doc.rect(x, y, columnas[i], 22).stroke();
+
+      doc
+        .font("Helvetica-Bold")
+        .fontSize(8)
+        .text(header, x, y + 7, {
+          width: columnas[i],
+          height: 12,
+          align: "center",
+          lineBreak: false,
+        });
+
+      x += columnas[i];
+    });
+
+    y += 22;
+  }
+
+  // La sección y su encabezado deben caber juntos.
+  if (y + 60 > LIMITE_INFERIOR) {
+    y = nuevaPagina(false);
+  }
+
+  dibujarEncabezadoTabla(false);
 
   const elementos = Array.isArray(trabajador.elementos)
     ? trabajador.elementos
     : [];
 
-  const rowHeight = 22;
-
   elementos.forEach((elemento) => {
-    x = MARGEN;
+    // La fila completa pasa a la página siguiente.
+    if (y + rowHeight > LIMITE_INFERIOR) {
+      y = nuevaPagina(false);
+      dibujarEncabezadoTabla(true);
+    }
+
+    let x = MARGEN;
 
     const fila = [elemento.elemento, elemento.condicion, elemento.uso];
 
@@ -398,7 +426,10 @@ function renderTablaEpp(doc, trabajador, y) {
         .fontSize(8)
         .text(texto(valor), x + 5, y + 7, {
           width: columnas[i] - 10,
+          height: rowHeight - 10,
           align: i === 0 ? "left" : "center",
+          lineBreak: false,
+          ellipsis: true,
         });
 
       x += columnas[i];
@@ -446,11 +477,7 @@ function renderTextoBloque(doc, titulo, contenido, y) {
   return y + altoTexto;
 }
 
-function renderPlanAccion(doc, trabajador, y) {
-  // =========================================================
-  // OBTENER PLANES DE ACCIÓN DESDE LOS ELEMENTOS EPP
-  // =========================================================
-
+function renderPlanAccion(doc, trabajador, y, nuevaPagina) {
   const elementos = Array.isArray(trabajador?.elementos)
     ? trabajador.elementos
     : [];
@@ -460,30 +487,68 @@ function renderPlanAccion(doc, trabajador, y) {
       String(elemento?.planAccion || "").trim() || elemento?.fechaPlanAccion,
   );
 
-  // =========================================================
-  // ENCABEZADO
-  // =========================================================
+  const columnas = [180, 275, 90];
+  const headers = ["ELEMENTO EPP", "PLAN DE ACCIÓN", "FECHA LÍMITE"];
 
-  doc.rect(MARGEN, y, ANCHO, 22).stroke();
+  function dibujarEncabezadoTabla(esContinuacion = false) {
+    doc.rect(MARGEN, y, ANCHO, 22).stroke();
 
-  doc
-    .font("Helvetica-Bold")
-    .fontSize(9)
-    .text("PLAN DE ACCIÓN", MARGEN, y + 6, {
-      width: ANCHO,
-      align: "center",
+    doc
+      .font("Helvetica-Bold")
+      .fontSize(9)
+      .text(
+        esContinuacion ? "PLAN DE ACCIÓN - CONTINUACIÓN" : "PLAN DE ACCIÓN",
+        MARGEN,
+        y + 6,
+        {
+          width: ANCHO,
+          align: "center",
+        },
+      );
+
+    y += 22;
+
+    let x = MARGEN;
+
+    headers.forEach((header, i) => {
+      doc.rect(x, y, columnas[i], 22).stroke();
+
+      doc
+        .font("Helvetica-Bold")
+        .fontSize(8)
+        .text(header, x + 3, y + 7, {
+          width: columnas[i] - 6,
+          height: 12,
+          align: "center",
+          lineBreak: false,
+        });
+
+      x += columnas[i];
     });
 
-  y += 22;
-
-  // =========================================================
-  // SIN PLANES DE ACCIÓN
-  // =========================================================
+    y += 22;
+  }
 
   if (planes.length === 0) {
-    const alto = 35;
+    const altoTotal = 22 + 35;
 
-    doc.rect(MARGEN, y, ANCHO, alto).stroke();
+    if (y + altoTotal > LIMITE_INFERIOR) {
+      y = nuevaPagina(false);
+    }
+
+    doc.rect(MARGEN, y, ANCHO, 22).stroke();
+
+    doc
+      .font("Helvetica-Bold")
+      .fontSize(9)
+      .text("PLAN DE ACCIÓN", MARGEN, y + 6, {
+        width: ANCHO,
+        align: "center",
+      });
+
+    y += 22;
+
+    doc.rect(MARGEN, y, ANCHO, 35).stroke();
 
     doc
       .font("Helvetica")
@@ -493,45 +558,17 @@ function renderPlanAccion(doc, trabajador, y) {
         align: "center",
       });
 
-    return y + alto;
+    return y + 35;
   }
 
-  // =========================================================
-  // TABLA
-  // =========================================================
+  if (y + 44 > LIMITE_INFERIOR) {
+    y = nuevaPagina(false);
+  }
 
-  const columnas = [180, 275, 90];
-
-  const headers = ["ELEMENTO EPP", "PLAN DE ACCIÓN", "FECHA LÍMITE"];
-
-  let x = MARGEN;
-
-  // ---------------------------------------------------------
-  // ENCABEZADOS DE TABLA
-  // ---------------------------------------------------------
-
-  headers.forEach((header, i) => {
-    doc.rect(x, y, columnas[i], 22).stroke();
-
-    doc
-      .font("Helvetica-Bold")
-      .fontSize(8)
-      .text(header, x + 3, y + 7, {
-        width: columnas[i] - 6,
-        align: "center",
-      });
-
-    x += columnas[i];
-  });
-
-  y += 22;
-
-  // ---------------------------------------------------------
-  // FILAS
-  // ---------------------------------------------------------
+  dibujarEncabezadoTabla(false);
 
   planes.forEach((elemento) => {
-    const nombreElemento = texto(elemento.elemento) || "—";
+    const nombreElemento = texto(elemento.elemento).trim() || "—";
 
     const planAccion = texto(elemento.planAccion).trim() || "Sin registro.";
 
@@ -539,24 +576,33 @@ function renderPlanAccion(doc, trabajador, y) {
       ? formatearFecha(elemento.fechaPlanAccion)
       : "No aplica";
 
-    // Calcular altura necesaria según el contenido.
+    doc.font("Helvetica").fontSize(8);
+
     const altoElemento =
       doc.heightOfString(nombreElemento, {
         width: columnas[0] - 10,
-        font: "Helvetica",
-        fontSize: 8,
       }) + 14;
 
     const altoPlan =
       doc.heightOfString(planAccion, {
         width: columnas[1] - 10,
-        font: "Helvetica",
-        fontSize: 8,
       }) + 14;
 
-    const rowHeight = Math.max(28, altoElemento, altoPlan);
+    const altoFecha =
+      doc.heightOfString(fechaLimite, {
+        width: columnas[2] - 10,
+      }) + 14;
 
-    x = MARGEN;
+    const rowHeight = Math.max(28, altoElemento, altoPlan, altoFecha);
+
+    // Ninguna columna se escribe hasta garantizar
+    // que la fila completa cabe.
+    if (y + rowHeight > LIMITE_INFERIOR) {
+      y = nuevaPagina(false);
+      dibujarEncabezadoTabla(true);
+    }
+
+    let x = MARGEN;
 
     const valores = [nombreElemento, planAccion, fechaLimite];
 
@@ -568,7 +614,10 @@ function renderPlanAccion(doc, trabajador, y) {
         .fontSize(8)
         .text(valor, x + 5, y + 7, {
           width: columnas[i] - 10,
+          height: rowHeight - 14,
           align: i === 2 ? "center" : "left",
+          lineBreak: true,
+          ellipsis: true,
         });
 
       x += columnas[i];
@@ -798,9 +847,9 @@ async function crearPdfInspeccionEpp(
 
       y = renderDatosTrabajador(doc, trabajador, index + 1, y);
 
-      y = renderTablaEpp(doc, trabajador, y);
+      y = renderTablaEpp(doc, trabajador, y, nuevaPagina);
 
-      y = renderPlanAccion(doc, trabajador, y);
+      y = renderPlanAccion(doc, trabajador, y, nuevaPagina);
 
       y = renderTextoBloque(doc, "OBSERVACIONES", trabajador.observaciones, y);
 
