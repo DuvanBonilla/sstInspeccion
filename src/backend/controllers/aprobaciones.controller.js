@@ -23,186 +23,330 @@
     resolverCorreoDestino / construirHtmlCorreo de pdfInspeccion.controller.js.
   - Es registrado en app.js como handler de /api/aprobaciones/:token.
 */
-const { obtenerContextoAprobacion, guardarAprobacion, marcarInspeccionEnviada } = require("../models/aprobaciones.model");
-const { descargarEvidenciaOneDrive, obtenerInspeccionCompleta } = require("../models/inspeccion.model");
 const {
-  crearPdfInspeccionExtintor,
+  obtenerContextoAprobacion,
+  guardarAprobacion,
+  marcarInspeccionEnviada,
+} = require("../models/aprobaciones.model");
+const { obtenerInspeccionCompleta } = require("../models/inspeccion.model");
+const {
   subirPdfAOneDrive,
+  construirEvidenciasDesdeOneDrive,
+  construirEvidenciasEppDesdeOneDrive,
+} = require("../services/evidencia.service");
+const {
+  generarPdfSstAprobacion,
+} = require("../services/pdfInspeccion.service");
+const {
   enviarCorreoPorGraph,
   resolverCorreoDestino,
-  construirHtmlCorreo
-} = require("./pdfInspeccion.controller");
-const { optimizarPdf } = require("../utils/pdfOptimizer");
-const { recuperarLinksAprobacion } = require("../controllers/inspeccion.controller");
+  construirHtmlCorreo,
+} = require("../services/correo.service");
+const {
+  generarPdfEppAprobacion,
+} = require("../services/pdfInspeccionEpp.service");
 
-// GET /api/aprobaciones/:token
+const {
+  resolverCorreoDestinoEpp,
+  construirHtmlCorreoEpp,
+} = require("../services/correoEpp.service");
+
+const {
+  actualizarExcelSeguimientoSstEnOneDrive,
+} = require("../services/seguimientoSstExcel.service");
+
+const {
+  actualizarExcelSeguimientoEppEnOneDrive,
+} = require("../services/seguimientoEppExcel.service");
+
+const { calcularResumenEpp } = require("../services/resumenEpp.service");
+
+const { optimizarPdf } = require("../utils/pdfOptimizer");
+
 async function obtenerResumenAprobacion(req, res) {
   try {
     const contexto = await obtenerContextoAprobacion(req.params.token);
+
     if (!contexto) {
-      return res.status(404).json({ ok: false, errores: ["Link de aprobación no válido"] });
+      return res.status(404).json({
+        ok: false,
+        errores: ["Link de aprobación no válido"],
+      });
     }
 
     const { row } = contexto;
+
     const completa = await obtenerInspeccionCompleta(row.inspeccion_id);
+
+    if (!completa) {
+      return res.status(404).json({
+        ok: false,
+        errores: ["Inspección no encontrada"],
+      });
+    }
+
+    const tipoInspeccion =
+      row.tipo_inspeccion || completa?.inspeccion?.tipo_inspeccion || "SST";
+
+    /* =====================================================
+       CONTEOS SEGÚN TIPO DE INSPECCIÓN
+    ===================================================== */
+
+    let conteos = {};
+
+    if (tipoInspeccion === "EPP") {
+      const trabajadores = Array.isArray(completa.trabajadores)
+        ? completa.trabajadores
+        : [];
+
+      const resumenEpp = calcularResumenEpp(trabajadores);
+
+      conteos = {
+        trabajadores: resumenEpp.totalTrabajadores,
+        evaluaciones: resumenEpp.totalEvaluaciones,
+        novedades: resumenEpp.totalNovedades,
+        trabajadoresConNovedades: resumenEpp.trabajadoresConNovedad,
+        trabajadoresSinNovedades: resumenEpp.trabajadoresSinNovedad,
+      };
+    } else {
+      conteos = {
+        extintores: completa?.extintores?.length || 0,
+        camillas: completa?.camillas?.length || 0,
+        senalizaciones: completa?.senalizaciones?.length || 0,
+        equiposTecnologicos: completa?.equiposTecnologicos?.length || 0,
+        botiquines: completa?.botiquines?.length || 0,
+      };
+    }
+
+    /* =====================================================
+       RESPUESTA
+    ===================================================== */
 
     return res.status(200).json({
       ok: true,
+
       rol: contexto.rol,
       rolLabel: contexto.rolLabel,
       yaAprobado: contexto.yaAprobado,
       nombreAprobador: contexto.nombreAprobador,
+
       inspeccion: {
         inspeccionId: row.inspeccion_id,
-        numInspeccion: Number(row.num_inspeccion),
+        numInspeccion: Number(row.inspecciones_id),
+
+        tipoInspeccion,
+
         fecha: row.fecha,
         sedeOperacion: row.sede_operacion,
         areaTrabajo: row.area_trabajo,
+
         jefeResponsable: row.jefe_responsable,
         cargoJefe: row.cargo_jefe,
+
         responsableInspeccion: row.responsable_inspeccion,
+
         cargoResponsable: row.cargo_responsable,
+
         estado: row.estado,
-        conteos: {
-          extintores: completa?.extintores.length || 0,
-          camillas: completa?.camillas.length || 0,
-          senalizaciones: completa?.senalizaciones.length || 0,
-          equiposTecnologicos: completa?.equiposTecnologicos.length || 0,
-          botiquines: completa?.botiquines.length || 0
-        }
-      }
+
+        conteos,
+
+        /*
+         * Para EPP enviamos también los trabajadores.
+         * Esto permitirá construir posteriormente
+         * el resumen detallado en la pantalla de aprobación.
+         */
+        trabajadores:
+          tipoInspeccion === "EPP" ? completa.trabajadores || [] : [],
+      },
     });
   } catch (error) {
-    const mensaje = error instanceof Error ? error.message : "Error obteniendo la inspección";
-    return res.status(500).json({ ok: false, errores: [mensaje] });
+    console.error("[aprobaciones] Error obteniendo resumen:", error);
+
+    const mensaje =
+      error instanceof Error ? error.message : "Error obteniendo la inspección";
+
+    return res.status(500).json({
+      ok: false,
+      errores: [mensaje],
+    });
   }
+}
+
+function construirAprobaciones(row) {
+  return {
+    inspector: {
+      nombre: row.aprobacion_inspector_nombre || "",
+    },
+    jefe: {
+      nombre: row.aprobacion_jefe_nombre || "",
+    },
+    copasst: {
+      nombre: row.aprobacion_copasst_nombre || "",
+    },
+  };
 }
 
 async function previsualizarAprobacion(req, res) {
   try {
+    // =====================================================
+    // 1. VALIDAR TOKEN
+    // =====================================================
+
     const contexto = await obtenerContextoAprobacion(req.params.token);
+
     if (!contexto) {
-      return res.status(404).json({ ok: false, errores: ["Link de aprobación no válido"] });
+      return res.status(404).json({
+        ok: false,
+        errores: ["Link de aprobación no válido"],
+      });
     }
+
+    // =====================================================
+    // 2. OBTENER INSPECCIÓN COMPLETA
+    // =====================================================
 
     const { row } = contexto;
+
     const completa = await obtenerInspeccionCompleta(row.inspeccion_id);
+
     if (!completa) {
-      return res.status(404).json({ ok: false, errores: ["Inspección no encontrada"] });
+      return res.status(404).json({
+        ok: false,
+        errores: ["Inspección no encontrada"],
+      });
     }
 
-    const [ext, cam, sen, eqp, bot] = await Promise.all([
-      construirEvidenciasDesdeOneDrive(completa.extintores),
-      construirEvidenciasDesdeOneDrive(completa.camillas),
-      construirEvidenciasDesdeOneDrive(completa.senalizaciones),
-      construirEvidenciasDesdeOneDrive(completa.equiposTecnologicos),
-      construirEvidenciasDesdeOneDrive(completa.botiquines)
-    ]);
+    // =====================================================
+    // 3. DETECTAR TIPO DE INSPECCIÓN
+    // =====================================================
 
-    const data = {
-      inspeccionId: row.inspeccion_id,
-      numInspeccion: Number(row.num_inspeccion),
-      fecha: row.fecha,
-      sedeOperacion: row.sede_operacion,
-      areaTrabajo: row.area_trabajo,
-      jefeResponsable: row.jefe_responsable,
-      cargoJefe: row.cargo_jefe,
-      responsableInspeccion: row.responsable_inspeccion,
-      cargoResponsable: row.cargo_responsable,
-      extintores: completa.extintores,
-      camillas: completa.camillas,
-      senalizaciones: completa.senalizaciones,
-      equiposTecnologicos: completa.equiposTecnologicos,
-      botiquines: completa.botiquines
-    };
+    const tipoInspeccion = String(
+      row.tipo_inspeccion || completa?.inspeccion?.tipo_inspeccion || "SST",
+    ).toUpperCase();
 
-    const aprobaciones = {
-      inspector: { nombre: row.aprobacion_inspector_nombre },
-      jefe: { nombre: row.aprobacion_jefe_nombre },
-      copasst: { nombre: row.aprobacion_copasst_nombre }
-    };
+    // =====================================================
+    // 4. APROBACIONES
+    // =====================================================
 
-    const pdfBuffer = await crearPdfInspeccionExtintor(
-      data,
-      ext.evidenciasPorIndex,
-      cam.evidenciasPorIndex,
-      sen.evidenciasPorIndex,
-      eqp.evidenciasPorIndex,
-      bot.evidenciasPorIndex,
-      {},
-      {
+    const aprobaciones = construirAprobaciones(row);
+
+    // =====================================================
+    // 5. BUFFER PDF
+    // =====================================================
+
+    let pdfBuffer;
+
+    // =====================================================
+    // EPP
+    // =====================================================
+
+    if (tipoInspeccion === "EPP") {
+      const trabajadores = Array.isArray(completa.trabajadores)
+        ? completa.trabajadores
+        : [];
+
+      // ---------------------------------------------------
+      // DESCARGAR EVIDENCIAS
+      // ---------------------------------------------------
+
+      const evidenciasPorTrabajador =
+        await construirEvidenciasEppDesdeOneDrive(trabajadores);
+
+      const resultadoEpp = await generarPdfEppAprobacion(
+        completa,
+        row,
         aprobaciones,
-        fechasPrecomputadas: {
-          extintores: ext.fechas,
-          camillas: cam.fechas,
-          senalizaciones: sen.fechas,
-          equipos: eqp.fechas,
-          botiquines: bot.fechas
-        }
-      }
-    );
+        evidenciasPorTrabajador,
+      );
+
+      pdfBuffer = resultadoEpp.pdf;
+    }
+
+    // =====================================================
+    // SST
+    // =====================================================
+    else {
+      pdfBuffer = await generarPdfSstAprobacion(completa, row, aprobaciones);
+    }
+
+    // =====================================================
+    // 6. DEVOLVER PDF
+    // =====================================================
 
     res.setHeader("Content-Type", "application/pdf");
-    res.setHeader("Content-Disposition", `inline; filename="${row.inspeccion_id}.pdf"`);
+
+    res.setHeader(
+      "Content-Disposition",
+      `inline; filename="${row.inspeccion_id}.pdf"`,
+    );
+
     return res.status(200).send(pdfBuffer);
   } catch (error) {
-    const mensaje = error instanceof Error ? error.message : "Error generando preview del PDF";
-    return res.status(500).json({ ok: false, errores: [mensaje] });
+    console.error("[aprobaciones] Error generando preview:", error);
+
+    const mensaje =
+      error instanceof Error
+        ? error.message
+        : "Error generando preview del PDF";
+
+    return res.status(500).json({
+      ok: false,
+      errores: [mensaje],
+    });
   }
 }
 
-// POST /api/aprobaciones/:token — body { nombre }
 async function registrarAprobacion(req, res) {
   try {
     const { nombre } = req.body || {};
 
     if (!nombre || !String(nombre).trim()) {
-      return res.status(400).json({ ok: false, errores: ["El nombre es obligatorio"] });
+      return res
+        .status(400)
+        .json({ ok: false, errores: ["El nombre es obligatorio"] });
     }
     const resultado = await guardarAprobacion(req.params.token, { nombre });
 
     if (!resultado.ok) {
       if (resultado.motivo === "no_encontrado") {
-        return res.status(404).json({ ok: false, errores: ["Link de aprobación no válido"] });
+        return res
+          .status(404)
+          .json({ ok: false, errores: ["Link de aprobación no válido"] });
       }
-      return res.status(409).json({ ok: false, errores: ["Este link ya fue usado para aprobar"] });
+      return res
+        .status(409)
+        .json({ ok: false, errores: ["Este link ya fue usado para aprobar"] });
     }
 
     if (resultado.completas) {
       // No bloquea la respuesta al aprobador: el PDF y el correo se procesan en segundo plano.
       finalizarInspeccion(resultado.inspeccionId).catch((err) => {
-        console.error(`[aprobaciones] error finalizando ${resultado.inspeccionId}:`, err.message);
+        console.error(
+          `[aprobaciones] error finalizando ${resultado.inspeccionId}:`,
+          err.message,
+        );
       });
     }
 
-    return res.status(200).json({ ok: true, mensaje: "Aprobación registrada", todasCompletas: resultado.completas });
+    return res.status(200).json({
+      ok: true,
+      mensaje: "Aprobación registrada",
+      todasCompletas: resultado.completas,
+    });
   } catch (error) {
-    const mensaje = error instanceof Error ? error.message : "Error registrando la aprobación";
+    const mensaje =
+      error instanceof Error
+        ? error.message
+        : "Error registrando la aprobación";
     return res.status(500).json({ ok: false, errores: [mensaje] });
   }
 }
 
-// Descarga de OneDrive todas las evidencias de una sección y arma los mapas
-// evidenciasPorIndex + fechas que espera crearPdfInspeccionExtintor.
-async function construirEvidenciasDesdeOneDrive(items) {
-  const evidenciasPorIndex = new Map();
-  const fechas = new Map();
-
-  await Promise.all((Array.isArray(items) ? items : []).map(async (item, idx) => {
-    const rutas = String(item?.evidenciaRuta || "").split("\n").map((r) => r.trim()).filter(Boolean);
-    if (rutas.length === 0) return;
-
-    const buffers = await Promise.all(rutas.map((ruta) => descargarEvidenciaOneDrive(ruta)));
-    const archivos = buffers.filter(Boolean).map((buffer) => ({ buffer }));
-    if (archivos.length > 0) evidenciasPorIndex.set(idx, archivos);
-    if (item?.evidenciaFecha) fechas.set(idx, item.evidenciaFecha);
-  }));
-
-  return { evidenciasPorIndex, fechas };
-}
-
-// Regenera el PDF (con las 3 aprobaciones reales), lo archiva en OneDrive y envía el correo final.
 async function finalizarInspeccion(inspeccionId) {
+  // =======================================================
+  // 1. OBTENER INSPECCIÓN COMPLETA
+  // =======================================================
 
   const completa = await obtenerInspeccionCompleta(inspeccionId);
 
@@ -212,121 +356,277 @@ async function finalizarInspeccion(inspeccionId) {
 
   const row = completa.inspeccion;
 
-  const [ext, cam, sen, eqp, bot] = await Promise.all([
-    construirEvidenciasDesdeOneDrive(completa.extintores),
-    construirEvidenciasDesdeOneDrive(completa.camillas),
-    construirEvidenciasDesdeOneDrive(completa.senalizaciones),
-    construirEvidenciasDesdeOneDrive(completa.equiposTecnologicos),
-    construirEvidenciasDesdeOneDrive(completa.botiquines)
-  ]);
+  // =======================================================
+  // 2. IDENTIFICAR TIPO
+  // =======================================================
 
-  const data = {
-    inspeccionId: row.inspeccion_id,
-    numInspeccion: Number(row.num_inspeccion),
-    fecha: row.fecha,
-    sedeOperacion: row.sede_operacion,
-    areaTrabajo: row.area_trabajo,
-    jefeResponsable: row.jefe_responsable,
-    cargoJefe: row.cargo_jefe,
-    responsableInspeccion: row.responsable_inspeccion,
-    cargoResponsable: row.cargo_responsable,
-    extintores: completa.extintores,
-    camillas: completa.camillas,
-    senalizaciones: completa.senalizaciones,
-    equiposTecnologicos: completa.equiposTecnologicos,
-    botiquines: completa.botiquines
-  };
+  const tipoInspeccion = String(row.tipo_inspeccion || "SST").toUpperCase();
 
-  const aprobaciones = {
-    inspector: { nombre: row.aprobacion_inspector_nombre },
-    jefe: { nombre: row.aprobacion_jefe_nombre },
-    copasst: { nombre: row.aprobacion_copasst_nombre }
-  };
+  // =======================================================
+  // 3. APROBACIONES
+  // =======================================================
 
-  // ==========================================================
-  // 1. Generar el PDF con PDFKit
-  // ==========================================================
-  const pdfGenerado = await crearPdfInspeccionExtintor(
-    data,
-    ext.evidenciasPorIndex,
-    cam.evidenciasPorIndex,
-    sen.evidenciasPorIndex,
-    eqp.evidenciasPorIndex,
-    bot.evidenciasPorIndex,
-    {},
-    {
-      aprobaciones,
-      fechasPrecomputadas: {
-        extintores: ext.fechas,
-        camillas: cam.fechas,
-        senalizaciones: sen.fechas,
-        equipos: eqp.fechas,
-        botiquines: bot.fechas
-      }
-    }
+  const aprobaciones = construirAprobaciones(row);
+
+  // =======================================================
+  // 4. SEGURIDAD ADICIONAL
+  //
+  // guardarAprobacion() ya valida las 3 aprobaciones.
+  // Esta validación evita que finalizarInspeccion()
+  // genere un PDF final si fuese llamada manualmente.
+  // =======================================================
+
+  const aprobacionesCompletas = Boolean(
+    row.aprobacion_inspector_nombre &&
+    row.aprobacion_jefe_nombre &&
+    row.aprobacion_copasst_nombre,
   );
 
-  // ==========================================================
-  // 2. Optimizar el PDF
-  // Si Ghostscript falla, automáticamente devolverá pdfGenerado.
-  // ==========================================================
+  if (!aprobacionesCompletas) {
+    throw new Error(
+      `La inspección ${row.inspeccion_id} todavía no tiene las 3 aprobaciones.`,
+    );
+  }
+
+  // =======================================================
+  // 5. GENERAR PDF SEGÚN TIPO
+  // =======================================================
+
+  let pdfGenerado;
+
+  // Guardaremos los trabajadores EPP aquí porque después
+  // los necesitaremos para construir el correo EPP.
+  let trabajadoresEpp = [];
+
+  // =======================================================
+  // EPP
+  // =======================================================
+
+  if (tipoInspeccion === "EPP") {
+    trabajadoresEpp = Array.isArray(completa.trabajadores)
+      ? completa.trabajadores
+      : [];
+
+    const evidenciasPorTrabajador =
+      await construirEvidenciasEppDesdeOneDrive(trabajadoresEpp);
+
+    const resultadoEpp = await generarPdfEppAprobacion(
+      completa,
+      row,
+      aprobaciones,
+      evidenciasPorTrabajador,
+    );
+
+    pdfGenerado = resultadoEpp.pdf;
+    trabajadoresEpp = resultadoEpp.trabajadores;
+  }
+
+  // =======================================================
+  // SST
+  // =======================================================
+  else {
+    pdfGenerado = await generarPdfSstAprobacion(completa, row, aprobaciones);
+  }
+
+  // =======================================================
+  // 6. OPTIMIZAR PDF
+  // =======================================================
+
   const pdfFinal = await optimizarPdf(pdfGenerado, {
     profile: "inspection",
-    fileName: `${row.inspeccion_id}.pdf`
+    fileName: `${row.inspeccion_id}.pdf`,
   });
 
-  // ==========================================================
-  // 3. Subir el PDF optimizado a OneDrive
-  // ==========================================================
+  // =======================================================
+  // 7. SUBIR PDF FINAL A ONEDRIVE
+  // =======================================================
+
   const webUrl = await subirPdfAOneDrive(
     pdfFinal,
     row.inspeccion_id,
-    row.sede_operacion
+    row.sede_operacion,
   );
 
-  // ==========================================================
-  // 4. Enviar correo con el mismo PDF optimizado
-  // ==========================================================
-  const correoDestino = resolverCorreoDestino(row.sede_operacion, null);
+  // =======================================================
+  // 8. RESOLVER CORREO DESTINO
+  // =======================================================
+
+  const correoDestino =
+    tipoInspeccion === "EPP"
+      ? resolverCorreoDestinoEpp(row.sede_operacion, null)
+      : resolverCorreoDestino(row.sede_operacion, null);
+
+  // =======================================================
+  // 9. CONSTRUIR Y ENVIAR CORREO
+  // =======================================================
 
   if (correoDestino) {
+    let html;
 
-    const html = construirHtmlCorreo({
-      inspeccionId: row.inspeccion_id,
-      numInspeccion: Number(row.num_inspeccion),
-      fecha: row.fecha,
-      sedeOperacion: row.sede_operacion,
-      areaTrabajo: row.area_trabajo,
-      jefeResponsable: row.jefe_responsable,
-      responsableInspeccion: row.responsable_inspeccion,
-      cargoResponsable: row.cargo_responsable,
-      webUrl,
-      titulo: "Inspección aprobada"
-    });
+    // =====================================================
+    // CORREO EPP
+    // =====================================================
+
+    if (tipoInspeccion === "EPP") {
+      // ---------------------------------------------------
+      // CALCULAR RESUMEN EPP
+      // ---------------------------------------------------
+
+      const resumenEpp = calcularResumenEpp(trabajadoresEpp);
+
+      const {
+        totalTrabajadores,
+        trabajadoresConNovedad,
+        trabajadoresSinNovedad,
+        totalNovedades,
+      } = resumenEpp;
+
+      // ---------------------------------------------------
+      // HTML EPP
+      // ---------------------------------------------------
+
+      html = construirHtmlCorreoEpp({
+        inspeccionId: row.inspeccion_id,
+
+        numInspeccion: Number(row.inspecciones_id),
+
+        fecha: row.fecha,
+
+        sedeOperacion: row.sede_operacion,
+
+        areaTrabajo: row.area_trabajo,
+
+        responsableInspeccion: row.responsable_inspeccion,
+
+        totalTrabajadores,
+
+        trabajadoresConNovedad,
+
+        trabajadoresSinNovedad,
+
+        totalNovedades,
+
+        aprobaciones,
+
+        webUrl,
+      });
+    }
+
+    // =====================================================
+    // CORREO SST
+    // =====================================================
+    else {
+      html = construirHtmlCorreo({
+        inspeccionId: row.inspeccion_id,
+
+        numInspeccion: Number(row.inspecciones_id),
+
+        fecha: row.fecha,
+
+        sedeOperacion: row.sede_operacion,
+
+        areaTrabajo: row.area_trabajo,
+
+        jefeResponsable: row.jefe_responsable,
+
+        responsableInspeccion: row.responsable_inspeccion,
+
+        cargoResponsable: row.cargo_responsable,
+
+        webUrl,
+
+        titulo: "Inspección SST aprobada",
+      });
+    }
+
+    // =====================================================
+    // ENVÍO GRAPH
+    // =====================================================
 
     await enviarCorreoPorGraph({
       to: correoDestino,
-      subject: `Inspección SST aprobada N.° ${row.num_inspeccion} – ${row.inspeccion_id}`,
-      html,
-      pdfBuffer: pdfFinal,
-      nombre: `${row.inspeccion_id}.pdf`
-    });
 
+      subject: `Inspección ${tipoInspeccion} aprobada N.° ${row.inspecciones_id} – ${row.inspeccion_id}`,
+
+      html,
+
+      pdfBuffer: pdfFinal,
+
+      nombre: `${row.inspeccion_id}.pdf`,
+    });
   }
 
-  // ==========================================================
-  // 5. Marcar la inspección como enviada
-  // ==========================================================
+  // =======================================================
+  // 10. MARCAR COMO ENVIADA
+  //
+  // Solo ocurre después de:
+  // - 3 aprobaciones
+  // - PDF generado
+  // - PDF optimizado
+  // - PDF subido a OneDrive
+  // - correo procesado
+  // =======================================================
+
   await marcarInspeccionEnviada(
     row.inspeccion_id,
-    webUrl
+    webUrl,
   );
 
+  if (tipoInspeccion === "SST") {
+    try {
+      const resultadoExcel =
+        await actualizarExcelSeguimientoSstEnOneDrive();
+
+      console.log(
+        "[aprobaciones] Excel SST actualizado:",
+        {
+          inspeccionId: row.inspeccion_id,
+          rutaExcel: resultadoExcel.rutaExcel,
+          extintores: resultadoExcel.extintores,
+          camillas: resultadoExcel.camillas,
+          senalizaciones:
+            resultadoExcel.senalizaciones,
+          equiposTecnologicos:
+            resultadoExcel.equiposTecnologicos,
+          botiquines: resultadoExcel.botiquines,
+          resumen: resultadoExcel.resumen,
+          general: resultadoExcel.general,
+        },
+      );
+    } catch (error) {
+      console.error(
+        `[aprobaciones] No se pudo actualizar el Excel SST para ${row.inspeccion_id}:`,
+        error,
+      );
+    }
+  } else if (tipoInspeccion === "EPP") {
+    try {
+      const resultadoExcel =
+        await actualizarExcelSeguimientoEppEnOneDrive();
+
+      console.log(
+        "[aprobaciones] Excel EPP actualizado:",
+        {
+          inspeccionId: row.inspeccion_id,
+          rutaExcel: resultadoExcel.rutaExcel,
+          estadoInspecciones:
+            resultadoExcel.estadoInspecciones,
+          tamañoBytes:
+            resultadoExcel.tamañoBytes,
+        },
+      );
+    } catch (error) {
+      console.error(
+        `[aprobaciones] No se pudo actualizar el Excel EPP para ${row.inspeccion_id}:`,
+        error,
+      );
+    }
+  }
 }
 
 module.exports = {
   obtenerResumenAprobacion,
   previsualizarAprobacion,
   registrarAprobacion,
- 
 };
+

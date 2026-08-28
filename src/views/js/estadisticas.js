@@ -14,14 +14,12 @@
   const pageInfo = document.getElementById("page-info");
   const columnasOrdenables = document.querySelectorAll("th[data-sort]");
 
-
-
   const kpis = {
     total: document.getElementById("kpi-total"),
     pendientes: document.getElementById("kpi-pendientes"),
     aprobadas: document.getElementById("kpi-aprobadas"),
     enviadas: document.getElementById("kpi-enviadas"),
-    mes: document.getElementById("kpi-mes")
+    mes: document.getElementById("kpi-mes"),
   };
 
   const sedesLista = document.getElementById("sedes-lista");
@@ -33,7 +31,7 @@
     total: 0,
 
     sortBy: null,
-    sortOrder: "asc"
+    sortOrder: "asc",
   };
 
   function leerFiltros() {
@@ -44,10 +42,8 @@
       fechaHasta: String(fd.get("fechaHasta") || "").trim(),
       sedeOperacion: String(fd.get("sedeOperacion") || "").trim(),
       estado: String(fd.get("estado") || "").trim(),
-      q: String(fd.get("q") || "").trim()
+      q: String(fd.get("q") || "").trim(),
     };
-
-    console.log("FILTROS ACTUALES:", filtros);
 
     return filtros;
   }
@@ -67,7 +63,7 @@
     return d.toLocaleDateString("es-CO", {
       year: "numeric",
       month: "2-digit",
-      day: "2-digit"
+      day: "2-digit",
     });
   }
 
@@ -80,18 +76,19 @@
 
     const sedes = Array.isArray(resumen.porSede) ? resumen.porSede : [];
     sedesLista.innerHTML = sedes.length
-      ? sedes.map((s) => `<span class="sede-chip">${s.sede}: ${s.cantidad}</span>`).join("")
+      ? sedes
+          .map((s) => `<span class="sede-chip">${s.sede}: ${s.cantidad}</span>`)
+          .join("")
       : '<span class="sede-chip">Sin datos para estos filtros</span>';
   }
 
   function renderEstado(estado) {
-
     const safe = estado || "sin_estado";
 
     const nombres = {
       pendiente_aprobacion: "Pendiente aprobación",
       enviada: "Enviada",
-      aprobada: "Aprobada"
+      aprobada: "Aprobada",
     };
 
     return `
@@ -100,26 +97,30 @@
       title="${nombres[safe] || safe}">
     </span>
   `;
-
   }
-
 
   function renderTabla(items) {
     if (!Array.isArray(items) || items.length === 0) {
-      tablaBody.innerHTML = '<tr><td colspan="9">No hay inspecciones para los filtros seleccionados.</td></tr>';
+      tablaBody.innerHTML =
+        '<tr><td colspan="9">No hay inspecciones para los filtros seleccionados.</td></tr>';
       return;
     }
 
-    tablaBody.innerHTML = items.map((it) => {
-      console.log(it.estado);
-      const totalItems = Number(it.extintores || 0) + Number(it.camillas || 0) + Number(it.senalizaciones || 0) + Number(it.equipos || 0) + Number(it.botiquines || 0);
+    tablaBody.innerHTML = items
+      .map((it) => {
+        const totalItems =
+          Number(it.extintores || 0) +
+          Number(it.camillas || 0) +
+          Number(it.senalizaciones || 0) +
+          Number(it.equipos || 0) +
+          Number(it.botiquines || 0);
 
-      const recuperarBtn = `
+        const recuperarBtn = `
 <button
     type="button"
     class="btn-recuperar accion-btn accion-btn-links"
     data-inspeccion-id="${it.inspeccion_id}"
-    data-num-inspeccion="${it.num_inspeccion}"
+    data-num-inspeccion="${it.inspecciones_id}"
     ${it.estado === "pendiente_aprobacion" ? "" : "disabled"}>
 
 <svg xmlns="http://www.w3.org/2000/svg"
@@ -136,7 +137,7 @@
 </button>
 `;
 
-      const verPdfBtn = `
+        const verPdfBtn = `
 <button
     type="button"
     class="btn-ver-pdf accion-btn accion-btn-pdf"
@@ -161,9 +162,9 @@
 
 </button>
 `;
-      return `
+        return `
           <tr>
-            <td>${it.num_inspeccion ?? "-"}</td>
+            <td>${it.inspecciones_id ?? "-"}</td>
             <td>${it.inspeccion_id || "-"}</td>
             <td>${formatearFecha(it.created_at)}</td>
             <td>${it.sede_operacion || "-"}</td>
@@ -179,8 +180,8 @@
             </td>
           </tr>
         `;
-
-    }).join("");
+      })
+      .join("");
   }
 
   function updatePaginacion() {
@@ -191,7 +192,6 @@
   }
 
   async function cargarResumen(filtros) {
-
     const query = crearQuery(filtros);
 
     const resp = await fetch(`/api/estadisticas/resumen?${query}`);
@@ -203,24 +203,22 @@
     }
 
     setKpis(data.resumen || {});
-
   }
 
   async function cargarTabla(filtros) {
-
     const query = crearQuery({
       ...filtros,
       page: state.page,
       pageSize: state.pageSize,
       sortBy: state.sortBy,
-      sortOrder: state.sortOrder
+      sortOrder: state.sortOrder,
     });
 
     const resp = await fetch(`/api/estadisticas/inspecciones?${query}`);
 
     const data = await resp.json();
 
-    if (!resp.ok || !data.ok) {
+    if (!resp.ok) {
       throw new Error("No fue posible cargar la tabla");
     }
 
@@ -228,37 +226,27 @@
     state.totalPages = Number(data.totalPages || 1);
 
     renderTabla(data.items || []);
+
     updatePaginacion();
-
   }
+
   async function cargarTodo() {
-
     try {
-
       const filtros = leerFiltros();
 
-      await Promise.all([
-        cargarResumen(filtros),
-        cargarTabla(filtros)
-      ]);
-
+      await Promise.all([cargarResumen(filtros), cargarTabla(filtros)]);
     } catch {
-
       tablaBody.innerHTML =
         '<tr><td colspan="9">Error cargando estadísticas. Intenta de nuevo.</td></tr>';
 
       tablaMeta.textContent = "";
-
     }
-
   }
 
   async function actualizarFiltros() {
-
     state.page = 1;
 
     await cargarTodo();
-
   }
 
   inputBusqueda.addEventListener("input", () => {
@@ -273,24 +261,19 @@
     actualizarFiltros();
   });
 
-  columnasOrdenables.forEach(columna => {
-
+  columnasOrdenables.forEach((columna) => {
     columna.addEventListener("click", () => {
-
       const campo = columna.dataset.sort;
 
       if (state.sortBy === campo) {
-        state.sortOrder =
-          state.sortOrder === "asc"
-            ? "desc"
-            : "asc";
+        state.sortOrder = state.sortOrder === "asc" ? "desc" : "asc";
       } else {
         state.sortBy = campo;
         state.sortOrder = "asc";
       }
 
       // Actualizar las flechas
-      columnasOrdenables.forEach(c => {
+      columnasOrdenables.forEach((c) => {
         c.classList.remove("asc", "desc");
 
         if (c.dataset.sort === state.sortBy) {
@@ -301,11 +284,8 @@
       state.page = 1;
 
       cargarTabla();
-
     });
-
   });
-
 
   btnPrev.addEventListener("click", () => {
     if (state.page <= 1) return;
@@ -320,75 +300,51 @@
   });
 
   tablaBody.addEventListener("click", (e) => {
-
     const btnRecuperar = e.target.closest(".btn-recuperar");
 
     if (btnRecuperar) {
-
       recuperarLinks(btnRecuperar);
 
       return;
-
     }
 
     const btnPdf = e.target.closest(".btn-ver-pdf");
 
     if (btnPdf) {
-
       verPdf(btnPdf);
 
       return;
-
     }
-
-  });;
+  });
 
   async function recuperarLinks(btnRecuperar) {
-
     const inspeccionId = btnRecuperar.dataset.inspeccionId;
-
-    console.log("Recuperar inspección:", inspeccionId);
 
     //mostrarModal("cargando");
 
     try {
-
       const resp = await fetch(`/api/inspecciones/${inspeccionId}/links`);
 
       const data = await resp.json();
-
-      console.log("RESPUESTA COMPLETA:");
-      console.log(data);
-
-      console.log("LINKS:");
-      console.log(data.links);
 
       mostrarModal(
         "exito",
         inspeccionId,
         data.numInspeccion,
         data.links,
-        "recuperar"
-
-
+        "recuperar",
       );
-
     } catch (err) {
-
       console.error(err);
 
       mostrarModal("error");
-
     }
-
   }
 
   async function verPdf(btnPdf) {
-
     const inspeccionId = btnPdf.dataset.inspeccionId;
 
     try {
-
       const resp = await fetch(`/api/inspecciones/${inspeccionId}/links`);
       const data = await resp.json();
 
@@ -400,23 +356,17 @@
         throw new Error("No existe el token para generar el PDF.");
       }
 
-      const previewUrl =
-        `/api/aprobaciones/${data.previewToken}/preview`;
+      const previewUrl = `/api/aprobaciones/${data.previewToken}/preview`;
 
       window.open(previewUrl, "_blank", "noopener");
-
     } catch (err) {
-
       console.error(err);
 
       mostrarModal("error");
-
     }
-
   }
 
   const calendario = flatpickr("#rangoFechas", {
-
     mode: "range",
 
     locale: "es",
@@ -425,77 +375,93 @@
 
     allowInput: false,
 
-
     onChange(selectedDates) {
-
       if (selectedDates.length !== 2) {
         return;
       }
 
+      const desde = flatpickr.formatDate(selectedDates[0], "Y-m-d");
 
-      const desde = flatpickr.formatDate(
-        selectedDates[0],
-        "Y-m-d"
-      );
-
-      const hasta = flatpickr.formatDate(
-        selectedDates[1],
-        "Y-m-d"
-      );
-
+      const hasta = flatpickr.formatDate(selectedDates[1], "Y-m-d");
 
       const inputDesde = document.getElementById("fechaDesde");
       const inputHasta = document.getElementById("fechaHasta");
 
-
       inputDesde.value = desde;
       inputHasta.value = hasta;
 
-
       actualizarResumen(desde, hasta);
-
 
       setTimeout(() => {
         actualizarFiltros();
       }, 50);
-
-    }
-
+    },
   });
 
   function actualizarResumen(desde, hasta) {
-
     document.getElementById("textoDesde").textContent = desde;
     document.getElementById("textoHasta").textContent = hasta;
 
-    document.getElementById("rangoResumen")
-      .classList.remove("oculto");
+    document.getElementById("rangoResumen").classList.remove("oculto");
   }
 
-  document.getElementById("limpiarRango")
-    .addEventListener("click", () => {
+  document.getElementById("limpiarRango").addEventListener("click", () => {
+    calendario.clear();
 
+    document.getElementById("fechaDesde").value = "";
+    document.getElementById("fechaHasta").value = "";
 
-      calendario.clear();
+    document.getElementById("textoDesde").textContent = "";
+    document.getElementById("textoHasta").textContent = "";
 
+    document.getElementById("rangoResumen").classList.add("oculto");
 
-      document.getElementById("fechaDesde").value = "";
-      document.getElementById("fechaHasta").value = "";
+    actualizarFiltros();
+  });
 
+  const btnActualizarExcelSst = document.getElementById(
+    "btn-actualizar-excel-sst",
+  );
 
-      document.getElementById("textoDesde").textContent = "";
-      document.getElementById("textoHasta").textContent = "";
+  if (btnActualizarExcelSst) {
+    btnActualizarExcelSst.addEventListener("click", async () => {
+      const contenidoOriginal = btnActualizarExcelSst.innerHTML;
 
+      try {
+        btnActualizarExcelSst.disabled = true;
 
-      document.getElementById("rangoResumen")
-        .classList.add("oculto");
+        btnActualizarExcelSst.innerHTML = "<span>Actualizando...</span>";
 
+        const response = await fetch("/api/excel/sst/actualizar-onedrive", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
 
-      actualizarFiltros();
+        const data = await response.json();
 
+        if (!response.ok || !data.ok) {
+          const error = new Error(
+            data.mensaje || "No fue posible actualizar el Excel SST.",
+          );
+
+          error.codigo = data.codigo || "";
+
+          throw error;
+        }
+
+        alert("El Excel SST fue actualizado correctamente en OneDrive.");
+      } catch (error) {
+        console.error("[Excel SST] Error actualizando:", error);
+
+        alert(error.message || "No fue posible actualizar el Excel SST.");
+      } finally {
+        btnActualizarExcelSst.disabled = false;
+        btnActualizarExcelSst.innerHTML = contenidoOriginal;
+      }
     });
-
+  }
+  
   cargarTodo();
-
 })();
-

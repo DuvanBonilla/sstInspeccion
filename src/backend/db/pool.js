@@ -1,24 +1,37 @@
-/*
-  pool.js — Conexión a Neon (Postgres).
-
-  Qué hace:
-  - Crea un Pool de pg usando DATABASE_URL.
-  - Expone query() como helper único para todo el proyecto.
-
-  Cómo interactúa:
-  - Es usado por inspeccion.model.js y aprobaciones.model.js para leer/escribir
-    en la tabla `inspecciones`.
-  - Requiere DATABASE_URL en .env (local) o en las variables de entorno de Render.
-*/
 const { Pool } = require("pg");
 
+/* =========================================================
+   CONFIGURACIÓN
+========================================================= */
+
+const databaseUrl = process.env.DATABASE_URL;
+
+if (!databaseUrl) {
+  throw new Error(
+    "DATABASE_URL no está definida en las variables de entorno."
+  );
+}
+
+const esBaseLocal =
+  databaseUrl.includes("localhost") ||
+  databaseUrl.includes("127.0.0.1");
+
+
+
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: { rejectUnauthorized: false }
+  connectionString: databaseUrl,
+  ssl: esBaseLocal
+    ? false
+    : {
+        rejectUnauthorized: false,
+      },
 });
 
 function query(text, params) {
   return pool.query(text, params);
 }
 
-module.exports = { pool, query };
+module.exports = {
+  pool,
+  query,
+};

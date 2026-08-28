@@ -1,21 +1,6 @@
-/*
-  extintores.model.js — Modelo de validación y normalización de extintores.
-
-  Qué hace:
-  - normalizarExtintores(): limpia y estandariza el array de extintores recibido
-    del payload (trim de textos, conversión de tipos).
-  - validarExtintores(): verifica que cada extintor tenga los campos obligatorios
-    (número, ubicación, tipo, capacidad) y que cada condición sea un estado válido
-    (B, R, M, NC o NA). Acumula los errores encontrados.
-
-  Cómo interactúa:
-  - Es importado por extintor.model.js, que lo llama dentro de validarInspeccion()
-    para validar únicamente la sección de extintores del payload.
-  - No se comunica con el servidor ni con el frontend directamente.
-*/
+const { normalizarTexto } = require("../utils/texto.util");
 const ESTADOS_VALIDOS = new Set(["B", "R", "M", "NC", "NA"]);
 
-// Lista de campos de condición que se esperan en cada extintor
 const CAMPOS_CONDICION = [
   "acceso",
   "visibilidad",
@@ -38,13 +23,6 @@ const CAMPOS_CONDICION = [
   "otros"
 ];
 
-// Normaliza un valor de texto, eliminando espacios en blanco al inicio y al final.
-function normalizarTexto(valor) {
-  if (typeof valor !== "string") return "";
-  return valor.trim();
-}
-
-// Normaliza un objeto de extintor, asegurando que todos los campos estén presentes y en el formato correcto.
 function normalizarExtintor(extintor) {
   if (!extintor || typeof extintor !== "object") return null;
 

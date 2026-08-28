@@ -1,0 +1,1562 @@
+/*
+ * inspeccion-epp.css
+ *
+ * Estilos exclusivos del formulario de Inspección EPP.
+ * La infraestructura visual general se reutiliza desde
+ * inspeccion-sst.css.
+ */
+
+/* =========================================================
+   CONFIGURACIÓN DE TRABAJADORES
+========================================================= */
+
+.trabajadores-config {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+
+  gap: 32px;
+
+  padding: 20px;
+
+  margin-top: 18px;
+
+  border: 1px solid var(--line);
+  border-radius: 12px;
+
+  background: #f8fafc;
+}
+
+.trabajadores-config-info {
+  flex: 1;
+}
+
+.trabajadores-config-info h3 {
+  margin: 0 0 6px;
+
+  color: var(--navy);
+
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.trabajadores-config-info p {
+  margin: 0;
+
+  color: var(--muted);
+
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+/* =========================================================
+   CONTROL CANTIDAD
+========================================================= */
+
+.trabajadores-config-control {
+  display: flex;
+  align-items: flex-end;
+
+  gap: 12px;
+}
+
+.trabajadores-config-control .field {
+  min-width: 190px;
+}
+
+.trabajadores-config-control input {
+  width: 100%;
+}
+
+/* =========================================================
+   CONTENEDOR
+========================================================= */
+
+.trabajadores-container {
+  display: flex;
+  flex-direction: column;
+
+  gap: 18px;
+
+  margin-top: 22px;
+}
+
+/* =========================================================
+   ESTADO
+========================================================= */
+
+.trabajadores-estado {
+  margin-top: 16px;
+
+  padding: 12px 14px;
+
+  border-radius: 8px;
+
+  font-size: 13px;
+  font-weight: 600;
+
+  background: #eff6ff;
+  color: #1d4ed8;
+
+  border: 1px solid #bfdbfe;
+}
+
+/* =========================================================
+   RESPONSIVE CONFIGURACIÓN
+========================================================= */
+
+@media (max-width: 768px) {
+  .trabajadores-config {
+    flex-direction: column;
+    align-items: stretch;
+
+    gap: 18px;
+  }
+
+  .trabajadores-config-control {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .trabajadores-config-control .field {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .trabajadores-config-control .add-btn {
+    width: 100%;
+  }
+}
+
+/* =========================================================
+   TARJETA TRABAJADOR
+========================================================= */
+
+.trabajador-card {
+  overflow: hidden;
+
+  border: 1px solid var(--line);
+  border-radius: 14px;
+
+  background: #ffffff;
+
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.05);
+}
+
+/* =========================================================
+   CABECERA TRABAJADOR
+========================================================= */
+
+.trabajador-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  gap: 16px;
+
+  padding: 18px 20px;
+
+  border-bottom: 1px solid var(--line);
+
+  background: #f8fafc;
+
+  cursor: pointer;
+  user-select: none;
+}
+
+.trabajador-header-info {
+  display: flex;
+  align-items: center;
+
+  gap: 12px;
+
+  min-width: 0;
+}
+
+.trabajador-toggle-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 24px;
+  height: 24px;
+
+  flex-shrink: 0;
+
+  font-size: 12px;
+}
+
+.trabajador-numero {
+  display: block;
+
+  margin-bottom: 3px;
+
+  color: var(--primary);
+
+  font-size: 11px;
+  font-weight: 800;
+
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.trabajador-card-header h3 {
+  margin: 0;
+
+  color: var(--navy);
+
+  font-size: 16px;
+}
+
+.trabajador-nombre-resumen {
+  margin: 2px 0 0;
+}
+
+/* =========================================================
+   ACORDEÓN
+========================================================= */
+
+.trabajador-card-body {
+  display: block;
+}
+
+/*
+ * Al minimizar el trabajador se oculta absolutamente
+ * todo el contenido excepto la cabecera.
+ */
+
+.trabajador-card.trabajador-collapsed .trabajador-card-body {
+  display: none;
+}
+
+/* =========================================================
+   BOTÓN ELIMINAR TRABAJADOR
+========================================================= */
+
+.btn-eliminar-trabajador {
+  flex-shrink: 0;
+}
+
+/* =========================================================
+   DATOS DEL TRABAJADOR
+========================================================= */
+
+.trabajador-datos {
+  display: grid;
+
+  grid-template-columns: 2fr 1fr 1.5fr;
+
+  gap: 16px;
+
+  padding: 20px;
+}
+
+/* =========================================================
+   ELEMENTOS EPP
+========================================================= */
+
+.trabajador-epp {
+  padding: 0 20px 16px;
+}
+
+.trabajador-subtitulo {
+  margin-bottom: 8px;
+
+  color: var(--navy);
+
+  font-size: 14px;
+  font-weight: 800;
+}
+
+/* =========================================================
+   TABLA EPP
+========================================================= */
+
+.epp-table-wrap {
+  overflow-x: auto;
+
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+
+.epp-table {
+  width: 100%;
+
+  border-collapse: collapse;
+}
+
+.epp-table th,
+.epp-table td {
+  padding: 10px 12px;
+
+  border-bottom: 1px solid var(--line);
+
+  text-align: center;
+}
+
+.epp-table th {
+  background: #f8fafc;
+
+  color: var(--navy);
+
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.epp-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.epp-table th:first-child,
+.epp-table td:first-child {
+  text-align: left;
+}
+
+.epp-nombre {
+  color: var(--text);
+
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.epp-calificacion {
+  width: 90px;
+
+  padding: 7px 8px;
+}
+
+/* =========================================================
+   PLAN DE ACCIÓN INDIVIDUAL POR EPP - COMPACTO
+========================================================= */
+
+.epp-plan-row > td {
+  padding: 6px 10px !important;
+  background: #f8fafc;
+  border-bottom: 1px solid var(--line);
+}
+
+.epp-plan-container {
+  display: grid;
+
+  /* Plan de acción | Fecha límite */
+  grid-template-columns: minmax(0, 1fr) 200px;
+
+  gap: 10px;
+  align-items: end;
+
+  width: 100%;
+}
+
+.epp-plan-container .field {
+  margin: 0;
+}
+
+.epp-plan-container label {
+  display: block;
+
+  margin-bottom: 3px;
+
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.1;
+}
+
+/* PLAN DE ACCIÓN */
+
+.epp-plan-field {
+  min-width: 0;
+}
+
+.epp-plan-field textarea {
+  display: block;
+
+  width: 100%;
+
+  /* Más compacto verticalmente */
+  height: 32px;
+  min-height: 32px;
+
+  padding: 5px 8px;
+
+  box-sizing: border-box;
+
+  font-size: 12px;
+  line-height: 1.2;
+
+  resize: vertical;
+}
+
+/* FECHA LÍMITE */
+
+.epp-fecha-field {
+  min-width: 0;
+}
+
+.epp-fecha-field input[type="date"] {
+  display: block;
+
+  width: 100%;
+  height: 32px;
+
+  padding: 4px 7px;
+
+  box-sizing: border-box;
+
+  font-size: 12px;
+}
+
+/* =========================================================
+   OBSERVACIONES DEL TRABAJADOR
+========================================================= */
+
+.trabajador-observaciones {
+  padding: 0 20px 16px;
+}
+
+.trabajador-observaciones .field {
+  margin: 0;
+}
+
+.trabajador-observaciones textarea {
+  display: block;
+
+  width: 100%;
+
+  min-height: 58px;
+
+  box-sizing: border-box;
+
+  resize: vertical;
+}
+
+/* =========================================================
+   CONSTANCIA DEL OPERARIO
+========================================================= */
+
+.trabajador-evidencia {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  gap: 24px;
+
+  margin: 0 20px 20px;
+
+  padding: 14px 16px;
+
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+
+  background: #f8fafc;
+}
+
+/* =========================================================
+   INFORMACIÓN DE CONSTANCIA
+========================================================= */
+
+.evidencia-info {
+  flex: 1;
+
+  min-width: 0;
+}
+
+.evidencia-info .trabajador-subtitulo {
+  margin: 0 0 4px;
+}
+
+.evidencia-info p {
+  margin: 0;
+
+  color: var(--muted);
+
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+/* =========================================================
+   CONTROLES DE EVIDENCIA
+========================================================= */
+
+.evidencia-control {
+  display: flex;
+  align-items: center;
+
+  gap: 12px;
+
+  flex-shrink: 0;
+}
+
+/* =========================================================
+   BOTÓN PERSONALIZADO SUBIR EVIDENCIA
+========================================================= */
+
+.btn-evidencia {
+  position: relative;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  gap: 7px;
+
+  min-height: 36px;
+
+  padding: 7px 12px;
+
+  border: 1px solid var(--primary);
+  border-radius: 7px;
+
+  background: #ffffff;
+
+  color: var(--primary);
+
+  font-size: 12px;
+  font-weight: 700;
+
+  cursor: pointer;
+
+  white-space: nowrap;
+
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease,
+    transform 0.15s ease;
+}
+
+.btn-evidencia:hover {
+  background: #eff6ff;
+}
+
+.btn-evidencia:active {
+  transform: scale(0.98);
+}
+
+/* =========================================================
+   ICONO SUBIR
+========================================================= */
+
+.icon-evidencia {
+  display: block;
+
+  width: 16px;
+  height: 16px;
+
+  flex-shrink: 0;
+
+  pointer-events: none;
+}
+
+/* =========================================================
+   OCULTAR INPUT FILE NATIVO
+========================================================= */
+
+.btn-evidencia input[type="file"] {
+  position: absolute;
+
+  width: 1px;
+  height: 1px;
+
+  padding: 0;
+  margin: -1px;
+
+  overflow: hidden;
+
+  clip: rect(0, 0, 0, 0);
+
+  white-space: nowrap;
+
+  border: 0;
+
+  opacity: 0;
+}
+
+/* =========================================================
+   ESTADO DE LA EVIDENCIA
+========================================================= */
+
+.evidencia-estado {
+  color: #64748b;
+
+  font-size: 12px;
+  font-weight: 600;
+
+  white-space: nowrap;
+}
+
+/* =========================================================
+   RESPONSIVE TRABAJADOR
+========================================================= */
+
+@media (max-width: 768px) {
+  .trabajador-datos {
+    grid-template-columns: 1fr;
+  }
+
+  .epp-plan-container {
+    grid-template-columns: 1fr;
+  }
+
+  .trabajador-evidencia {
+    flex-direction: column;
+    align-items: stretch;
+
+    gap: 12px;
+  }
+
+  .evidencia-control {
+    flex-wrap: wrap;
+  }
+
+  .btn-evidencia {
+    width: fit-content;
+  }
+}
+
+/* =========================================================
+   RESUMEN FINAL EPP
+========================================================= */
+
+.resumen-epp-totales {
+  display: grid;
+
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+
+  gap: 14px;
+
+  margin: 16px 0 24px;
+}
+
+/* =========================================================
+   INDICADORES DEL RESUMEN
+========================================================= */
+
+.resumen-epp-indicador {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+
+  min-height: 86px;
+
+  padding: 16px 18px;
+
+  border: 1px solid var(--line);
+  border-radius: 12px;
+
+  background: #f8fafc;
+}
+
+.resumen-epp-indicador-label {
+  margin-bottom: 6px;
+
+  color: var(--muted);
+
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.resumen-epp-indicador-valor {
+  color: var(--navy);
+
+  font-size: 24px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+/* =========================================================
+   CONTENEDOR RESUMEN TRABAJADORES
+========================================================= */
+
+#resumen-trabajadores {
+  display: flex;
+  flex-direction: column;
+
+  gap: 12px;
+
+  margin-top: 14px;
+}
+
+/* =========================================================
+   TARJETA RESUMEN TRABAJADOR
+========================================================= */
+
+.resumen-trabajador-card {
+  overflow: hidden;
+
+  border: 1px solid var(--line);
+  border-radius: 12px;
+
+  background: #ffffff;
+
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+}
+
+/* =========================================================
+   CABECERA RESUMEN TRABAJADOR
+========================================================= */
+
+.resumen-trabajador-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  gap: 16px;
+
+  padding: 14px 18px;
+
+  border-bottom: 1px solid var(--line);
+
+  background: #f8fafc;
+}
+
+.resumen-trabajador-header > div {
+  display: flex;
+  align-items: center;
+
+  gap: 10px;
+
+  min-width: 0;
+}
+
+.resumen-trabajador-header strong {
+  flex-shrink: 0;
+
+  color: var(--primary);
+
+  font-size: 11px;
+  font-weight: 800;
+
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.resumen-trabajador-nombre {
+  overflow: hidden;
+
+  color: var(--navy);
+
+  font-size: 15px;
+  font-weight: 800;
+
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* =========================================================
+   ESTADO RESUMEN
+========================================================= */
+
+.resumen-estado {
+  flex-shrink: 0;
+
+  padding: 5px 10px;
+
+  border-radius: 999px;
+
+  background: #ecfdf5;
+  color: #047857;
+
+  font-size: 11px;
+  font-weight: 800;
+
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+/* =========================================================
+   DATOS RESUMIDOS DEL TRABAJADOR
+========================================================= */
+
+.resumen-trabajador-grid {
+  display: grid;
+
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+
+  gap: 0;
+
+  padding: 16px 18px;
+}
+
+.resumen-trabajador-grid > div {
+  min-width: 0;
+
+  padding: 0 14px;
+
+  border-right: 1px solid var(--line);
+}
+
+.resumen-trabajador-grid > div:first-child {
+  padding-left: 0;
+}
+
+.resumen-trabajador-grid > div:last-child {
+  padding-right: 0;
+
+  border-right: 0;
+}
+
+.resumen-label {
+  display: block;
+
+  margin-bottom: 5px;
+
+  color: var(--muted);
+
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.resumen-trabajador-grid strong {
+  display: block;
+
+  overflow: hidden;
+
+  color: var(--navy);
+
+  font-size: 13px;
+  font-weight: 700;
+
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* =========================================================
+   RESPONSIVE RESUMEN
+========================================================= */
+
+@media (max-width: 1000px) {
+  .resumen-epp-totales {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .resumen-trabajador-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+
+    row-gap: 18px;
+  }
+
+  .resumen-trabajador-grid > div {
+    border-right: 0;
+
+    padding: 0;
+  }
+}
+
+@media (max-width: 600px) {
+  .resumen-epp-totales {
+    grid-template-columns: 1fr;
+  }
+
+  .resumen-trabajador-header {
+    align-items: flex-start;
+  }
+
+  .resumen-trabajador-header > div {
+    flex-direction: column;
+    align-items: flex-start;
+
+    gap: 3px;
+  }
+
+  .resumen-trabajador-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .resumen-trabajador-nombre {
+    white-space: normal;
+  }
+}
+
+/* =========================================================
+   GESTIÓN DINÁMICA DE ELEMENTOS EPP
+========================================================= */
+
+.epp-gestion {
+  margin-top: 14px;
+}
+
+/* ---------------------------------------------------------
+   BOTÓN MOSTRAR / OCULTAR CATÁLOGO
+--------------------------------------------------------- */
+
+.btn-toggle-catalogo-epp {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  gap: 6px;
+
+  margin-top: 4px;
+
+  padding: 8px 14px;
+
+  border-radius: 7px;
+
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/* =========================================================
+   PANEL CATÁLOGO EPP
+========================================================= */
+
+.epp-catalogo-panel {
+  margin-top: 12px;
+
+  padding: 16px;
+
+  background: #f8fafc;
+
+  border: 1px solid #dbe3ec;
+  border-radius: 10px;
+}
+
+.epp-catalogo-panel[hidden] {
+  display: none !important;
+}
+
+/* ---------------------------------------------------------
+   GRUPOS DEL CATÁLOGO
+--------------------------------------------------------- */
+
+.epp-catalogo-grupo + .epp-catalogo-grupo {
+  margin-top: 18px;
+}
+
+.epp-catalogo-titulo {
+  margin: 0 0 9px;
+
+  color: #475569;
+
+  font-size: 12px;
+  font-weight: 700;
+
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* ---------------------------------------------------------
+   LISTADO DE ELEMENTOS
+--------------------------------------------------------- */
+
+.epp-catalogo-lista {
+  display: grid;
+
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+
+  gap: 8px;
+}
+
+/* ---------------------------------------------------------
+   OPCIÓN INDIVIDUAL DEL CATÁLOGO
+--------------------------------------------------------- */
+
+.epp-catalogo-opcion {
+  display: flex;
+  align-items: center;
+
+  gap: 8px;
+
+  min-height: 38px;
+
+  padding: 8px 10px;
+
+  background: #ffffff;
+
+  border: 1px solid #e2e8f0;
+  border-radius: 7px;
+
+  font-size: 13px;
+
+  cursor: pointer;
+
+  transition:
+    border-color 0.15s ease,
+    background-color 0.15s ease;
+}
+
+.epp-catalogo-opcion:hover {
+  background: #f1f5f9;
+
+  border-color: #cbd5e1;
+}
+
+.epp-catalogo-opcion input {
+  width: auto;
+  height: auto;
+
+  margin: 0;
+
+  cursor: pointer;
+}
+
+/* ---------------------------------------------------------
+   ELEMENTO YA AGREGADO
+--------------------------------------------------------- */
+
+.epp-catalogo-opcion-agregada {
+  opacity: 0.55;
+
+  background: #f1f5f9;
+
+  cursor: default;
+}
+
+.epp-catalogo-opcion-agregada:hover {
+  background: #f1f5f9;
+
+  border-color: #e2e8f0;
+}
+
+.epp-catalogo-opcion-agregada input {
+  cursor: default;
+}
+
+/* ---------------------------------------------------------
+   ACCIONES DEL CATÁLOGO
+--------------------------------------------------------- */
+
+.epp-catalogo-acciones {
+  display: flex;
+
+  justify-content: flex-end;
+
+  margin-top: 16px;
+}
+
+/* =========================================================
+   COLUMNA ACCIÓN
+========================================================= */
+
+.epp-col-accion,
+.epp-accion {
+  width: 58px;
+
+  text-align: center !important;
+}
+
+/* =========================================================
+   BOTÓN ELIMINAR ELEMENTO EPP
+========================================================= */
+
+.btn-eliminar-epp {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 15px;
+  min-width: 15px;
+
+  height: 15px;
+  min-height: 15px;
+
+  padding: 0;
+  margin: 0;
+
+  background: transparent;
+
+  border: 0;
+  border-radius: 6px;
+
+  color: #dc2626;
+
+  font-size: 15px;
+  line-height: 1;
+
+  cursor: pointer;
+
+  box-shadow: none;
+
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease,
+    transform 0.15s ease;
+}
+
+.btn-eliminar-epp:hover {
+  background: #fef2f2;
+
+  color: #b91c1c;
+}
+
+.btn-eliminar-epp:active {
+  transform: scale(0.94);
+}
+
+.btn-eliminar-epp:focus-visible {
+  outline: 2px solid #fecaca;
+
+  outline-offset: 2px;
+}
+
+/* =========================================================
+   SVG PAPELERA
+========================================================= */
+
+.icon-trash-epp {
+  display: block;
+
+  width: 14px;
+  height: 14px;
+
+  color: inherit;
+
+  pointer-events: none;
+}
+
+/* Compatibilidad por si queda algún icono antiguo */
+
+.btn-eliminar-epp i {
+  display: block;
+
+  margin: 0;
+
+  color: inherit;
+
+  font-size: 14px;
+
+  pointer-events: none;
+}
+
+/* =========================================================
+   FILA PLAN OCULTA
+========================================================= */
+
+.epp-plan-row[hidden] {
+  display: none !important;
+}
+
+/* =========================================================
+   CAMPO CON ERROR
+========================================================= */
+
+.campo-error {
+  border-color: #dc2626 !important;
+
+  box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.1) !important;
+}
+
+/* =========================================================
+   RESPONSIVE GESTIÓN EPP
+========================================================= */
+
+@media (max-width: 768px) {
+  .epp-catalogo-lista {
+    grid-template-columns: 1fr;
+  }
+
+  .epp-catalogo-panel {
+    padding: 12px;
+  }
+
+  .epp-catalogo-acciones {
+    justify-content: stretch;
+  }
+
+  .btn-agregar-epp-seleccionados {
+    width: 100%;
+  }
+}
+
+/* =========================================================
+   CATÁLOGO EPP - COMBOBOX
+========================================================= */
+
+/* =========================================================
+   CATÁLOGO EPP - SELECTOR MÚLTIPLE
+========================================================= */
+
+.epp-catalogo-panel {
+  margin-top: 12px;
+  padding: 14px;
+
+  background: #f8fafc;
+
+  border: 1px solid #dbe3ec;
+  border-radius: 10px;
+}
+
+.epp-catalogo-panel[hidden] {
+  display: none !important;
+}
+
+
+/* =========================================================
+   COMBOBOX
+========================================================= */
+
+.epp-combobox {
+  position: relative;
+  width: 100%;
+}
+
+
+/* =========================================================
+   BUSCADOR
+========================================================= */
+
+.epp-buscador-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  width: 100%;
+  min-height: 42px;
+
+  padding: 0 13px;
+
+  background: #ffffff;
+
+  border: 1px solid #d7deea;
+  border-radius: 8px;
+
+  box-sizing: border-box;
+
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.epp-buscador-wrapper:focus-within {
+  border-color: #2563eb;
+
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+
+/* =========================================================
+   ICONO BUSCADOR
+========================================================= */
+
+.epp-buscador-icono {
+  width: 17px;
+  height: 17px;
+
+  min-width: 17px;
+  min-height: 17px;
+
+  flex: 0 0 17px;
+
+  color: #64748b;
+}
+
+
+/* =========================================================
+   INPUT BUSCADOR
+========================================================= */
+
+.epp-catalogo-buscador {
+  flex: 1;
+  width: 100%;
+
+  padding: 10px 0;
+
+  border: none;
+  outline: none;
+
+  background: transparent;
+
+  color: #1e293b;
+
+  font-size: 13px;
+
+  box-sizing: border-box;
+}
+
+.epp-catalogo-buscador::placeholder {
+  color: #94a3b8;
+}
+
+
+/* =========================================================
+   BARRA DE SELECCIÓN
+========================================================= */
+
+.epp-catalogo-seleccion {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+
+  gap: 10px;
+
+  min-height: 44px;
+  margin: left 5px;
+  margin: right 5px;
+
+  padding: 8px 0 0;
+}
+
+
+/* CONTADOR */
+
+.epp-catalogo-contador {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  min-height: 34px;
+
+  margin: 0;
+
+  color: #64748b;
+
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+
+  white-space: nowrap;
+}
+
+
+/* =========================================================
+   BOTÓN AGREGAR SELECCIONADOS
+========================================================= */
+
+.epp-catalogo-agregar-seleccionados {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  min-height: 34px;
+  margin-left: 10px;
+
+  padding: 7px 13px;
+
+  border: 1px solid #2563eb;
+  border-radius: 7px;
+
+  background: #2563eb;
+
+  color: #ffffff;
+
+  font-size: 12px;
+  font-weight: 700;
+
+  cursor: pointer;
+
+  white-space: nowrap;
+
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    transform 0.1s ease;
+}
+
+.epp-catalogo-agregar-seleccionados:hover:not(:disabled) {
+  background: #1d4ed8;
+  border-color: #1d4ed8;
+}
+
+.epp-catalogo-agregar-seleccionados:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.epp-catalogo-agregar-seleccionados:disabled {
+  background: #e2e8f0;
+  border-color: #e2e8f0;
+
+  color: #94a3b8;
+
+  cursor: not-allowed;
+}
+
+
+/* =========================================================
+   RESULTADOS
+========================================================= */
+
+.epp-catalogo-resultados {
+  position: relative;
+
+  width: 100%;
+  max-height: 240px;
+
+  margin-top: 8px;
+
+  overflow-y: auto;
+
+  background: #ffffff;
+
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+
+  box-sizing: border-box;
+}
+
+
+/* SCROLL */
+
+.epp-catalogo-resultados::-webkit-scrollbar {
+  width: 7px;
+}
+
+.epp-catalogo-resultados::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.epp-catalogo-resultados::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 10px;
+}
+
+.epp-catalogo-resultados::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+
+/* =========================================================
+   OPCIÓN DEL CATÁLOGO
+========================================================= */
+
+.epp-combobox-opcion {
+  display: flex;
+  align-items: center;
+
+  gap: 10px;
+
+  width: 100%;
+
+  min-height: 38px;
+
+  padding: 8px 11px;
+
+  border-bottom: 1px solid #f1f5f9;
+
+  background: #ffffff;
+
+  cursor: pointer;
+
+  box-sizing: border-box;
+
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.epp-combobox-opcion:last-child {
+  border-bottom: none;
+}
+
+.epp-combobox-opcion:hover {
+  background: #f8fafc;
+}
+
+
+/* =========================================================
+   CHECKBOX
+========================================================= */
+
+.epp-catalogo-checkbox {
+  width: 15px;
+  height: 15px;
+
+  margin: 0;
+
+  flex-shrink: 0;
+
+  accent-color: #2563eb;
+
+  cursor: pointer;
+}
+
+
+/* =========================================================
+   OPCIÓN SELECCIONADA
+========================================================= */
+
+.epp-combobox-opcion:has(.epp-catalogo-checkbox:checked) {
+  background: #eff6ff;
+}
+
+.epp-combobox-opcion:has(.epp-catalogo-checkbox:checked)
+  .epp-combobox-opcion-nombre {
+  color: #1d4ed8;
+}
+
+
+/* =========================================================
+   NOMBRE DEL ELEMENTO
+========================================================= */
+
+.epp-combobox-opcion-nombre {
+  flex: 1;
+
+  min-width: 0;
+
+  color: #1e293b;
+
+  font-size: 12.5px;
+  font-weight: 600;
+
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+
+/* =========================================================
+   CATEGORÍA
+========================================================= */
+
+.epp-combobox-opcion-info {
+  flex-shrink: 0;
+
+  padding: 3px 7px;
+
+  border-radius: 4px;
+
+  background: #eff6ff;
+
+  color: #2563eb;
+
+  font-size: 10px;
+  font-weight: 700;
+
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+
+/* =========================================================
+   SIN RESULTADOS
+========================================================= */
+
+.epp-combobox-sin-resultados {
+  padding: 18px;
+
+  text-align: center;
+
+  color: #64748b;
+
+  font-size: 12px;
+}
+
+
+/* =========================================================
+   RESPONSIVE
+========================================================= */
+
+@media (max-width: 600px) {
+
+  .epp-catalogo-panel {
+    padding: 10px;
+  }
+
+  .epp-catalogo-seleccion {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 7px;
+  }
+
+  .epp-catalogo-contador {
+    text-align: right;
+  }
+
+  .epp-catalogo-agregar-seleccionados {
+    width: 100%;
+  }
+
+  .epp-combobox-opcion {
+    padding: 9px 10px;
+  }
+}

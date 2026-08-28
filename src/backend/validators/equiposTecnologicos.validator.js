@@ -1,18 +1,4 @@
-/*
-  equiposTecnologicos.model.js — Modelo de validación y normalización de equipos tecnológicos.
-
-  Qué hace:
-  - normalizarEquiposTecnologicos(): limpia y estandariza el array de equipos del payload.
-  - validarEquiposTecnologicos(): verifica que cada uno de los 4 equipos fijos
-    (sensor de humo, sensor de movimiento, cámaras, alarma) tenga ubicación y que
-    los campos de estado, mantenimiento (B/R/M/NC/NA) y afectación al servicio (SI/NO)
-    sean valores válidos.
-
-  Cómo interactúa:
-  - Es importado por extintor.model.js y usado dentro de validarInspeccion()
-    para validar únicamente la sección de equipos tecnológicos del payload.
-  - No se comunica con el servidor ni con el frontend directamente.
-*/
+const { normalizarTexto } = require("../utils/texto.util");
 const ESTADOS_VALIDOS = new Set(["B", "R", "M", "NC", "NA"]);
 const AFECTACION_SERVICIO_VALIDOS = new Set(["SI", "NO"]);
 
@@ -23,14 +9,6 @@ const EQUIPOS_TECNOLOGICOS = [
   "Camaras de seguridad",
   "Alarma de emergencia"
 ];
-
-
-// Normaliza un valor de texto, eliminando espacios en blanco al inicio y al final.
-function normalizarTexto(valor) {
-  if (typeof valor !== "string") return "";
-  return valor.trim();
-}
-
 
 // Normaliza un objeto de equipo tecnológico, asegurando que todos los campos estén presentes y en el formato correcto.
 function normalizarEquipoTecnologico(equipoTecnologico, index) {

@@ -1,0 +1,70 @@
+name: Sincronizar cierres EPP
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+
+  workflow_dispatch:
+
+  push:
+    branches:
+      - feature/epp
+    paths:
+      - ".github/workflows/sincronizar-epp.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sincronizacion-cierres-epp
+  cancel-in-progress: false
+
+jobs:
+  sincronizar:
+    name: Leer Excel y actualizar Neon
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Llamar endpoint de sincronización
+        shell: bash
+        env:
+          EPP_SYNC_SECRET: ${{ secrets.AZURE_EPP_SYNC_SECRET }}
+          EPP_SYNC_URL: https://sstinspeccion.onrender.com/api/excel/epp/sincronizar-cierres
+        run: |
+          if [ -z "$EPP_SYNC_SECRET" ]; then
+            echo "No está configurado AZURE_EPP_SYNC_SECRET."
+            exit 1
+          fi
+
+          response_file="$(mktemp)"
+
+          http_code="$(
+            curl \
+              --silent \
+              --show-error \
+              --location \
+              --max-time 180 \
+              --retry 3 \
+              --retry-delay 10 \
+              --retry-all-errors \
+              --request POST \
+              --header "Authorization: Bearer $EPP_SYNC_SECRET" \
+              --header "Content-Type: application/json" \
+              --output "$response_file" \
+              --write-out "%{http_code}" \
+              "$EPP_SYNC_URL"
+          )"
+
+          echo "Estado HTTP: $http_code"
+          echo "Respuesta:"
+          cat "$response_file"
+
+          if [[ "$http_code" -lt 200 || "$http_code" -ge 300 ]]; then
+            echo
+            echo "La sincronización EPP falló."
+            exit 1
+          fi
+
+          echo
+          echo "Sincronización EPP completada correctamente."

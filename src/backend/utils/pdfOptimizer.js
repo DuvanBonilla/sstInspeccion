@@ -509,8 +509,6 @@ async function ejecutarGhostscript(
     settings
 ) {
 
-    console.log("Ghostscript executable:", PDF_OPTIMIZER_CONFIG.ghostscriptExecutable);
-
     const startedAt = Date.now();
 
     const args = [
@@ -839,60 +837,6 @@ function registrarEstadisticas({
     if (!PDF_OPTIMIZER_CONFIG.debug) {
         return;
     }
-
-    console.info("");
-
-    console.info("====================================================");
-
-    console.info("📄 PDF OPTIMIZER");
-
-    console.info("====================================================");
-
-    console.info(`Versión                : ${PDF_OPTIMIZER_VERSION}`);
-
-    console.info(`Documento              : ${fileName}`);
-
-    console.info(`Perfil                 : ${profileName}`);
-
-    console.info("");
-
-    console.info(
-        `Original               : ${originalInfo.sizeMB.toFixed(2)} MB`
-    );
-
-    console.info(
-        `Optimizado             : ${optimizedInfo.sizeMB.toFixed(2)} MB`
-    );
-
-    console.info(
-        `Reducción              : ${validation.reductionPercent.toFixed(2)} %`
-    );
-
-    console.info(
-        `Espacio ahorrado       : ${(validation.savedBytes / MB).toFixed(2)} MB`
-    );
-
-    console.info("");
-
-    console.info(
-        `Tiempo Ghostscript     : ${executionTime} ms`
-    );
-
-    console.info(
-        `Resultado              : ${
-            validation.useOptimized
-                ? "PDF optimizado"
-                : "Se conserva el original"
-        }`
-    );
-
-    console.info(
-        `Motivo                 : ${validation.reason}`
-    );
-
-    console.info("====================================================");
-
-    console.info("");
 
 }
 

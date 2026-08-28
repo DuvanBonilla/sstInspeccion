@@ -1,18 +1,5 @@
-/*
-  fechaEvidencia.js — Resuelve la fecha de una foto de evidencia.
-
-  Qué hace:
-  - Intenta leer la fecha real de la foto desde metadatos EXIF (DateTimeOriginal/DateTime).
-  - Si la foto no trae EXIF, usa como respaldo el lastModified enviado por el navegador.
-
-  Cómo interactúa:
-  - Usado por inspeccion.controller.js al guardar la inspección (fecha queda
-    almacenada junto a la evidencia en Neon) y por pdfInspeccion.controller.js
-    al generar el PDF en el momento del envío original.
-*/
 const exifr = require("exifr");
 
-// Extrae fecha/hora de la foto desde metadatos EXIF. Devuelve string "YYYY-MM-DD HH:MM" o null.
 async function extraerFechaExif(buffer) {
   if (!buffer?.length) return null;
   try {
@@ -28,7 +15,6 @@ async function extraerFechaExif(buffer) {
   }
 }
 
-// Formatea un timestamp (ms) como "YYYY-MM-DD HH:MM".
 function formatearFechaMs(ms) {
   const d = new Date(Number(ms));
   if (isNaN(d)) return null;
@@ -36,7 +22,6 @@ function formatearFechaMs(ms) {
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
 }
 
-// Resuelve la fecha de una evidencia: EXIF primero, lastModified del navegador como respaldo.
 async function resolverFechaEvidencia(file, lastModMs) {
   const fechaExif = await extraerFechaExif(file?.buffer);
   if (fechaExif) return fechaExif;
