@@ -2,7 +2,7 @@ name: Sincronizar cierres EPP
 
 on:
   schedule:
-    - cron: "7,22,37,52 * * * *"
+  - cron: "27, 57 * * * *"
 
   workflow_dispatch:
 
