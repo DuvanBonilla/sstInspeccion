@@ -2,17 +2,15 @@ name: Sincronizar cierres EPP
 
 on:
   schedule:
+    - cron: "27,57 * * * *"
 
-  - cron: "27,57 * * * *"
-
-workflow_dispatch:
+  workflow_dispatch:
 
   push:
     branches:
       - main
     paths:
       - ".github/workflows/sincronizar-epp.yml"
-
 
 permissions:
   contents: read
@@ -69,4 +67,4 @@ jobs:
           fi
 
           echo
-          echo "Sincronización EPP. completada correctamente."
+          echo "Sincronización EPP completada correctamente."
