@@ -225,7 +225,43 @@ function construirHojaPlanesAccion(workbook, planes) {
   ========================================================= */
 
   const ultimaFila = hoja.rowCount;
-  const ultimaFilaFiltro = Math.max(ultimaFila, 2);
+
+  /* =========================================================
+   TABLA DINÁMICA PARA POWER AUTOMATE
+
+   La tabla siempre abarcará desde A1 hasta la última fila
+   generada a partir de los planes existentes en la BD.
+========================================================= */
+
+  const columnasTabla = hoja
+    .getRow(1)
+    .values.slice(1, 20)
+    .map((encabezado) => ({
+      name: String(encabezado || ""),
+      filterButton: true,
+    }));
+
+  const filasTabla = [];
+
+  for (let numeroFila = 2; numeroFila <= ultimaFila; numeroFila += 1) {
+    filasTabla.push(hoja.getRow(numeroFila).values.slice(1, 20));
+  }
+
+  hoja.addTable({
+    name: "TablaPlanesAccionEpp",
+    ref: "A1",
+    headerRow: true,
+    totalsRow: false,
+    style: {
+      theme: null,
+      showFirstColumn: false,
+      showLastColumn: false,
+      showRowStripes: false,
+      showColumnStripes: false,
+    },
+    columns: columnasTabla,
+    rows: filasTabla,
+  });
 
   /* =========================================================
      FORMATO BASE
@@ -445,8 +481,6 @@ function construirHojaPlanesAccion(workbook, planes) {
   ========================================================= */
 
   congelarEncabezado(hoja, 1);
-
-  activarFiltro(hoja, `A1:P${ultimaFilaFiltro}`);
 
   return hoja;
 }
