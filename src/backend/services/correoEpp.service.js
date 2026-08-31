@@ -896,11 +896,11 @@ function resolverCorreoDestinoEpp(sedeOperacion, correoManual) {
   const sede = (sedeOperacion || "").toLowerCase().trim();
 
   if (sede.includes("santa marta")) {
-    return "juanmix201@gmail.com";
+    return "sstsantamarta@cargoban.com.co";
   }
 
   if (sede.includes("urab")) {
-    return "Trynda201@gmail.com";
+    return "s.ocupacional@cargoban.com.co";
   }
 
   return correoManual || process.env.GRAPH_EMAIL_TO_TEST;

@@ -94,8 +94,8 @@ async function enviarCorreoPorGraph({
 
 function resolverCorreoDestino(sedeOperacion, correoManual) {
   const sede = (sedeOperacion || "").toLowerCase().trim();
-  if (sede.includes("santa marta")) return "jmmontenegro201@gmail.com";
-  if (sede.includes("urab")) return "trynda201@gmail.com";
+  if (sede.includes("santa marta")) return "sstsantamarta@cargoban.com.co";
+  if (sede.includes("urab")) return "s.ocupacional@cargoban.com.co";
   return correoManual || process.env.GRAPH_EMAIL_TO_TEST;
 }
 
