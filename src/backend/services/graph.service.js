@@ -127,8 +127,8 @@ async function subirArchivoOneDrive({
     `/drive/root:${encodeURI(rutaNormalizada)}:/content` +
     "?@microsoft.graph.conflictBehavior=replace";
 
-  const maxIntentos = 6;
-  const esperas = [15, 30, 60, 90, 120];
+  const maxIntentos = 4;
+  const esperas = [10, 15, 30];
 
   for (let intento = 1; intento <= maxIntentos; intento++) {
     const response = await fetchConRetry(
@@ -182,10 +182,19 @@ async function subirArchivoOneDrive({
 
     const retryAfter = Number(response.headers.get("retry-after"));
 
-    const esperaSegundos =
-      Number.isFinite(retryAfter) && retryAfter > 0
-        ? retryAfter
-        : esperas[intento - 1];
+    let esperaSegundos;
+
+    if (response.status === 423) {
+      esperaSegundos = esperasBloqueo[intento - 1];
+    } else if (
+      response.status === 429 &&
+      Number.isFinite(retryAfter) &&
+      retryAfter > 0
+    ) {
+      esperaSegundos = retryAfter;
+    } else {
+      esperaSegundos = esperasBloqueo[intento - 1];
+    }
 
     console.warn(
       `[Graph] OneDrive respondió HTTP ${response.status}: ${detail}. ` +

@@ -18,7 +18,11 @@ const {
 
 const { crearWorkbook, generarBuffer } = require("./excel.service");
 
-const { subirArchivoOneDrive } = require("./graph.service");
+const {
+  subirArchivoOneDrive,
+  descartarCheckoutOneDrive,
+  hacerCheckinOneDrive,
+} = require("./graph.service");
 
 const {
   construirHojaResumenEpp,
@@ -94,8 +98,6 @@ async function generarExcelSeguimientoEpp(filtros = {}) {
 async function actualizarExcelSeguimientoEppEnOneDrive() {
   const rutaExcel = obtenerRutaExcelEpp();
 
-  // Antes de regenerar el archivo, guardar en la BD
-  // los cierres realizados manualmente desde Excel.
   const sincronizacion = await sincronizarCierresDesdeExcelEpp({
     detenerSiHayErrores: true,
     permitirArchivoInexistente: true,
