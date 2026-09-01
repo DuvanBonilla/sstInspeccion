@@ -1,8 +1,9 @@
 name: Sincronizar cierres EPP
 
 on:
-  schedule:
-    - cron: "27,57 * * * *"
+  repository_dispatch:
+    types:
+      - sincronizar_cierres_epp
 
   workflow_dispatch:
 
