@@ -167,7 +167,6 @@ function construirHojaPlanesAccion(workbook, planes) {
       fechaCompromiso: fila.fecha_plan_accion || null,
 
       // Este valor es manual en el Excel.
-      cumplido: fila.estado_plan === "CUMPLIDO" ? "☑ CUMPLIDO" : "☐ PENDIENTE",
 
       detalleEppId: fila.detalle_epp_id || "",
 
@@ -188,35 +187,30 @@ function construirHojaPlanesAccion(workbook, planes) {
        Si está cumplido:
        Días Restantes = 0
     ======================================================= */
-
+    // N = Días Restantes
     row.getCell(14).value = {
       formula:
-        `IF(P${numeroFila}="☑ CUMPLIDO",0,` +
+        `IF(AND(R${numeroFila}<>"",S${numeroFila}<>""),0,` +
         `IF(M${numeroFila}="","",` +
         `INT(M${numeroFila})-TODAY()))`,
     };
 
-    /* =======================================================
-       SITUACIÓN
-
-       O = Situación
-
-       Si está cumplido:
-       CUMPLIDO
-
-       Si está pendiente:
-       - fecha pasada        = VENCIDO
-       - faltan <= 3 días    = PRÓXIMO A VENCER
-       - faltan > 3 días     = EN PLAZO
-    ======================================================= */
-
+    // O = Situación
     row.getCell(15).value = {
       formula:
-        `IF(P${numeroFila}="☑ CUMPLIDO","CUMPLIDO",` +
-        `IF(M${numeroFila}="","",` +
-        `IF(M${numeroFila}<TODAY(),"VENCIDO",` +
-        `IF(M${numeroFila}-TODAY()<=3,` +
-        `"PRÓXIMO A VENCER","EN PLAZO"))))`,
+        `IF(AND(R${numeroFila}<>"",S${numeroFila}<>""),` +
+        `"CUMPLIDO",` +
+        `IF(M${numeroFila}="","PENDIENTE",` +
+        `IF(N${numeroFila}<0,"VENCIDO",` +
+        `IF(N${numeroFila}=0,"VENCE HOY",` +
+        `IF(N${numeroFila}<=3,"PRÓXIMO A VENCER","EN PLAZO")))))`,
+    };
+
+    // P = Cumplido
+    row.getCell(16).value = {
+      formula:
+        `IF(AND(R${numeroFila}<>"",S${numeroFila}<>""),` +
+        `"☑ CUMPLIDO","☐ PENDIENTE")`,
     };
   });
 
@@ -292,16 +286,6 @@ function construirHojaPlanesAccion(workbook, planes) {
     for (let fila = 2; fila <= ultimaFila; fila += 1) {
       const celdaCumplido = hoja.getCell(`P${fila}`);
 
-      celdaCumplido.dataValidation = {
-        type: "list",
-        allowBlank: false,
-        formulae: ['"☐ PENDIENTE,☑ CUMPLIDO"'],
-        showErrorMessage: true,
-        errorStyle: "error",
-        errorTitle: "Valor no válido",
-        error: "Seleccione PENDIENTE o CUMPLIDO.",
-      };
-
       celdaCumplido.alignment = {
         horizontal: "center",
         vertical: "middle",
@@ -337,6 +321,29 @@ function construirHojaPlanesAccion(workbook, planes) {
             },
           },
         },
+
+                {
+          type: "cellIs",
+          operator: "equal",
+          formulae: ['"VENCE HOY"'],
+          style: {
+            fill: {
+              type: "pattern",
+              pattern: "solid",
+              bgColor: {
+                argb: "FFFCE8E6",
+              },
+            },
+            font: {
+              bold: true,
+              color: {
+                argb: "FFB42318",
+              },
+            },
+          },
+        },
+
+        
 
         // ---------------------------------------------------
         // PRÓXIMO A VENCER

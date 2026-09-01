@@ -127,37 +127,76 @@ async function subirArchivoOneDrive({
     `/drive/root:${encodeURI(rutaNormalizada)}:/content` +
     "?@microsoft.graph.conflictBehavior=replace";
 
-  const response = await fetchConRetry(
-    url,
-    {
-      method: "PUT",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": contentType,
+  const maxIntentos = 6;
+  const esperas = [15, 30, 60, 90, 120];
+
+  for (let intento = 1; intento <= maxIntentos; intento++) {
+    const response = await fetchConRetry(
+      url,
+      {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": contentType,
+        },
+        body: buffer,
       },
-      body: buffer,
-    },
-    3,
-  );
+      3,
+    );
 
-  const text = await response.text();
+    const text = await response.text();
 
-  let data;
+    let data;
 
-  try {
-    data = text ? JSON.parse(text) : {};
-  } catch {
-    data = { raw: text };
-  }
+    try {
+      data = text ? JSON.parse(text) : {};
+    } catch {
+      data = { raw: text };
+    }
 
-  if (!response.ok) {
+    if (response.ok) {
+      if (intento > 1) {
+        console.log(
+          `[Graph] Archivo cargado correctamente después de ${intento} intentos.`,
+        );
+      }
+
+      return data;
+    }
+
     const detail =
-      data?.error?.message || data?.raw || "No se pudo subir el archivo";
+      data?.error?.message || data?.raw || `Error HTTP ${response.status}`;
 
-    throw new Error(`Error OneDrive/Graph al subir archivo: ${detail}`);
+    const esReintentable =
+      response.status === 423 ||
+      response.status === 429 ||
+      response.status >= 500;
+
+    if (!esReintentable || intento === maxIntentos) {
+      throw new Error(
+        `Error OneDrive/Graph al subir archivo ` +
+          `(HTTP ${response.status}, intento ${intento}/${maxIntentos}): ` +
+          detail,
+      );
+    }
+
+    const retryAfter = Number(response.headers.get("retry-after"));
+
+    const esperaSegundos =
+      Number.isFinite(retryAfter) && retryAfter > 0
+        ? retryAfter
+        : esperas[intento - 1];
+
+    console.warn(
+      `[Graph] OneDrive respondió HTTP ${response.status}: ${detail}. ` +
+        `Reintentando ${intento + 1}/${maxIntentos} ` +
+        `en ${esperaSegundos} segundos...`,
+    );
+
+    await esperar(esperaSegundos * 1000);
   }
 
-  return data;
+  throw new Error("No se pudo subir el archivo a OneDrive");
 }
 
 async function descargarArchivoOneDrive(ruta) {
