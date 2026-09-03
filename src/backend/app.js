@@ -55,9 +55,6 @@ const {
   autorizarAzureEpp,
 } = require("./middlewares/autorizarAzureEpp.middleware");
 
-const {
-  ejecutarAlertasEppDiarias,
-} = require("./controllers/alertasEpp.controller");
 
 const app = express();
 app.set("trust proxy", true);
@@ -122,11 +119,7 @@ app.post(
   autorizarAzureEpp,
   sincronizarCierresExcelEpp,
 );
-app.post(
-  "/api/alertas-epp/ejecutar-diario",
-  autorizarAzureEpp,
-  ejecutarAlertasEppDiarias,
-);
+
 app.get("/api/inspecciones/:id/links", obtenerLinks);
 app.get("/api/catalogo-epp", listarCatalogoEpp);
 app.get("/api/catalogo-epp/predeterminados", listarEppPredeterminados);
