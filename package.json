@@ -24,5 +24,8 @@
     "pdfkit": "^0.19.1",
     "pg": "^8.22.0",
     "playwright": "^1.60.0"
+  },
+  "devDependencies": {
+    "jsdoc": "^4.0.5"
   }
 }
