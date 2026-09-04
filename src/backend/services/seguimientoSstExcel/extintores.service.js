@@ -38,6 +38,17 @@ const COLUMNAS_CONDICION_EXTINTOR = [
   ["AK", "otros"],
 ];
 
+/**
+ * Convierte el tipo de extintor en las columnas indicadoras del Excel.
+ *
+ * Normaliza el texto recibido y marca con `SI` la columna correspondiente
+ * a Solkaflam, CO2, multipropósito o agua, dejando las demás en `NO`.
+ *
+ * @param {string} tipo - Tipo de agente del extintor.
+ * @returns {{L: string, M: string, N: string, O: string}}
+ * Indicadores de tipo distribuidos en las columnas del Excel.
+ */
+
 function mapearTipoExtintor(tipo) {
   const valor = String(tipo || "")
     .trim()
@@ -46,23 +57,26 @@ function mapearTipoExtintor(tipo) {
     .replace(/[\u0300-\u036f]/g, "");
 
   return {
-    L: ["solkaflam", "solkaflan"].includes(valor)
-      ? "SI"
-      : "NO",
+    L: ["solkaflam", "solkaflan"].includes(valor) ? "SI" : "NO",
 
-    M: valor === "co2"
-      ? "SI"
-      : "NO",
+    M: valor === "co2" ? "SI" : "NO",
 
-    N: valor === "multiproposito"
-      ? "SI"
-      : "NO",
+    N: valor === "multiproposito" ? "SI" : "NO",
 
-    O: valor === "agua"
-      ? "SI"
-      : "NO",
+    O: valor === "agua" ? "SI" : "NO",
   };
 }
+
+/**
+ * Convierte el tipo de extintor en las columnas indicadoras del Excel.
+ *
+ * Normaliza el texto recibido y marca con `SI` la columna correspondiente
+ * a Solkaflam, CO2, multipropósito o agua, dejando las demás en `NO`.
+ *
+ * @param {string} tipo - Tipo de agente del extintor.
+ * @returns {{L: string, M: string, N: string, O: string}}
+ * Indicadores de tipo distribuidos en las columnas del Excel.
+ */
 
 function mapearExtintorAExcel(inspeccion, extintor) {
   const fila = {
@@ -92,10 +106,7 @@ function mapearExtintorAExcel(inspeccion, extintor) {
 
   const condiciones = extintor.condiciones || {};
 
-  for (const [
-    columna,
-    campo,
-  ] of COLUMNAS_CONDICION_EXTINTOR) {
+  for (const [columna, campo] of COLUMNAS_CONDICION_EXTINTOR) {
     fila[columna] = condiciones[campo] || "";
   }
 
@@ -112,67 +123,54 @@ function mapearExtintoresAExcel(inspeccion) {
   );
 }
 
+/**
+ * Obtiene los extintores de inspecciones SST aprobadas y los prepara para Excel.
+ *
+ * Consulta los registros mediante el modelo de seguimiento y transforma
+ * cada resultado en una fila compatible con la hoja `Extintores`.
+ *
+ * @async
+ * @returns {Promise<Array<Object>>} Filas de extintores preparadas para el Excel.
+ */
+
 async function obtenerFilasExtintoresSstAprobados() {
   const registros = await obtenerExtintoresSstAprobados();
 
-  return registros.map((registro) =>
-    mapearExtintorAExcel(registro, registro),
-  );
+  return registros.map((registro) => mapearExtintorAExcel(registro, registro));
 }
 
-
-
-function actualizarFilasExtintoresXml(
-  hojaXml,
-  filasExtintores,
-) {
+function actualizarFilasExtintoresXml(hojaXml, filasExtintores) {
   return actualizarFilasHojaXml({
     hojaXml,
 
     filas: filasExtintores,
 
-    ultimaColumna:
-      ULTIMA_COLUMNA_EXTINTORES,
+    ultimaColumna: ULTIMA_COLUMNA_EXTINTORES,
 
-    nombreHoja:
-      "Extintores",
+    nombreHoja: "Extintores",
 
-    columnasFecha:
-      ["C"],
+    columnasFecha: ["C"],
 
-    columnasNumericas:
-      ["B", "R"],
+    columnasNumericas: ["B", "R"],
   });
 }
 
-function actualizarRangoTablaExtintores(
-  tablaXml,
-  cantidadFilas,
-) {
+function actualizarRangoTablaExtintores(tablaXml, cantidadFilas) {
   return actualizarRangoTablaXml({
     tablaXml,
 
-    ultimaColumna:
-      ULTIMA_COLUMNA_EXTINTORES,
+    ultimaColumna: ULTIMA_COLUMNA_EXTINTORES,
 
     cantidadFilas,
   });
 }
 
 function diagnosticarTablaExtintores(zip) {
-  const tablaXml = obtenerXml(
-    zip,
-    RUTA_TABLA_EXTINTORES,
-  );
+  const tablaXml = obtenerXml(zip, RUTA_TABLA_EXTINTORES);
 
-  const hojaXml = obtenerXml(
-    zip,
-    RUTA_HOJA_EXTINTORES,
-  );
+  const hojaXml = obtenerXml(zip, RUTA_HOJA_EXTINTORES);
 
-  const rango = tablaXml.match(
-    /<table\b[^>]*\bref="([^"]+)"/,
-  )?.[1] || null;
+  const rango = tablaXml.match(/<table\b[^>]*\bref="([^"]+)"/)?.[1] || null;
 
   const columnas = [
     ...tablaXml.matchAll(
@@ -184,9 +182,8 @@ function diagnosticarTablaExtintores(zip) {
     nombre: match[2],
   }));
 
-  const fila2 = hojaXml.match(
-    /<row\b[^>]*\br="2"[^>]*>[\s\S]*?<\/row>/,
-  )?.[0] || null;
+  const fila2 =
+    hojaXml.match(/<row\b[^>]*\br="2"[^>]*>[\s\S]*?<\/row>/)?.[0] || null;
 
   return {
     rango,
@@ -196,57 +193,54 @@ function diagnosticarTablaExtintores(zip) {
   };
 }
 
+/**
+ * Actualiza la hoja y la tabla de extintores del seguimiento SST.
+ *
+ * Obtiene los extintores aprobados, reemplaza las filas del XML de la hoja,
+ * ajusta el rango de la tabla estructurada y guarda ambos contenidos dentro
+ * del archivo Excel cargado en memoria.
+ *
+ * @async
+ * @param {@param {AdmZip} zip} zip - Archivo Excel abierto como contenedor ZIP.
+ * @returns {Promise<{
+ *   totalExtintores: number,
+ *   rango: string,
+ *   inspecciones: string[]
+ * }>} Resultado de la actualización, rango de la tabla e inspecciones incluidas.
+ * @throws {Error} Si no se proporciona el archivo Excel cargado en memoria.
+ */
+
 async function actualizarExtintores(zip) {
   if (!zip) {
-    throw new Error(
-      "Se requiere el archivo Excel cargado en memoria",
-    );
+    throw new Error("Se requiere el archivo Excel cargado en memoria");
   }
 
-  const filasExtintores =
-    await obtenerFilasExtintoresSstAprobados();
+  const filasExtintores = await obtenerFilasExtintoresSstAprobados();
 
-  const hojaXml = obtenerXml(
-    zip,
-    RUTA_HOJA_EXTINTORES,
-  );
+  const hojaXml = obtenerXml(zip, RUTA_HOJA_EXTINTORES);
 
-  const tablaXml = obtenerXml(
-    zip,
-    RUTA_TABLA_EXTINTORES,
-  );
+  const tablaXml = obtenerXml(zip, RUTA_TABLA_EXTINTORES);
 
   const hojaActualizada = actualizarFilasExtintoresXml(
     hojaXml,
     filasExtintores,
   );
 
-  const tablaActualizada =
-    actualizarRangoTablaExtintores(
-      tablaXml,
-      filasExtintores.length,
-    );
-
-  reemplazarXml(
-    zip,
-    RUTA_HOJA_EXTINTORES,
-    hojaActualizada,
+  const tablaActualizada = actualizarRangoTablaExtintores(
+    tablaXml,
+    filasExtintores.length,
   );
 
-  reemplazarXml(
-    zip,
-    RUTA_TABLA_EXTINTORES,
-    tablaActualizada.xml,
-  );
+  reemplazarXml(zip, RUTA_HOJA_EXTINTORES, hojaActualizada);
+
+  reemplazarXml(zip, RUTA_TABLA_EXTINTORES, tablaActualizada.xml);
 
   return {
     totalExtintores: filasExtintores.length,
 
     rango: tablaActualizada.rango,
 
-    inspecciones: filasExtintores.map(
-      (fila) => fila.A,
-    ),
+    inspecciones: filasExtintores.map((fila) => fila.A),
   };
 }
 

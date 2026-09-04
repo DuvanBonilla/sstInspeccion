@@ -11,9 +11,17 @@ const { uploadEvidenceToOneDrive } = require("../services/evidencia.service");
 
 const { resolverFechaEvidencia } = require("../utils/fechaEvidencia");
 
-/* =========================================================
-   OBTENER ARCHIVOS RECIBIDOS
-========================================================= */
+/**
+ * Obtiene los archivos adjuntos recibidos en la solicitud.
+ *
+ * Normaliza las diferentes estructuras que puede generar Multer y devuelve
+ * todos los archivos en un único arreglo. Si la solicitud no contiene
+ * archivos, devuelve un arreglo vacío.
+ *
+ * @param {Object} req Solicitud HTTP de Express.
+ * @param {(Array<Object>|Object)} [req.files] Archivos procesados por Multer.
+ * @returns {Array<Object>} Lista normalizada de archivos recibidos.
+ */
 
 function obtenerArchivos(req) {
   if (Array.isArray(req.files)) {
@@ -27,21 +35,35 @@ function obtenerArchivos(req) {
   return [];
 }
 
-/* =========================================================
-   CONTROLADOR PRINCIPAL
-========================================================= */
+/**
+ * Registra una inspección de elementos de protección personal.
+ *
+ * Lee y valida la información general de la inspección y los datos de los
+ * trabajadores evaluados. Para cada trabajador, localiza y valida su evidencia,
+ * la almacena en OneDrive, determina la fecha de la imagen y relaciona los
+ * datos obtenidos con el trabajador correspondiente.
+ *
+ * Finalmente, guarda la inspección EPP en la base de datos y devuelve su
+ * identificador, número consecutivo y tokens de aprobación.
+ *
+ * Corresponde al endpoint POST /enviar-inspeccion-epp.
+ *
+ * @async
+ * @param {Object} req Solicitud HTTP de Express.
+ * @param {Object} req.body Datos enviados desde el formulario EPP.
+ * @param {(Array<Object>|Object)} [req.files] Evidencias recibidas mediante Multer.
+ * @param {Object} res Respuesta HTTP de Express.
+ * @returns {Promise<Object>} Respuesta HTTP con el resultado del registro;
+ * estado 400 si la información o las evidencias son inválidas, estado 201 si
+ * la inspección se registra correctamente o estado 500 si ocurre un error.
+ */
 
 async function enviarInspeccionEpp(req, res) {
   try {
-    /* -------------------------------------------------------
-       1. LEER PAYLOAD
-    ------------------------------------------------------- */
+
 
     const payload = leerPayload(req);
 
-    /* -------------------------------------------------------
-       2. VALIDAR
-    ------------------------------------------------------- */
 
     const validacion = validarInspeccionEpp(payload);
 
@@ -57,30 +79,15 @@ async function enviarInspeccionEpp(req, res) {
 
     const { general, trabajadores } = validacion.data;
 
-    /* -------------------------------------------------------
-       3. ARCHIVOS
-    ------------------------------------------------------- */
 
     const archivos = obtenerArchivos(req);
 
-    /* -------------------------------------------------------
-       4. PROCESAR EVIDENCIAS
-    ------------------------------------------------------- */
+
 
     for (let i = 0; i < trabajadores.length; i++) {
       const trabajador = trabajadores[i];
 
-      /*
-    Convención del FormData:
 
-    evidencia_trabajador_0
-    evidencia_trabajador_0_lastmod
-
-    evidencia_trabajador_1
-    evidencia_trabajador_1_lastmod
-
-    ...
-  */
 
       const nombreCampo = `evidencia_trabajador_${i}`;
 
@@ -98,15 +105,10 @@ async function enviarInspeccionEpp(req, res) {
 
       const archivoValidado = validacionEvidencia.data;
 
-      /* -----------------------------------------------------
-     LAST MODIFIED
-  ----------------------------------------------------- */
 
       const lastModified = req.body?.[`${nombreCampo}_lastmod`];
 
-      /* -----------------------------------------------------
-     SUBIR A ONEDRIVE
-  ----------------------------------------------------- */
+
 
       const evidenciaOneDrive = await uploadEvidenceToOneDrive(
         archivo,
@@ -118,19 +120,14 @@ async function enviarInspeccionEpp(req, res) {
       const evidenciaRuta = evidenciaOneDrive.ruta || "";
       const evidenciaUrl = evidenciaOneDrive.webUrl || "";
 
-      /* -----------------------------------------------------
-     FECHA DE LA EVIDENCIA
-     EXIF → lastModified → null
-  ----------------------------------------------------- */
+
 
       const evidenciaFecha = await resolverFechaEvidencia(
         archivo,
         lastModified,
       );
 
-      /* -----------------------------------------------------
-     ASOCIAR AL TRABAJADOR
-  ----------------------------------------------------- */
+
 
       trabajador.evidenciaRuta = evidenciaRuta || "";
 
@@ -143,18 +140,14 @@ async function enviarInspeccionEpp(req, res) {
       trabajador.evidenciaFecha = evidenciaFecha;
     }
 
-    /* -------------------------------------------------------
-       5. GUARDAR EN BASE DE DATOS
-    ------------------------------------------------------- */
+
 
     const resultado = await guardarInspeccionEppEnDB({
       general,
       trabajadores,
     });
 
-    /* -------------------------------------------------------
-       6. RESPUESTA
-    ------------------------------------------------------- */
+
 
     return res.status(201).json({
       ok: true,
@@ -179,9 +172,6 @@ async function enviarInspeccionEpp(req, res) {
   }
 }
 
-/* =========================================================
-   EXPORTACIONES
-========================================================= */
 
 module.exports = {
   enviarInspeccionEpp,

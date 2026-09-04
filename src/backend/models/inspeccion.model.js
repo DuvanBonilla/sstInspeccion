@@ -1,13 +1,29 @@
 const { query, pool } = require("../db/pool");
 
-// Guarda la inspección completa: la fila general en `inspecciones` y cada
-// sección en su propia tabla (extintores, camillas, senalizaciones,
-// equipos_tecnologicos, botiquines + botiquin_items), todas con FK a la
-// inspección. El Inspector queda aprobado de una vez (nombre de la
-// info general); Jefe y COPASST aprueban después con su link. Todo dentro de
-// una transacción: o se guarda completa, o no se guarda nada. Devuelve el
-// número de inspección (autoincremental, sin condición de carrera) y los 3
-// tokens (el de inspector no se usa como link, pero queda en la fila).
+/**
+ * Guarda una inspección SST completa en la base de datos.
+ *
+ * Registra la información general y sus secciones de extintores, camillas,
+ * señalizaciones, equipos tecnológicos y botiquines. Los elementos de cada
+ * botiquín se almacenan relacionados con su registro principal.
+ *
+ * Todas las operaciones se ejecutan dentro de una transacción. Si alguna
+ * consulta falla, revierte los cambios realizados y libera la conexión.
+ * La aprobación del inspector se registra automáticamente.
+ *
+ * @async
+ * @param {Object} data Inspección SST normalizada.
+ * @param {Object} data.general Información general de la inspección.
+ * @param {Array<Object>} [data.extintores] Extintores inspeccionados.
+ * @param {Array<Object>} [data.camillas] Camillas inspeccionadas.
+ * @param {Array<Object>} [data.senalizaciones] Señalizaciones inspeccionadas.
+ * @param {Array<Object>} [data.equiposTecnologicos] Equipos inspeccionados.
+ * @param {Array<Object>} [data.botiquines] Botiquines inspeccionados.
+ * @returns {Promise<Object>} Identificador, número consecutivo y tokens de
+ * aprobación de la inspección registrada.
+ * @throws {Error} Si falla alguna operación de la transacción.
+ */
+
 async function guardarInspeccionEnDB(data) {
   const general = data?.general || {};
   const client = await pool.connect();
@@ -184,10 +200,21 @@ async function guardarInspeccionEnDB(data) {
   }
 }
 
-// Lee una inspección completa desde Neon (fila general + las 5 secciones,
-// reconstruidas en la misma forma anidada que usa el generador de PDF).
-// Se usa al completar las 3 firmas, para regenerar el PDF sin depender del
-// request original de envío. Devuelve null si no existe.
+/**
+ * Recupera una inspección completa desde la base de datos.
+ *
+ * Obtiene la información general y reconstruye la estructura correspondiente
+ * según el tipo de inspección. Para EPP recupera los trabajadores y sus
+ * evaluaciones; para SST recupera las cinco secciones y los elementos de
+ * cada botiquín.
+ *
+ * @async
+ * @param {string} inspeccionId Identificador único de la inspección.
+ * @returns {Promise<Object|null>} Inspección completa con su estructura SST
+ * o EPP, o `null` cuando el identificador no existe.
+ * @throws {Error} Si falla alguna consulta a la base de datos.
+ */
+
 async function obtenerInspeccionCompleta(inspeccionId) {
   const { rows } = await query(
     `SELECT * FROM inspecciones WHERE inspeccion_id = $1`,
@@ -418,6 +445,24 @@ async function obtenerInspeccionCompleta(inspeccionId) {
   };
 }
 
+/**
+ * Construye las condiciones y parámetros SQL para filtrar inspecciones.
+ *
+ * Genera una cláusula parametrizada a partir del tipo de inspección, rango
+ * de fechas, sede, estado y texto de búsqueda. Si no se reciben filtros,
+ * devuelve una condición que incluye todos los registros.
+ *
+ * @param {Object} filtros Criterios aplicados a la consulta.
+ * @param {string} [filtros.fechaDesde] Fecha inicial del rango.
+ * @param {string} [filtros.fechaHasta] Fecha final del rango.
+ * @param {string} [filtros.sedeOperacion] Sede operacional.
+ * @param {string} [filtros.estado] Estado de la inspección.
+ * @param {string} [filtros.q] Texto de búsqueda general.
+ * @param {string} [filtros.tipoInspeccion] Tipo de inspección.
+ * @returns {{whereSql: string, valores: Array<*>}} Condición SQL y valores
+ * parametrizados utilizados por las consultas.
+ */
+
 function construirFiltrosInspecciones({
   fechaDesde,
   fechaHasta,
@@ -543,6 +588,25 @@ async function obtenerResumenEstadisticas(filtros = {}) {
   };
 }
 
+/**
+ * Consulta una lista paginada de inspecciones y sus cantidades de elementos.
+ *
+ * Aplica filtros, ordenamiento y paginación. Para cada inspección incluye la
+ * cantidad registrada de extintores, camillas, señalizaciones, equipos
+ * tecnológicos y botiquines.
+ *
+ * @async
+ * @param {Object} [filtros={}] Criterios de búsqueda de inspecciones.
+ * @param {Object} [paginacion={}] Configuración de la página solicitada.
+ * @param {number} [paginacion.page=1] Número de página.
+ * @param {number} [paginacion.pageSize=10] Registros por página.
+ * @param {string} [paginacion.sortBy] Campo utilizado para ordenar.
+ * @param {string} [paginacion.sortOrder] Dirección del ordenamiento.
+ * @returns {Promise<Object>} Total de registros, información de paginación
+ * y lista de inspecciones encontradas.
+ * @throws {Error} Si falla alguna consulta a la base de datos.
+ */
+
 async function listarInspeccionesConFiltros(filtros = {}, paginacion = {}) {
   const page = Math.max(1, Number(paginacion.page) || 1);
   const pageSize = Math.min(
@@ -630,6 +694,25 @@ async function listarInspeccionesConFiltros(filtros = {}, paginacion = {}) {
     items: resDatos.rows || [],
   };
 }
+
+/**
+ * Consulta una lista paginada de inspecciones EPP.
+ *
+ * Fuerza el filtro de tipo EPP y aplica los demás criterios de búsqueda,
+ * ordenamiento y paginación. Cada registro incluye la cantidad de trabajadores
+ * relacionados con la inspección.
+ *
+ * @async
+ * @param {Object} [filtros={}] Criterios de búsqueda de inspecciones EPP.
+ * @param {Object} [paginacion={}] Configuración de la página solicitada.
+ * @param {number} [paginacion.page=1] Número de página.
+ * @param {number} [paginacion.pageSize=10] Registros por página.
+ * @param {string} [paginacion.sortBy] Campo utilizado para ordenar.
+ * @param {string} [paginacion.sortOrder] Dirección del ordenamiento.
+ * @returns {Promise<Object>} Total de registros, información de paginación
+ * y lista de inspecciones EPP encontradas.
+ * @throws {Error} Si falla alguna consulta a la base de datos.
+ */
 
 async function listarInspeccionesEppConFiltros(filtros = {}, paginacion = {}) {
   const page = Math.max(1, Number(paginacion.page) || 1);
@@ -767,6 +850,23 @@ async function listarInspeccionesEppConFiltros(filtros = {}, paginacion = {}) {
     items: resDatos.rows || [],
   };
 }
+
+/**
+ * Obtiene los enlaces de aprobación pendientes de una inspección.
+ *
+ * Consulta los tokens de aprobación y genera únicamente los enlaces del jefe
+ * y COPASST que todavía no hayan aprobado. También devuelve el token utilizado
+ * para acceder a la vista previa del documento.
+ *
+ * Los enlaces se construyen utilizando la variable de entorno `APP_URL` o
+ * `http://localhost:3000` cuando esta no se encuentra configurada.
+ *
+ * @async
+ * @param {string} inspeccionId Identificador único de la inspección.
+ * @returns {Promise<Object|null>} Datos de la inspección, token de vista
+ * previa y enlaces pendientes, o `null` si la inspección no existe.
+ * @throws {Error} Si falla la consulta a la base de datos.
+ */
 
 async function obtenerLinksInspeccion(inspeccionId) {
   const { rows } = await query(

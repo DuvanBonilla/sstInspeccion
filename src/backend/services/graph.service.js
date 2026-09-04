@@ -19,6 +19,21 @@ function esErrorTransitorio(error) {
   ].includes(codigo);
 }
 
+/**
+ * Ejecuta una solicitud HTTP con reintentos ante errores transitorios.
+ *
+ * Repite la solicitud cuando detecta problemas temporales de conexión,
+ * tiempo de espera o resolución de red. Entre cada intento aplica una
+ * espera progresiva.
+ *
+ * @async
+ * @param {string} url Dirección a la que se enviará la solicitud.
+ * @param {Object} [options={}] Opciones utilizadas por `fetch`.
+ * @param {number} [maxIntentos=3] Cantidad máxima de intentos permitidos.
+ * @returns {Promise<Response>} Respuesta HTTP obtenida.
+ * @throws {Error} Si el error no es transitorio o se agotan los intentos.
+ */
+
 async function fetchConRetry(url, options = {}, maxIntentos = 3) {
   let ultimoError;
 
@@ -46,6 +61,14 @@ async function fetchConRetry(url, options = {}, maxIntentos = 3) {
   throw ultimoError;
 }
 
+/**
+ * Obtiene una variable de entorno obligatoria.
+ *
+ * @param {string} name Nombre de la variable de entorno.
+ * @returns {string} Valor configurado para la variable.
+ * @throws {Error} Si la variable no existe o no contiene un valor.
+ */
+
 function getRequiredEnv(name) {
   const value = process.env[name];
 
@@ -55,6 +78,19 @@ function getRequiredEnv(name) {
 
   return value;
 }
+
+/**
+ * Obtiene un token de acceso para Microsoft Graph.
+ *
+ * Utiliza el flujo de credenciales de aplicación con el tenant, cliente y
+ * secreto configurados. El token se conserva temporalmente en memoria y se
+ * reutiliza mientras continúe vigente.
+ *
+ * @async
+ * @returns {Promise<string>} Token de acceso válido para Microsoft Graph.
+ * @throws {Error} Si faltan credenciales, falla la solicitud o Microsoft no
+ * devuelve un token válido.
+ */
 
 async function getAccessToken() {
   if (_cachedToken && Date.now() < _tokenExpiresAt - 30_000) {
@@ -108,6 +144,23 @@ function normalizarRutaOneDrive(ruta) {
 
   return ruta.startsWith("/") ? ruta : `/${ruta}`;
 }
+
+/**
+ * Carga o reemplaza un archivo en OneDrive mediante Microsoft Graph.
+ *
+ * Normaliza la ruta de destino, obtiene un token de acceso y envía el contenido
+ * binario. Si OneDrive responde con bloqueo, límite de solicitudes o un error
+ * del servidor, realiza nuevos intentos antes de considerar fallida la carga.
+ *
+ * @async
+ * @param {Object} archivo Información del archivo que será cargado.
+ * @param {string} archivo.ruta Ruta de destino dentro de OneDrive.
+ * @param {Buffer} archivo.buffer Contenido binario del archivo.
+ * @param {string} [archivo.contentType="application/octet-stream"] Tipo MIME.
+ * @returns {Promise<Object>} Información del archivo devuelta por Microsoft Graph.
+ * @throws {Error} Si falta el contenido, falla la autenticación o no se puede
+ * completar la carga.
+ */
 
 async function subirArchivoOneDrive({
   ruta,
@@ -207,6 +260,17 @@ async function subirArchivoOneDrive({
 
   throw new Error("No se pudo subir el archivo a OneDrive");
 }
+
+/**
+ * Descarga un archivo desde OneDrive mediante Microsoft Graph.
+ *
+ * @async
+ * @param {string} ruta Ruta del archivo dentro de OneDrive.
+ * @returns {Promise<Buffer|null>} Contenido binario del archivo, o `null`
+ * cuando no se proporciona una ruta.
+ * @throws {Error} Si falla la autenticación o Microsoft Graph no permite
+ * descargar el archivo.
+ */
 
 async function descargarArchivoOneDrive(ruta) {
   if (!ruta) {

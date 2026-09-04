@@ -1,12 +1,27 @@
 const ExcelJS = require("exceljs");
 
-/* =========================================================
-   WORKBOOK
-========================================================= */
+/**
+ * Crea un nuevo libro de Excel utilizando ExcelJS.
+ *
+ * @returns {ExcelJS.Workbook} Libro vacío preparado para agregar hojas,
+ * columnas y registros.
+ */
 
 function crearWorkbook() {
   return new ExcelJS.Workbook();
 }
+
+/**
+ * Convierte un libro de Excel en contenido binario XLSX.
+ *
+ * El Buffer resultante puede utilizarse para descargar el archivo, adjuntarlo
+ * o almacenarlo en OneDrive.
+ *
+ * @async
+ * @param {ExcelJS.Workbook} workbook Libro que será serializado.
+ * @returns {Promise<Buffer>} Contenido binario del archivo XLSX.
+ * @throws {Error} Si no se proporciona un libro o falla la serialización.
+ */
 
 async function generarBuffer(workbook) {
   if (!workbook) {
@@ -16,9 +31,18 @@ async function generarBuffer(workbook) {
   return workbook.xlsx.writeBuffer();
 }
 
-/* =========================================================
-   HOJAS
-========================================================= */
+/**
+ * Obtiene una hoja existente o crea una nueva dentro del libro.
+ *
+ * Si ya existe una hoja con el nombre indicado, devuelve esa misma instancia.
+ * En caso contrario, crea la hoja utilizando las opciones proporcionadas.
+ *
+ * @param {ExcelJS.Workbook} workbook Libro que contiene la hoja.
+ * @param {string} nombre Nombre de la hoja.
+ * @param {Object} [opciones={}] Opciones utilizadas al crear una nueva hoja.
+ * @returns { @returns {ExcelJS.Worksheet} Hoja existente o recién creada.
+ * @throws {Error} Si no se proporciona el libro o el nombre de la hoja.
+ */
 
 function obtenerOCrearHoja(workbook, nombre, opciones = {}) {
   if (!workbook) {
@@ -37,10 +61,6 @@ function obtenerOCrearHoja(workbook, nombre, opciones = {}) {
 
   return worksheet;
 }
-
-/* =========================================================
-   ESTRUCTURA
-========================================================= */
 
 function configurarColumnas(worksheet, columnas) {
   if (!worksheet) {
@@ -75,10 +95,6 @@ function activarFiltro(worksheet, rango) {
   worksheet.autoFilter = rango;
 }
 
-/* =========================================================
-   FORMATOS
-========================================================= */
-
 function aplicarFormatoFecha(
   worksheet,
   columna,
@@ -94,10 +110,6 @@ function aplicarFormatoFecha(
     worksheet.getCell(`${columna}${fila}`).numFmt = formato;
   }
 }
-
-/* =========================================================
-   ESTILO GENERAL
-========================================================= */
 
 function aplicarEstiloEncabezado(worksheet, fila = 1) {
   if (!worksheet) {
@@ -185,10 +197,6 @@ function aplicarFormatoCuerpo(
     });
   }
 }
-
-/* =========================================================
-   ALINEACIÓN
-========================================================= */
 
 function centrarColumnas(
   worksheet,
@@ -283,10 +291,6 @@ function aplicarColorPorValor(
     };
   }
 }
-
-/* =========================================================
-   EXPORTS
-========================================================= */
 
 module.exports = {
   crearWorkbook,

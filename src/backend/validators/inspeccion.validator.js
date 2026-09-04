@@ -21,6 +21,32 @@ const {
 
 const { normalizarTexto } = require("../utils/texto.util");
 
+/**
+ * Normaliza y valida la información de una inspección SST.
+ *
+ * Valida los datos generales de la inspección y delega la normalización y
+ * validación de extintores, camillas, señalizaciones, equipos tecnológicos
+ * y botiquines en los validadores correspondientes.
+ *
+ * Para las sedes de Urabá y Santa Marta permite que una o varias secciones
+ * sean enviadas sin elementos. En las demás sedes exige al menos un elemento
+ * por cada sección. Los elementos recibidos se validan independientemente de
+ * que la sede permita omitir secciones.
+ *
+ * @param {Object} payload Información recibida desde el formulario SST.
+ * @param {string} [payload.inspeccionId] Identificador de la inspección.
+ * @param {string} [payload.fecha] Fecha de la inspección.
+ * @param {string} [payload.sedeOperacion] Sede donde se realiza la inspección.
+ * @param {string} [payload.areaTrabajo] Área inspeccionada.
+ * @param {string} [payload.jefeResponsable] Nombre del jefe responsable.
+ * @param {string} [payload.cargoJefe] Cargo del jefe responsable.
+ * @param {string} [payload.responsableInspeccion] Responsable de la inspección.
+ * @param {string} [payload.cargoResponsable] Cargo del responsable.
+ * @returns {Object} Resultado de la validación. Si existen errores devuelve
+ * `ok: false` y la lista `errores`; si la información es válida devuelve
+ * `ok: true` y los datos normalizados en `data`.
+ */
+
 function validarInspeccion(payload) {
   const errores = [];
 

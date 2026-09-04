@@ -1,6 +1,29 @@
-function mostrarModal(estado, inspeccionId = null, numInspeccion = null, links = null, modo = "crear") {
-  const modal = document.getElementById("envio-modal");
+/**
+ * Muestra el modal correspondiente al estado de una operación de inspección.
+ *
+ * Alterna entre los estados de carga, éxito y error. Cuando la operación
+ * finaliza correctamente, configura la información de la inspección y los
+ * enlaces de aprobación que deben presentarse.
+ *
+ * @param {"cargando"|"exito"|"error"} estado - Estado que debe mostrar el modal.
+ * @param {string|null} [inspeccionId=null] - Identificador público de la inspección.
+ * @param {number|string|null} [numInspeccion=null] - Número interno de la inspección.
+ * @param {Object|null} enlaces - Enlaces de aprobación recibidos.
+ * @param {string} [enlaces.jefe] - Enlace de aprobación correspondiente al jefe.
+ * @param {string} [enlaces.copasst] - Enlace de aprobación correspondiente al COPASST.
+ * Enlaces de aprobación disponibles.
+ * @param {"crear"|"recuperar"} [modo="crear"] - Contexto en el que se abre el modal.
+ * @returns {void}
+ */
 
+function mostrarModal(
+  estado,
+  inspeccionId = null,
+  numInspeccion = null,
+  links = null,
+  modo = "crear",
+) {
+  const modal = document.getElementById("envio-modal");
 
   const estadoCargando = document.getElementById("envio-estado-cargando");
   const estadoExito = document.getElementById("envio-estado-exito");
@@ -10,7 +33,7 @@ function mostrarModal(estado, inspeccionId = null, numInspeccion = null, links =
     console.error("Faltan elementos del modal", {
       estadoCargando,
       estadoExito,
-      estadoError
+      estadoError,
     });
     return;
   }
@@ -20,27 +43,34 @@ function mostrarModal(estado, inspeccionId = null, numInspeccion = null, links =
   estadoError.classList.toggle("hidden", estado !== "error");
 
   if (estado === "exito") {
-
-    configurarModalExito(
-      inspeccionId,
-      numInspeccion,
-      links,
-      modo
-    );
-
+    configurarModalExito(inspeccionId, numInspeccion, links, modo);
   }
 
   modal.classList.add("visible");
 }
 
+/**
+ * Configura el contenido mostrado después de completar una operación.
+ *
+ * Presenta el identificador y número de la inspección, carga los enlaces
+ * disponibles para Jefe de Área y COPASST, y adapta el mensaje y las acciones
+ * según se trate de una inspección recién creada o de enlaces recuperados.
+ *
+ * @param {string|null} inspeccionId - Identificador público de la inspección.
+ * @param {number|string|null} numInspeccion - Número interno de la inspección.
+ * @param {Object|null} links
+ * Enlaces de aprobación recibidos.
+ * @param {"crear"|"recuperar"} [modo="crear"] - Contexto de presentación del modal.
+ * @returns {void}
+ */
+
 function configurarModalExito(
   inspeccionId,
   numInspeccion,
   links,
-  modo = "crear"
+  modo = "crear",
 ) {
-  document.getElementById("envio-inspeccion-id").textContent =
-    inspeccionId;
+  document.getElementById("envio-inspeccion-id").textContent = inspeccionId;
 
   const numEl = document.getElementById("envio-num-inspeccion");
 
@@ -56,7 +86,6 @@ function configurarModalExito(
   console.log("Links recibidos en configurarModalExito:", links);
 
   if (links) {
-
     const bloqueJefe = document.getElementById("bloque-jefe");
     const bloqueCopasst = document.getElementById("bloque-copasst");
 
@@ -84,23 +113,20 @@ function configurarModalExito(
       inputCopasst.value = "";
       inputCopasst.setAttribute("value", "");
     }
-
   }
 
   const titulo = document.querySelector(".exito-titulo");
   const subtitulo = document.querySelector(".exito-sub");
 
-  const btnInicio =
-    document.getElementById("btn-modal-inicio");
+  const btnInicio = document.getElementById("btn-modal-inicio");
 
-  const btnNueva =
-    document.getElementById("btn-modal-nueva");
+  const btnNueva = document.getElementById("btn-modal-nueva");
 
   console.log({
     titulo,
     subtitulo,
     btnInicio,
-    btnNueva
+    btnNueva,
   });
 
   if (modo === "crear") {
@@ -122,9 +148,19 @@ function configurarModalExito(
   }
 }
 
-// Copia el valor de un input de link al portapapeles y da feedback visual en el botón.
-function copiarLink(boton) {
+/**
+ * Abre y copia al portapapeles un enlace de aprobación.
+ *
+ * Obtiene el enlace desde el campo asociado con el botón, lo abre en una
+ * nueva pestaña y proporciona una confirmación visual cuando se copia
+ * correctamente al portapapeles.
+ *
+ * @param {HTMLButtonElement} boton - Botón que contiene el identificador
+ * del campo desde el cual debe obtenerse el enlace.
+ * @returns {void}
+ */
 
+function copiarLink(boton) {
   const targetId = boton.getAttribute("data-copy-target");
   const input = document.getElementById(targetId);
 
@@ -134,7 +170,8 @@ function copiarLink(boton) {
   window.open(input.value, "_blank", "noopener,noreferrer");
 
   // Copiar al portapapeles
-  navigator.clipboard.writeText(input.value)
+  navigator.clipboard
+    .writeText(input.value)
     .then(() => {
       const textoOriginal = boton.textContent;
 
@@ -147,10 +184,9 @@ function copiarLink(boton) {
         boton.classList.remove("copiado");
       }, 1500);
     })
-    .catch(err => {
+    .catch((err) => {
       console.error("No fue posible copiar el enlace:", err);
     });
-
 }
 
 function cerrarModal() {

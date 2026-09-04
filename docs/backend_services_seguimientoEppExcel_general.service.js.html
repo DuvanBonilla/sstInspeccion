@@ -1,0 +1,1095 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: backend/services/seguimientoEppExcel/general.service.js</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+    <link type="text/css" rel="stylesheet" href="styles/sst-docs.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: backend/services/seguimientoEppExcel/general.service.js</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>const { obtenerOCrearHoja } = require("../excel.service");
+
+const COLORES = {
+  azulPrincipal: "FF102A5C",
+  azulSeccion: "FF1F4E79",
+  azulClaro: "FFEAF1FB",
+
+  blanco: "FFFFFFFF",
+  grisClaro: "FFF2F4F7",
+  grisTexto: "FF667085",
+
+  verdeFondo: "FFEAF7EE",
+  verdeTexto: "FF16794B",
+
+  amarilloFondo: "FFFFF4E5",
+  amarilloTexto: "FFB54708",
+
+  rojoFondo: "FFFCE8E6",
+  rojoTexto: "FFB42318",
+
+  borde: "FFD9E2F3",
+};
+
+function aplicarFondo(celda, color) {
+  celda.fill = {
+    type: "pattern",
+    pattern: "solid",
+    fgColor: {
+      argb: color,
+    },
+  };
+}
+
+function aplicarBorde(celda) {
+  celda.border = {
+    top: {
+      style: "thin",
+      color: {
+        argb: COLORES.borde,
+      },
+    },
+
+    left: {
+      style: "thin",
+      color: {
+        argb: COLORES.borde,
+      },
+    },
+
+    bottom: {
+      style: "thin",
+      color: {
+        argb: COLORES.borde,
+      },
+    },
+
+    right: {
+      style: "thin",
+      color: {
+        argb: COLORES.borde,
+      },
+    },
+  };
+}
+
+function aplicarTexto(
+  celda,
+  {
+    color = COLORES.azulPrincipal,
+    tamaño = 10,
+    negrita = false,
+    horizontal = "center",
+  } = {},
+) {
+  celda.font = {
+    name: "Arial",
+    size: tamaño,
+    bold: negrita,
+
+    color: {
+      argb: color,
+    },
+  };
+
+  celda.alignment = {
+    horizontal,
+    vertical: "middle",
+    wrapText: true,
+  };
+}
+
+function crearSeccion(hoja, fila, titulo) {
+  hoja.mergeCells(`A${fila}:L${fila}`);
+
+  const celda = hoja.getCell(`A${fila}`);
+
+  celda.value = titulo;
+
+  aplicarFondo(celda, COLORES.azulSeccion);
+
+  aplicarTexto(celda, {
+    color: COLORES.blanco,
+    tamaño: 10,
+    negrita: true,
+    horizontal: "left",
+  });
+
+  hoja.getRow(fila).height = 20;
+}
+
+function crearEncabezado(hoja, fila, configuracion) {
+  for (const columna of configuracion) {
+    const rango = `${columna.desde}${fila}:${columna.hasta}${fila}`;
+
+    if (columna.desde !== columna.hasta) {
+      hoja.mergeCells(rango);
+    }
+
+    const celda = hoja.getCell(`${columna.desde}${fila}`);
+
+    celda.value = columna.titulo;
+
+    aplicarFondo(celda, COLORES.azulPrincipal);
+
+    aplicarTexto(celda, {
+      color: COLORES.blanco,
+      tamaño: 9,
+      negrita: true,
+    });
+
+    aplicarBorde(celda);
+  }
+
+  hoja.getRow(fila).height = 25;
+}
+
+function crearIndicador(
+  hoja,
+  {
+    columnas,
+    titulo,
+    formula,
+    resultado,
+    fondo = COLORES.azulClaro,
+    color = COLORES.azulPrincipal,
+    formato,
+  },
+) {
+  const [inicio, fin] = columnas;
+
+  hoja.mergeCells(`${inicio}5:${fin}5`);
+
+  hoja.mergeCells(`${inicio}6:${fin}7`);
+
+  const celdaTitulo = hoja.getCell(`${inicio}5`);
+
+  celdaTitulo.value = titulo;
+
+  aplicarFondo(celdaTitulo, COLORES.grisClaro);
+
+  aplicarTexto(celdaTitulo, {
+    color: COLORES.grisTexto,
+    tamaño: 9,
+    negrita: true,
+  });
+
+  aplicarBorde(celdaTitulo);
+
+  const celdaValor = hoja.getCell(`${inicio}6`);
+
+  celdaValor.value = formula
+    ? {
+        formula,
+        result: resultado,
+      }
+    : resultado;
+
+  if (formato) {
+    celdaValor.numFmt = formato;
+  }
+
+  aplicarFondo(celdaValor, fondo);
+
+  aplicarTexto(celdaValor, {
+    color,
+    tamaño: 18,
+    negrita: true,
+  });
+
+  aplicarBorde(celdaValor);
+}
+
+function obtenerNumero(valor) {
+  const numero = Number(valor);
+
+  return Number.isFinite(numero) ? numero : 0;
+}
+
+function obtenerEstadoPlan(plan) {
+  return String(plan.estado_plan || "")
+    .trim()
+    .toUpperCase();
+}
+
+function obtenerFechaComparable(valor) {
+  if (!valor) {
+    return 0;
+  }
+
+  const fecha = new Date(valor);
+
+  if (Number.isNaN(fecha.getTime())) {
+    return 0;
+  }
+
+  return fecha.getTime();
+}
+
+function obtenerFechaVisible(valor) {
+  if (!valor) {
+    return "";
+  }
+
+  if (valor instanceof Date) {
+    return valor.toISOString().slice(0, 10);
+  }
+
+  return String(valor).slice(0, 10);
+}
+
+/**
+ * Calcula los días restantes hasta la fecha de compromiso de un plan.
+ *
+ * Compara únicamente las fechas de calendario, sin considerar la hora.
+ * Un resultado negativo identifica un plan vencido, mientras que un valor
+ * entre cero y tres permite clasificarlo como próximo a vencer.
+ *
+ * @param {string|Date|null} valor - Fecha de compromiso del plan de acción.
+ * @returns {number|null} Días restantes, o `null` cuando la fecha no existe
+ * o no puede interpretarse correctamente.
+ */
+function obtenerDiasRestantes(valor) {
+  if (!valor) {
+    return null;
+  }
+
+  const fecha = new Date(valor);
+
+  if (Number.isNaN(fecha.getTime())) {
+    return null;
+  }
+
+  const compromiso = new Date(
+    fecha.getFullYear(),
+    fecha.getMonth(),
+    fecha.getDate(),
+  );
+
+  const ahora = new Date();
+
+  const hoy = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate());
+
+  return Math.round((compromiso.getTime() - hoy.getTime()) / 86400000);
+}
+
+function aplicarEstiloFilaDatos(hoja, numeroFila) {
+  const fila = hoja.getRow(numeroFila);
+
+  fila.height = 21;
+
+  for (let numeroColumna = 1; numeroColumna &lt;= 12; numeroColumna += 1) {
+    const celda = fila.getCell(numeroColumna);
+
+    aplicarBorde(celda);
+
+    aplicarTexto(celda, {
+      tamaño: 9,
+      horizontal: numeroColumna &lt;= 8 ? "left" : "center",
+    });
+
+    if (numeroFila % 2 === 0) {
+      aplicarFondo(celda, COLORES.grisClaro);
+    }
+  }
+}
+
+/**
+ * Construye el tablero general del seguimiento de inspecciones EPP.
+ *
+ * Consolida la información de inspecciones, trabajadores y planes de acción
+ * en la hoja `General`. Genera indicadores globales, una búsqueda por código
+ * de inspección, el listado de las últimas inspecciones, porcentajes de
+ * novedades, estados de los planes y los planes pendientes prioritarios.
+ *
+ * Los planes se clasifican como cumplidos, pendientes, vencidos o próximos
+ * a vencer según su estado y fecha de compromiso. La hoja también incorpora
+ * fórmulas vinculadas con `_RESUMEN` para conservar indicadores actualizables
+ * dentro del libro de Excel.
+ *
+ * @param {ExcelJS.Workbook} workbook
+ * Libro donde debe construirse el tablero.
+ * @param {Array&lt;Object>} inspecciones
+ * Inspecciones EPP utilizadas para calcular los indicadores.
+ * @param {Array&lt;Object>} seguimiento
+ * Registros individuales de trabajadores evaluados.
+ * @param {Array&lt;Object>} planes
+ * Planes de acción asociados con las inspecciones.
+ * @returns {{
+ *   hoja: string,
+ *   totalInspecciones: number,
+ *   totalTrabajadores: number,
+ *   totalEppEvaluados: number,
+ *   totalPlanes: number,
+ *   planesPendientes: number,
+ *   planesCumplidos: number,
+ *   planesVencidos: number,
+ *   planesProximosVencer: number
+ * }} Resumen de la hoja construida y sus indicadores principales.
+ */
+
+function construirHojaGeneralEpp(workbook, inspecciones, seguimiento, planes) {
+  const hoja = obtenerOCrearHoja(workbook, "General");
+
+  hoja.views = [
+    {
+      showGridLines: false,
+    },
+  ];
+
+  const anchos = [17, 15, 17, 15, 17, 15, 17, 15, 15, 15, 17, 17];
+
+  anchos.forEach((ancho, indice) => {
+    hoja.getColumn(indice + 1).width = ancho;
+  });
+
+  const ultimaFilaResumen = Math.max(inspecciones.length + 1, 2);
+
+  const rangoResumen = `'_RESUMEN'!$A$2:$O$${ultimaFilaResumen}`;
+
+  const inspeccionesOrdenadas = [...inspecciones].sort(
+    (primera, segunda) =>
+      obtenerFechaComparable(segunda.fecha) -
+      obtenerFechaComparable(primera.fecha),
+  );
+
+  const ultimaInspeccion = inspeccionesOrdenadas[0];
+
+  const totalEppEvaluados = inspecciones.reduce(
+    (total, inspeccion) =>
+      total + obtenerNumero(inspeccion.total_epp_evaluados),
+    0,
+  );
+
+  const totalEppConNovedad = inspecciones.reduce(
+    (total, inspeccion) => total + obtenerNumero(inspeccion.epp_con_novedad),
+    0,
+  );
+
+  const totalTrabajadoresConNovedad = inspecciones.reduce(
+    (total, inspeccion) =>
+      total + obtenerNumero(inspeccion.trabajadores_con_novedad),
+    0,
+  );
+
+  const planesCumplidos = planes.filter(
+    (plan) => obtenerEstadoPlan(plan) === "CUMPLIDO",
+  );
+
+  const planesPendientes = planes.filter(
+    (plan) => obtenerEstadoPlan(plan) !== "CUMPLIDO",
+  );
+
+  const planesVencidos = planesPendientes.filter((plan) => {
+    const dias = obtenerDiasRestantes(plan.fecha_plan_accion);
+
+    return dias !== null &amp;&amp; dias &lt; 0;
+  });
+
+  const planesProximosVencer = planesPendientes.filter((plan) => {
+    const dias = obtenerDiasRestantes(plan.fecha_plan_accion);
+
+    return dias !== null &amp;&amp; dias >= 0 &amp;&amp; dias &lt;= 3;
+  });
+
+  hoja.mergeCells("A2:L3");
+
+  const titulo = hoja.getCell("A2");
+
+  titulo.value = "SEGUIMIENTO GENERAL DE INSPECCIONES EPP";
+
+  aplicarFondo(titulo, COLORES.azulPrincipal);
+
+  aplicarTexto(titulo, {
+    color: COLORES.blanco,
+    tamaño: 16,
+    negrita: true,
+  });
+
+  crearIndicador(hoja, {
+    columnas: ["A", "B"],
+
+    titulo: "INSPECCIONES REALIZADAS",
+
+    formula: `COUNTA('_RESUMEN'!A2:A${ultimaFilaResumen})`,
+
+    resultado: inspecciones.length,
+  });
+
+  crearIndicador(hoja, {
+    columnas: ["C", "D"],
+
+    titulo: "TRABAJADORES EVALUADOS",
+
+    formula: `SUM('_RESUMEN'!G2:G${ultimaFilaResumen})`,
+
+    resultado: seguimiento.length,
+  });
+
+  crearIndicador(hoja, {
+    columnas: ["E", "F"],
+
+    titulo: "EPP EVALUADOS",
+
+    formula: `SUM('_RESUMEN'!I2:I${ultimaFilaResumen})`,
+
+    resultado: totalEppEvaluados,
+  });
+
+  crearIndicador(hoja, {
+    columnas: ["G", "H"],
+
+    titulo: "EPP CON NOVEDAD",
+
+    formula: `SUM('_RESUMEN'!J2:J${ultimaFilaResumen})`,
+
+    resultado: totalEppConNovedad,
+
+    fondo: COLORES.amarilloFondo,
+
+    color: COLORES.amarilloTexto,
+  });
+
+  crearIndicador(hoja, {
+    columnas: ["I", "J"],
+
+    titulo: "PLANES PENDIENTES",
+
+    formula: `SUM('_RESUMEN'!L2:L${ultimaFilaResumen})`,
+
+    resultado: planesPendientes.length,
+
+    fondo: COLORES.amarilloFondo,
+
+    color: COLORES.amarilloTexto,
+  });
+
+  crearIndicador(hoja, {
+    columnas: ["K", "L"],
+
+    titulo: "ÚLTIMA INSPECCIÓN",
+
+    resultado: obtenerFechaVisible(ultimaInspeccion?.fecha),
+
+    fondo: COLORES.verdeFondo,
+
+    color: COLORES.verdeTexto,
+  });
+
+  crearSeccion(hoja, 9, "B. BUSCAR INSPECCIÓN POR ID");
+
+  hoja.mergeCells("A10:B10");
+  hoja.mergeCells("C10:F10");
+
+  const etiquetaBusqueda = hoja.getCell("A10");
+
+  etiquetaBusqueda.value = "ID a buscar:";
+
+  aplicarTexto(etiquetaBusqueda, {
+    negrita: true,
+    horizontal: "left",
+  });
+
+  aplicarFondo(etiquetaBusqueda, COLORES.azulClaro);
+
+  const entradaBusqueda = hoja.getCell("C10");
+
+  entradaBusqueda.value = "";
+
+  aplicarFondo(entradaBusqueda, COLORES.amarilloFondo);
+
+  aplicarBorde(entradaBusqueda);
+
+  aplicarTexto(entradaBusqueda, {
+    horizontal: "left",
+  });
+
+  crearEncabezado(hoja, 12, [
+    {
+      desde: "A",
+      hasta: "C",
+      titulo: "INSPECCIÓN",
+    },
+    {
+      desde: "D",
+      hasta: "F",
+      titulo: "RESPONSABLE",
+    },
+    {
+      desde: "G",
+      hasta: "H",
+      titulo: "SEDE / ÁREA",
+    },
+    {
+      desde: "I",
+      hasta: "J",
+      titulo: "FECHA",
+    },
+    {
+      desde: "K",
+      hasta: "L",
+      titulo: "PLANES PENDIENTES",
+    },
+  ]);
+
+  hoja.mergeCells("A13:C13");
+  hoja.mergeCells("D13:F13");
+  hoja.mergeCells("G13:H13");
+  hoja.mergeCells("I13:J13");
+  hoja.mergeCells("K13:L13");
+
+  hoja.getCell("A13").value = {
+    formula:
+      'IF($C$10="","",' +
+      `IFERROR(VLOOKUP($C$10,${rangoResumen},1,FALSE),` +
+      '"No encontrado"))',
+
+    result: "",
+  };
+
+  hoja.getCell("D13").value = {
+    formula:
+      'IF($C$10="","",' + `IFERROR(VLOOKUP($C$10,${rangoResumen},6,FALSE),""))`,
+
+    result: "",
+  };
+
+  hoja.getCell("G13").value = {
+    formula:
+      'IF($C$10="","",' +
+      `IFERROR(VLOOKUP($C$10,${rangoResumen},3,FALSE)` +
+      '&amp;" / "&amp;' +
+      `VLOOKUP($C$10,${rangoResumen},4,FALSE),""))`,
+
+    result: "",
+  };
+
+  hoja.getCell("I13").value = {
+    formula:
+      'IF($C$10="","",' + `IFERROR(VLOOKUP($C$10,${rangoResumen},2,FALSE),""))`,
+
+    result: "",
+  };
+
+  hoja.getCell("K13").value = {
+    formula:
+      'IF($C$10="","",' +
+      `IFERROR(VLOOKUP($C$10,${rangoResumen},12,FALSE),""))`,
+
+    result: "",
+  };
+
+  crearSeccion(hoja, 15, "C. ÚLTIMAS INSPECCIONES REALIZADAS");
+
+  crearEncabezado(hoja, 16, [
+    {
+      desde: "A",
+      hasta: "C",
+      titulo: "INSPECCIÓN",
+    },
+    {
+      desde: "D",
+      hasta: "F",
+      titulo: "RESPONSABLE",
+    },
+    {
+      desde: "G",
+      hasta: "H",
+      titulo: "SEDE / ÁREA",
+    },
+    {
+      desde: "I",
+      hasta: "I",
+      titulo: "FECHA",
+    },
+    {
+      desde: "J",
+      hasta: "J",
+      titulo: "EPP",
+    },
+    {
+      desde: "K",
+      hasta: "K",
+      titulo: "NOVEDADES",
+    },
+    {
+      desde: "L",
+      hasta: "L",
+      titulo: "PLANES",
+    },
+  ]);
+
+  const ultimasInspecciones = inspeccionesOrdenadas.slice(0, 3);
+
+  for (let indice = 0; indice &lt; 3; indice += 1) {
+    const numeroFila = 17 + indice;
+
+    const inspeccion = ultimasInspecciones[indice];
+
+    hoja.mergeCells(`A${numeroFila}:C${numeroFila}`);
+
+    hoja.mergeCells(`D${numeroFila}:F${numeroFila}`);
+
+    hoja.mergeCells(`G${numeroFila}:H${numeroFila}`);
+
+    aplicarEstiloFilaDatos(hoja, numeroFila);
+
+    if (!inspeccion) {
+      continue;
+    }
+
+    const cantidadPlanes = planes.filter(
+      (plan) => plan.inspeccion_id === inspeccion.inspeccion_id,
+    ).length;
+
+    hoja.getCell(`A${numeroFila}`).value = inspeccion.inspeccion_id || "";
+
+    hoja.getCell(`D${numeroFila}`).value =
+      inspeccion.responsable_inspeccion || "";
+
+    hoja.getCell(`G${numeroFila}`).value =
+      `${inspeccion.sede_operacion || ""}` +
+      ` / ${inspeccion.area_trabajo || ""}`;
+
+    hoja.getCell(`I${numeroFila}`).value = obtenerFechaVisible(
+      inspeccion.fecha,
+    );
+
+    hoja.getCell(`J${numeroFila}`).value = obtenerNumero(
+      inspeccion.total_epp_evaluados,
+    );
+
+    hoja.getCell(`K${numeroFila}`).value = obtenerNumero(
+      inspeccion.epp_con_novedad,
+    );
+
+    hoja.getCell(`L${numeroFila}`).value = cantidadPlanes;
+  }
+
+  crearSeccion(hoja, 21, "D. CUMPLIMIENTO GLOBAL EPP");
+
+  crearEncabezado(hoja, 22, [
+    {
+      desde: "A",
+      hasta: "D",
+      titulo: "INDICADOR",
+    },
+    {
+      desde: "E",
+      hasta: "F",
+      titulo: "TOTAL",
+    },
+    {
+      desde: "G",
+      hasta: "H",
+      titulo: "SIN NOVEDAD",
+    },
+    {
+      desde: "I",
+      hasta: "J",
+      titulo: "CON NOVEDAD",
+    },
+    {
+      desde: "K",
+      hasta: "L",
+      titulo: "% CON NOVEDAD",
+    },
+  ]);
+
+  const indicadores = [
+    {
+      fila: 23,
+
+      nombre: "Trabajadores evaluados",
+
+      total: seguimiento.length,
+
+      conNovedad: totalTrabajadoresConNovedad,
+    },
+    {
+      fila: 24,
+
+      nombre: "Elementos EPP evaluados",
+
+      total: totalEppEvaluados,
+
+      conNovedad: totalEppConNovedad,
+    },
+  ];
+
+  for (const indicador of indicadores) {
+    const numeroFila = indicador.fila;
+
+    hoja.mergeCells(`A${numeroFila}:D${numeroFila}`);
+
+    hoja.mergeCells(`E${numeroFila}:F${numeroFila}`);
+
+    hoja.mergeCells(`G${numeroFila}:H${numeroFila}`);
+
+    hoja.mergeCells(`I${numeroFila}:J${numeroFila}`);
+
+    hoja.mergeCells(`K${numeroFila}:L${numeroFila}`);
+
+    aplicarEstiloFilaDatos(hoja, numeroFila);
+
+    hoja.getCell(`A${numeroFila}`).value = indicador.nombre;
+
+    hoja.getCell(`E${numeroFila}`).value = indicador.total;
+
+    hoja.getCell(`G${numeroFila}`).value =
+      indicador.total - indicador.conNovedad;
+
+    hoja.getCell(`I${numeroFila}`).value = indicador.conNovedad;
+
+    hoja.getCell(`K${numeroFila}`).value = {
+      formula: `IFERROR(I${numeroFila}/E${numeroFila},0)`,
+
+      result: indicador.total > 0 ? indicador.conNovedad / indicador.total : 0,
+    };
+
+    hoja.getCell(`K${numeroFila}`).numFmt = "0%";
+
+    aplicarFondo(hoja.getCell(`G${numeroFila}`), COLORES.verdeFondo);
+
+    aplicarFondo(hoja.getCell(`I${numeroFila}`), COLORES.amarilloFondo);
+  }
+
+  crearSeccion(hoja, 26, "E. ESTADO DE PLANES DE ACCIÓN");
+
+  crearEncabezado(hoja, 27, [
+    {
+      desde: "A",
+      hasta: "B",
+      titulo: "TOTAL",
+    },
+    {
+      desde: "C",
+      hasta: "D",
+      titulo: "PENDIENTES",
+    },
+    {
+      desde: "E",
+      hasta: "F",
+      titulo: "CUMPLIDOS",
+    },
+    {
+      desde: "G",
+      hasta: "H",
+      titulo: "VENCIDOS",
+    },
+    {
+      desde: "I",
+      hasta: "J",
+      titulo: "PRÓXIMOS A VENCER",
+    },
+    {
+      desde: "K",
+      hasta: "L",
+      titulo: "% CUMPLIMIENTO",
+    },
+  ]);
+
+  const indicadoresPlanes = [
+    {
+      inicio: "A",
+      fin: "B",
+
+      formula: `SUM('_RESUMEN'!K2:K${ultimaFilaResumen})`,
+
+      resultado: planes.length,
+
+      fondo: COLORES.azulClaro,
+    },
+    {
+      inicio: "C",
+      fin: "D",
+
+      formula: `SUM('_RESUMEN'!L2:L${ultimaFilaResumen})`,
+
+      resultado: planesPendientes.length,
+
+      fondo: COLORES.amarilloFondo,
+    },
+    {
+      inicio: "E",
+      fin: "F",
+
+      formula: `SUM('_RESUMEN'!M2:M${ultimaFilaResumen})`,
+
+      resultado: planesCumplidos.length,
+
+      fondo: COLORES.verdeFondo,
+    },
+    {
+      inicio: "G",
+      fin: "H",
+
+      formula: `SUM('_RESUMEN'!N2:N${ultimaFilaResumen})`,
+
+      resultado: planesVencidos.length,
+
+      fondo: COLORES.rojoFondo,
+    },
+    {
+      inicio: "I",
+      fin: "J",
+
+      formula: `SUM('_RESUMEN'!O2:O${ultimaFilaResumen})`,
+
+      resultado: planesProximosVencer.length,
+
+      fondo: COLORES.amarilloFondo,
+    },
+    {
+      inicio: "K",
+      fin: "L",
+
+      formula: "IFERROR(E28/A28,0)",
+
+      resultado: planes.length > 0 ? planesCumplidos.length / planes.length : 0,
+
+      fondo: COLORES.verdeFondo,
+
+      porcentaje: true,
+    },
+  ];
+
+  for (const indicador of indicadoresPlanes) {
+    hoja.mergeCells(`${indicador.inicio}28:${indicador.fin}28`);
+
+    const celda = hoja.getCell(`${indicador.inicio}28`);
+
+    celda.value = {
+      formula: indicador.formula,
+
+      result: indicador.resultado,
+    };
+
+    if (indicador.porcentaje) {
+      celda.numFmt = "0%";
+    }
+
+    aplicarFondo(celda, indicador.fondo);
+
+    aplicarTexto(celda, {
+      tamaño: 13,
+      negrita: true,
+    });
+
+    aplicarBorde(celda);
+  }
+
+  hoja.getRow(28).height = 25;
+
+  crearSeccion(hoja, 30, "F. PLANES PENDIENTES PRIORITARIOS");
+
+  crearEncabezado(hoja, 31, [
+    {
+      desde: "A",
+      hasta: "C",
+      titulo: "INSPECCIÓN",
+    },
+    {
+      desde: "D",
+      hasta: "F",
+      titulo: "TRABAJADOR",
+    },
+    {
+      desde: "G",
+      hasta: "I",
+      titulo: "ELEMENTO EPP",
+    },
+    {
+      desde: "J",
+      hasta: "K",
+      titulo: "FECHA COMPROMISO",
+    },
+    {
+      desde: "L",
+      hasta: "L",
+      titulo: "DÍAS",
+    },
+  ]);
+
+  const planesPrioritarios = [...planesPendientes]
+    .sort(
+      (primero, segundo) =>
+        obtenerFechaComparable(primero.fecha_plan_accion) -
+        obtenerFechaComparable(segundo.fecha_plan_accion),
+    )
+    .slice(0, 3);
+
+  for (let indice = 0; indice &lt; 3; indice += 1) {
+    const numeroFila = 32 + indice;
+
+    hoja.mergeCells(`A${numeroFila}:C${numeroFila}`);
+
+    hoja.mergeCells(`D${numeroFila}:F${numeroFila}`);
+
+    hoja.mergeCells(`G${numeroFila}:I${numeroFila}`);
+
+    hoja.mergeCells(`J${numeroFila}:K${numeroFila}`);
+
+    aplicarEstiloFilaDatos(hoja, numeroFila);
+
+    const plan = planesPrioritarios[indice];
+
+    if (!plan) {
+      continue;
+    }
+
+    hoja.getCell(`A${numeroFila}`).value = plan.inspeccion_id || "";
+
+    hoja.getCell(`D${numeroFila}`).value = plan.nombre_trabajador || "";
+
+    hoja.getCell(`G${numeroFila}`).value = plan.elemento_epp || "";
+
+    hoja.getCell(`J${numeroFila}`).value = obtenerFechaVisible(
+      plan.fecha_plan_accion,
+    );
+
+    const dias = obtenerDiasRestantes(plan.fecha_plan_accion);
+
+    const celdaDias = hoja.getCell(`L${numeroFila}`);
+
+    celdaDias.value = dias === null ? "" : dias;
+
+    if (dias !== null &amp;&amp; dias &lt; 0) {
+      aplicarFondo(celdaDias, COLORES.rojoFondo);
+
+      aplicarTexto(celdaDias, {
+        color: COLORES.rojoTexto,
+
+        negrita: true,
+      });
+    } else if (dias !== null &amp;&amp; dias &lt;= 3) {
+      aplicarFondo(celdaDias, COLORES.amarilloFondo);
+
+      aplicarTexto(celdaDias, {
+        color: COLORES.amarilloTexto,
+
+        negrita: true,
+      });
+    }
+  }
+
+  crearSeccion(hoja, 36, "G. LEYENDA DE ESTADOS");
+
+  const leyendas = [
+    {
+      inicio: "A",
+      fin: "C",
+
+      texto: "B = Bueno",
+
+      fondo: COLORES.verdeFondo,
+    },
+    {
+      inicio: "D",
+      fin: "F",
+
+      texto: "R = Regular",
+
+      fondo: COLORES.amarilloFondo,
+    },
+    {
+      inicio: "G",
+      fin: "I",
+
+      texto: "M = Malo",
+
+      fondo: COLORES.rojoFondo,
+    },
+    {
+      inicio: "J",
+      fin: "L",
+
+      texto: "NA = No aplica",
+
+      fondo: COLORES.grisClaro,
+    },
+  ];
+
+  for (const leyenda of leyendas) {
+    hoja.mergeCells(`${leyenda.inicio}37:${leyenda.fin}37`);
+
+    const celda = hoja.getCell(`${leyenda.inicio}37`);
+
+    celda.value = leyenda.texto;
+
+    aplicarFondo(celda, leyenda.fondo);
+
+    aplicarTexto(celda, {
+      tamaño: 9,
+      negrita: true,
+    });
+
+    aplicarBorde(celda);
+  }
+
+  return {
+    hoja: "General",
+
+    totalInspecciones: inspecciones.length,
+
+    totalTrabajadores: seguimiento.length,
+
+    totalEppEvaluados,
+
+    totalPlanes: planes.length,
+
+    planesPendientes: planesPendientes.length,
+
+    planesCumplidos: planesCumplidos.length,
+
+    planesVencidos: planesVencidos.length,
+
+    planesProximosVencer: planesProximosVencer.length,
+  };
+}
+
+module.exports = {
+  construirHojaGeneralEpp,
+};
+</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Modules</h3><ul><li><a href="module-app.html">app</a></li></ul><h3>Global</h3><ul><li><a href="global.html#IMAGE_OPTIMIZER_VERSION">IMAGE_OPTIMIZER_VERSION</a></li><li><a href="global.html#KB">KB</a></li><li><a href="global.html#PDF_OPTIMIZER_CONFIG">PDF_OPTIMIZER_CONFIG</a></li><li><a href="global.html#PDF_OPTIMIZER_VERSION">PDF_OPTIMIZER_VERSION</a></li><li><a href="global.html#PROFILES">PROFILES</a></li><li><a href="global.html#activarRecalculoAutomatico">activarRecalculoAutomatico</a></li><li><a href="global.html#actualizarBotiquines">actualizarBotiquines</a></li><li><a href="global.html#actualizarDimensionHojaXml">actualizarDimensionHojaXml</a></li><li><a href="global.html#actualizarEquiposTecnologicos">actualizarEquiposTecnologicos</a></li><li><a href="global.html#actualizarExcelSeguimientoEpp">actualizarExcelSeguimientoEpp</a></li><li><a href="global.html#actualizarExcelSeguimientoEppEnOneDrive">actualizarExcelSeguimientoEppEnOneDrive</a></li><li><a href="global.html#actualizarExcelSeguimientoSst">actualizarExcelSeguimientoSst</a></li><li><a href="global.html#actualizarExcelSeguimientoSstEnMemoria">actualizarExcelSeguimientoSstEnMemoria</a></li><li><a href="global.html#actualizarExcelSeguimientoSstEnOneDrive">actualizarExcelSeguimientoSstEnOneDrive</a></li><li><a href="global.html#actualizarExtintores">actualizarExtintores</a></li><li><a href="global.html#actualizarFilasHojaXml">actualizarFilasHojaXml</a></li><li><a href="global.html#actualizarFormulasExistentes">actualizarFormulasExistentes</a></li><li><a href="global.html#actualizarGeneral">actualizarGeneral</a></li><li><a href="global.html#actualizarPaso">actualizarPaso</a></li><li><a href="global.html#actualizarPreviewArchivo">actualizarPreviewArchivo</a></li><li><a href="global.html#actualizarRangoTablaXml">actualizarRangoTablaXml</a></li><li><a href="global.html#actualizarResumen">actualizarResumen</a></li><li><a href="global.html#actualizarSenalizaciones">actualizarSenalizaciones</a></li><li><a href="global.html#analizarImagen">analizarImagen</a></li><li><a href="global.html#analizarPdf">analizarPdf</a></li><li><a href="global.html#autorizarAzureEpp">autorizarAzureEpp</a></li><li><a href="global.html#buscarPorToken">buscarPorToken</a></li><li><a href="global.html#calcularDiasRestantes">calcularDiasRestantes</a></li><li><a href="global.html#calcularDimensiones">calcularDimensiones</a></li><li><a href="global.html#calcularResumenEpp">calcularResumenEpp</a></li><li><a href="global.html#cargarCatalogoEpp">cargarCatalogoEpp</a></li><li><a href="global.html#cargarExcelSst">cargarExcelSst</a></li><li><a href="global.html#cargarImagen">cargarImagen</a></li><li><a href="global.html#cerrarPlanesAccionDesdeExcel">cerrarPlanesAccionDesdeExcel</a></li><li><a href="global.html#clasificarPlanesPorInspeccion">clasificarPlanesPorInspeccion</a></li><li><a href="global.html#configurarModalExito">configurarModalExito</a></li><li><a href="global.html#construirAprobaciones">construirAprobaciones</a></li><li><a href="global.html#construirArchivoOptimizado">construirArchivoOptimizado</a></li><li><a href="global.html#construirCeldaXml">construirCeldaXml</a></li><li><a href="global.html#construirEvidenciasDesdeOneDrive">construirEvidenciasDesdeOneDrive</a></li><li><a href="global.html#construirEvidenciasEppDesdeOneDrive">construirEvidenciasEppDesdeOneDrive</a></li><li><a href="global.html#construirFilaBotiquin">construirFilaBotiquin</a></li><li><a href="global.html#construirFilaEquipoTecnologico">construirFilaEquipoTecnologico</a></li><li><a href="global.html#construirFilaResumen">construirFilaResumen</a></li><li><a href="global.html#construirFiltrosExcelEpp">construirFiltrosExcelEpp</a></li><li><a href="global.html#construirFiltrosInspecciones">construirFiltrosInspecciones</a></li><li><a href="global.html#construirFormDataEpp">construirFormDataEpp</a></li><li><a href="global.html#construirHojaGeneralEpp">construirHojaGeneralEpp</a></li><li><a href="global.html#construirHojaInspecciones">construirHojaInspecciones</a></li><li><a href="global.html#construirHojaPlanesAccion">construirHojaPlanesAccion</a></li><li><a href="global.html#construirHojaResumenEpp">construirHojaResumenEpp</a></li><li><a href="global.html#construirHojaSeguimientoEpp">construirHojaSeguimientoEpp</a></li><li><a href="global.html#construirHtmlCorreo">construirHtmlCorreo</a></li><li><a href="global.html#construirHtmlCorreoEpp">construirHtmlCorreoEpp</a></li><li><a href="global.html#construirInspeccionEpp">construirInspeccionEpp</a></li><li><a href="global.html#construirLinksAprobacionEpp">construirLinksAprobacionEpp</a></li><li><a href="global.html#construirNombreArchivo">construirNombreArchivo</a></li><li><a href="global.html#construirResumenTrabajadores">construirResumenTrabajadores</a></li><li><a href="global.html#convertirCanvasABlob">convertirCanvasABlob</a></li><li><a href="global.html#convertirFechaAExcel">convertirFechaAExcel</a></li><li><a href="global.html#copiarLink">copiarLink</a></li><li><a href="global.html#corregirFormulasPuntuales">corregirFormulasPuntuales</a></li><li><a href="global.html#crearArchivosTemporales">crearArchivosTemporales</a></li><li><a href="global.html#crearBloqueEvidencias">crearBloqueEvidencias</a></li><li><a href="global.html#crearCanvas">crearCanvas</a></li><li><a href="global.html#crearPdfInspeccionEpp">crearPdfInspeccionEpp</a></li><li><a href="global.html#crearPdfInspeccionExtintor">crearPdfInspeccionExtintor</a></li><li><a href="global.html#crearWorkbook">crearWorkbook</a></li><li><a href="global.html#createBotiquinesManager">createBotiquinesManager</a></li><li><a href="global.html#createCamillasManager">createCamillasManager</a></li><li><a href="global.html#createEquiposTecnologicosManager">createEquiposTecnologicosManager</a></li><li><a href="global.html#createExtintoresManager">createExtintoresManager</a></li><li><a href="global.html#createSenalizacionesManager">createSenalizacionesManager</a></li><li><a href="global.html#createTrabajadoresEppManager">createTrabajadoresEppManager</a></li><li><a href="global.html#descargarArchivoOneDrive">descargarArchivoOneDrive</a></li><li><a href="global.html#descargarEvidenciaOneDrive">descargarEvidenciaOneDrive</a></li><li><a href="global.html#diagnosticarTablaExtintores">diagnosticarTablaExtintores</a></li><li><a href="global.html#dibujarImagen">dibujarImagen</a></li><li><a href="global.html#ejecutarGhostscript">ejecutarGhostscript</a></li><li><a href="global.html#eliminarCadenaCalculo">eliminarCadenaCalculo</a></li><li><a href="global.html#enviarCorreoPorGraph">enviarCorreoPorGraph</a></li><li><a href="global.html#enviarExtintorOneDrive">enviarExtintorOneDrive</a></li><li><a href="global.html#enviarInspeccionEpp">enviarInspeccionEpp</a></li><li><a href="global.html#enviarPdfPruebaCorreo">enviarPdfPruebaCorreo</a></li><li><a href="global.html#esCampoOpcional">esCampoOpcional</a></li><li><a href="global.html#extraerEvidenciasPorIndex">extraerEvidenciasPorIndex</a></li><li><a href="global.html#extraerFechaExif">extraerFechaExif</a></li><li><a href="global.html#fetchConRetry">fetchConRetry</a></li><li><a href="global.html#finalizarInspeccion">finalizarInspeccion</a></li><li><a href="global.html#formatearFechaMs">formatearFechaMs</a></li><li><a href="global.html#fs">fs</a></li><li><a href="global.html#generarBuffer">generarBuffer</a></li><li><a href="global.html#generarExcelSeguimientoEpp">generarExcelSeguimientoEpp</a></li><li><a href="global.html#generarInspeccionId">generarInspeccionId</a></li><li><a href="global.html#generarPdfEppAprobacion">generarPdfEppAprobacion</a></li><li><a href="global.html#generarPdfPrueba">generarPdfPrueba</a></li><li><a href="global.html#generarPdfSstAprobacion">generarPdfSstAprobacion</a></li><li><a href="global.html#getAccessToken">getAccessToken</a></li><li><a href="global.html#getEvidenceFolderPath">getEvidenceFolderPath</a></li><li><a href="global.html#getRequiredEnv">getRequiredEnv</a></li><li><a href="global.html#ghostscriptExecutable">ghostscriptExecutable</a></li><li><a href="global.html#guardarAprobacion">guardarAprobacion</a></li><li><a href="global.html#guardarInspeccionEnDB">guardarInspeccionEnDB</a></li><li><a href="global.html#guardarInspeccionEppEnDB">guardarInspeccionEppEnDB</a></li><li><a href="global.html#guardarPdfTemporal">guardarPdfTemporal</a></li><li><a href="global.html#inicializarEnvioEpp">inicializarEnvioEpp</a></li><li><a href="global.html#leerArchivosEvidencia">leerArchivosEvidencia</a></li><li><a href="global.html#leerCierresDesdeExcelEpp">leerCierresDesdeExcelEpp</a></li><li><a href="global.html#leerFiltros">leerFiltros</a></li><li><a href="global.html#leerPayload">leerPayload</a></li><li><a href="global.html#leerPdfOptimizado">leerPdfOptimizado</a></li><li><a href="global.html#leerRespuesta">leerRespuesta</a></li><li><a href="global.html#liberarImagen">liberarImagen</a></li><li><a href="global.html#limpiarTemporales">limpiarTemporales</a></li><li><a href="global.html#limpiarValoresCalculados">limpiarValoresCalculados</a></li><li><a href="global.html#listarCatalogoEpp">listarCatalogoEpp</a></li><li><a href="global.html#listarEppPredeterminados">listarEppPredeterminados</a></li><li><a href="global.html#listarInspecciones">listarInspecciones</a></li><li><a href="global.html#listarInspeccionesConFiltros">listarInspeccionesConFiltros</a></li><li><a href="global.html#listarInspeccionesEpp">listarInspeccionesEpp</a></li><li><a href="global.html#listarInspeccionesEppConFiltros">listarInspeccionesEppConFiltros</a></li><li><a href="global.html#mapearCamillaAExcel">mapearCamillaAExcel</a></li><li><a href="global.html#mapearExtintorAExcel">mapearExtintorAExcel</a></li><li><a href="global.html#mapearSenalizacionAExcel">mapearSenalizacionAExcel</a></li><li><a href="global.html#mapearTipoExtintor">mapearTipoExtintor</a></li><li><a href="global.html#marcarInspeccionEnviada">marcarInspeccionEnviada</a></li><li><a href="global.html#maximumInputSize">maximumInputSize</a></li><li><a href="global.html#mostrarModal">mostrarModal</a></li><li><a href="global.html#navegarAPaso">navegarAPaso</a></li><li><a href="global.html#normalizarBotiquin">normalizarBotiquin</a></li><li><a href="global.html#normalizarBotiquinItem">normalizarBotiquinItem</a></li><li><a href="global.html#normalizarBotiquines">normalizarBotiquines</a></li><li><a href="global.html#normalizarCamilla">normalizarCamilla</a></li><li><a href="global.html#normalizarCamillas">normalizarCamillas</a></li><li><a href="global.html#normalizarEquipoTecnologico">normalizarEquipoTecnologico</a></li><li><a href="global.html#normalizarEquiposTecnologicos">normalizarEquiposTecnologicos</a></li><li><a href="global.html#normalizarExtintor">normalizarExtintor</a></li><li><a href="global.html#normalizarExtintores">normalizarExtintores</a></li><li><a href="global.html#normalizarSenalizacion">normalizarSenalizacion</a></li><li><a href="global.html#normalizarSenalizaciones">normalizarSenalizaciones</a></li><li><a href="global.html#obtenerArchivos">obtenerArchivos</a></li><li><a href="global.html#obtenerBotiquinItemsSstAprobados">obtenerBotiquinItemsSstAprobados</a></li><li><a href="global.html#obtenerCamillasSstAprobadas">obtenerCamillasSstAprobadas</a></li><li><a href="global.html#obtenerCatalogoEppActivo">obtenerCatalogoEppActivo</a></li><li><a href="global.html#obtenerContextoAprobacion">obtenerContextoAprobacion</a></li><li><a href="global.html#obtenerDiasRestantes">obtenerDiasRestantes</a></li><li><a href="global.html#obtenerEppPredeterminados">obtenerEppPredeterminados</a></li><li><a href="global.html#obtenerEquiposTecnologicosSstAprobados">obtenerEquiposTecnologicosSstAprobados</a></li><li><a href="global.html#obtenerEstrategiaCompresion">obtenerEstrategiaCompresion</a></li><li><a href="global.html#obtenerExtensionOriginal">obtenerExtensionOriginal</a></li><li><a href="global.html#obtenerExtintoresSstAprobados">obtenerExtintoresSstAprobados</a></li><li><a href="global.html#obtenerFilasBotiquinesSstAprobados">obtenerFilasBotiquinesSstAprobados</a></li><li><a href="global.html#obtenerFilasCamillasSstAprobadas">obtenerFilasCamillasSstAprobadas</a></li><li><a href="global.html#obtenerFilasEquiposTecnologicosSstAprobados">obtenerFilasEquiposTecnologicosSstAprobados</a></li><li><a href="global.html#obtenerFilasExtintoresSstAprobados">obtenerFilasExtintoresSstAprobados</a></li><li><a href="global.html#obtenerFilasResumenSstAprobadas">obtenerFilasResumenSstAprobadas</a></li><li><a href="global.html#obtenerFilasSenalizacionesSstAprobadas">obtenerFilasSenalizacionesSstAprobadas</a></li><li><a href="global.html#obtenerInspeccionCompleta">obtenerInspeccionCompleta</a></li><li><a href="global.html#obtenerInspecciones">obtenerInspecciones</a></li><li><a href="global.html#obtenerLinks">obtenerLinks</a></li><li><a href="global.html#obtenerLinksInspeccion">obtenerLinksInspeccion</a></li><li><a href="global.html#obtenerOCrearHoja">obtenerOCrearHoja</a></li><li><a href="global.html#obtenerPerfil">obtenerPerfil</a></li><li><a href="global.html#obtenerPlanesAccion">obtenerPlanesAccion</a></li><li><a href="global.html#obtenerResumen">obtenerResumen</a></li><li><a href="global.html#obtenerResumenAprobacion">obtenerResumenAprobacion</a></li><li><a href="global.html#obtenerResumenEpp">obtenerResumenEpp</a></li><li><a href="global.html#obtenerResumenInspeccionesSstAprobadas">obtenerResumenInspeccionesSstAprobadas</a></li><li><a href="global.html#obtenerRutaExcelEpp">obtenerRutaExcelEpp</a></li><li><a href="global.html#obtenerRutaExcelSst">obtenerRutaExcelSst</a></li><li><a href="global.html#obtenerSeguimientoEpp">obtenerSeguimientoEpp</a></li><li><a href="global.html#obtenerSenalizacionesSstAprobadas">obtenerSenalizacionesSstAprobadas</a></li><li><a href="global.html#obtenerXml">obtenerXml</a></li><li><a href="global.html#optimizarImagen">optimizarImagen</a></li><li><a href="global.html#optimizarPdf">optimizarPdf</a></li><li><a href="global.html#previsualizarAprobacion">previsualizarAprobacion</a></li><li><a href="global.html#query">query</a></li><li><a href="global.html#reemplazarFormulaCelda">reemplazarFormulaCelda</a></li><li><a href="global.html#reemplazarXml">reemplazarXml</a></li><li><a href="global.html#registrarAprobacion">registrarAprobacion</a></li><li><a href="global.html#registrarEstadisticas">registrarEstadisticas</a></li><li><a href="global.html#registrarOriginalConservado">registrarOriginalConservado</a></li><li><a href="global.html#resolverCarpetaDestinoPdf">resolverCarpetaDestinoPdf</a></li><li><a href="global.html#resolverCorreoDestino">resolverCorreoDestino</a></li><li><a href="global.html#resolverCorreoDestinoEpp">resolverCorreoDestinoEpp</a></li><li><a href="global.html#resolverFechaEvidencia">resolverFechaEvidencia</a></li><li><a href="global.html#seleccionarFormatoSalida">seleccionarFormatoSalida</a></li><li><a href="global.html#sincronizarCierresDesdeExcelEpp">sincronizarCierresDesdeExcelEpp</a></li><li><a href="global.html#sincronizarCierresExcelEpp">sincronizarCierresExcelEpp</a></li><li><a href="global.html#subirArchivoOneDrive">subirArchivoOneDrive</a></li><li><a href="global.html#subirEvidenciasMultiples">subirEvidenciasMultiples</a></li><li><a href="global.html#subirPdfAOneDrive">subirPdfAOneDrive</a></li><li><a href="global.html#timeoutMs">timeoutMs</a></li><li><a href="global.html#uploadEvidenceToOneDrive">uploadEvidenceToOneDrive</a></li><li><a href="global.html#validarArchivo">validarArchivo</a></li><li><a href="global.html#validarBotiquines">validarBotiquines</a></li><li><a href="global.html#validarCamillas">validarCamillas</a></li><li><a href="global.html#validarEquiposTecnologicos">validarEquiposTecnologicos</a></li><li><a href="global.html#validarEvidenciaTrabajador">validarEvidenciaTrabajador</a></li><li><a href="global.html#validarExtintores">validarExtintores</a></li><li><a href="global.html#validarInformacionGeneral">validarInformacionGeneral</a></li><li><a href="global.html#validarInspeccion">validarInspeccion</a></li><li><a href="global.html#validarInspeccionEpp">validarInspeccionEpp</a></li><li><a href="global.html#validarPdf">validarPdf</a></li><li><a href="global.html#validarResultado">validarResultado</a></li><li><a href="global.html#validarSenalizaciones">validarSenalizaciones</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.5</a>
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>

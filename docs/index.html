@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Home</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+    <link type="text/css" rel="stylesheet" href="styles/sst-docs.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Home</h1>
+
+    
+
+
+
+    
+
+
+    <h3> </h3>
+
+
+
+
+
+
+
+
+
+
+    
+
+
+
+
+    <section>
+        <article><h1>SST Inspección</h1>
+<p>Sistema web para registrar, aprobar y consultar inspecciones de <strong>Seguridad y Salud en el Trabajo (SST)</strong> y <strong>Elementos de Protección Personal (EPP)</strong>.</p>
+<p>La aplicación administra evidencias fotográficas, genera informes PDF, integra archivos con OneDrive mediante Microsoft Graph y actualiza libros de seguimiento para SST y EPP.</p>
+<h2>Funcionalidades principales</h2>
+<h3>Inspecciones SST</h3>
+<p>El formulario SST permite inspeccionar:</p>
+<ul>
+<li>Extintores.</li>
+<li>Camillas.</li>
+<li>Señalizaciones.</li>
+<li>Equipos tecnológicos.</li>
+<li>Botiquines y sus insumos.</li>
+</ul>
+<p>Cada módulo dispone de campos, calificaciones, validaciones y evidencias propias. Según la sede seleccionada, el formulario puede permitir omitir determinados módulos.</p>
+<table>
+<thead>
+<tr>
+<th>Valor</th>
+<th>Significado</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>B</code></td>
+<td>Bueno</td>
+</tr>
+<tr>
+<td><code>R</code></td>
+<td>Regular</td>
+</tr>
+<tr>
+<td><code>M</code></td>
+<td>Malo</td>
+</tr>
+<tr>
+<td><code>NC</code></td>
+<td>No contiene</td>
+</tr>
+<tr>
+<td><code>NA</code></td>
+<td>No aplica</td>
+</tr>
+</tbody>
+</table>
+<h3>Inspecciones EPP</h3>
+<p>Una inspección EPP puede incluir varios trabajadores. Para cada uno se registra:</p>
+<ul>
+<li>Nombre, código y cargo o labor.</li>
+<li>Elementos EPP asignados desde un catálogo configurable.</li>
+<li>Condición y uso de cada elemento.</li>
+<li>Plan de acción y fecha límite cuando corresponda.</li>
+<li>Observaciones.</li>
+<li>Evidencia fotográfica.</li>
+</ul>
+<p>Las calificaciones EPP son <code>B</code>, <code>R</code>, <code>M</code> y <code>NA</code>. Cuando la condición o el uso se califican como <code>R</code> o <code>M</code>, el sistema exige un plan de acción y una fecha límite.</p>
+<h3>Aprobaciones</h3>
+<p>Al registrar una inspección, el inspector queda aprobado automáticamente. El sistema genera enlaces individuales para el Jefe de Área y COPASST.</p>
+<p>Cada enlace utiliza un token único. Desde la página de aprobación se puede consultar el resumen, abrir una vista previa del informe y registrar el nombre del aprobador.</p>
+<p>Cuando se completan las aprobaciones requeridas, el backend:</p>
+<ol>
+<li>Recupera los datos y evidencias de la inspección.</li>
+<li>Genera el informe PDF correspondiente a SST o EPP.</li>
+<li>Optimiza el PDF cuando la configuración lo permite.</li>
+<li>Almacena el informe en OneDrive.</li>
+<li>Envía el correo con el resultado.</li>
+<li>Actualiza el archivo de seguimiento correspondiente.</li>
+</ol>
+<h3>Evidencias y optimización</h3>
+<p>Los formularios permiten adjuntar múltiples evidencias en los módulos SST y una evidencia por trabajador en EPP.</p>
+<p>El frontend incluye un optimizador reutilizable que valida archivos JPEG, PNG y WebP, selecciona una estrategia según el tamaño, redimensiona sin alterar la proporción y conserva el archivo original cuando la optimización no produce una reducción útil o presenta un error.</p>
+<p>El backend obtiene y almacena las evidencias mediante Microsoft Graph. También utiliza la fecha disponible en los archivos como respaldo para determinar la fecha de evidencia.</p>
+<h3>Informes PDF</h3>
+<p>Existen generadores independientes para SST y EPP. Los informes incluyen, según el tipo de inspección:</p>
+<ul>
+<li>Información general.</li>
+<li>Elementos inspeccionados o trabajadores evaluados.</li>
+<li>Calificaciones y hallazgos.</li>
+<li>Planes de acción.</li>
+<li>Evidencias.</li>
+<li>Aprobaciones.</li>
+</ul>
+<p>La optimización de PDF utiliza Ghostscript y puede configurarse mediante variables de entorno.</p>
+<h3>Estadísticas</h3>
+<p>La aplicación ofrece paneles independientes para SST y EPP con indicadores, filtros, ordenamiento, paginación, recuperación de enlaces de aprobación, vista previa del informe y actualización manual del seguimiento en OneDrive.</p>
+<h3>Seguimiento en Excel</h3>
+<p>El seguimiento SST actualiza un libro existente mediante modificación de su XML interno. Incluye hojas para extintores, camillas, señalizaciones, equipos tecnológicos, botiquines, resumen de inspecciones y tablero General. Durante la actualización se conservan los estilos de la plantilla, se ajustan los rangos de las tablas y se fuerza el recálculo de fórmulas.</p>
+<p>El seguimiento EPP genera o actualiza hojas para inspecciones, trabajadores, resultados EPP, planes de acción, resumen consolidado y tablero General.</p>
+<p>Los cierres registrados en el Excel EPP pueden sincronizarse nuevamente con PostgreSQL mediante un endpoint protegido. El workflow <code>.github/workflows/sincronizar-epp.yml</code> ejecuta esta sincronización.</p>
+<h2>Flujo general</h2>
+<pre class="prettyprint source lang-mermaid"><code>flowchart TD
+    A[Formulario SST o EPP] --> B[Validación frontend]
+    B --> C[Validación backend]
+    C --> D[PostgreSQL y evidencias]
+    D --> E[Enlaces de aprobación]
+    E --> F[Jefe de Área y COPASST]
+    F --> G{Aprobaciones completas}
+    G -- No --> E
+    G -- Sí --> H[Generación y optimización PDF]
+    H --> I[OneDrive y correo]
+    I --> J[Seguimiento Excel SST o EPP]
+</code></pre>
+<h2>Arquitectura</h2>
+<p>El proyecto utiliza una arquitectura MVC modular.</p>
+<h3>Backend</h3>
+<ul>
+<li><code>src/backend/app.js</code>: configuración de Express, archivos estáticos y rutas.</li>
+<li><code>src/backend/controllers/</code>: coordinación de solicitudes HTTP y respuestas.</li>
+<li><code>src/backend/models/</code>: consultas PostgreSQL y operaciones transaccionales.</li>
+<li><code>src/backend/services/</code>: PDF, correo, Microsoft Graph y seguimiento Excel.</li>
+<li><code>src/backend/validators/</code>: normalización y reglas de validación SST/EPP.</li>
+<li><code>src/backend/middlewares/</code>: autorización de procesos protegidos.</li>
+<li><code>src/backend/utils/</code>: optimización PDF, fechas, solicitudes y manipulación XML.</li>
+<li><code>src/backend/db/</code>: conexión y migraciones de PostgreSQL.</li>
+</ul>
+<h3>Frontend</h3>
+<p>El frontend utiliza HTML, CSS y JavaScript Vanilla:</p>
+<ul>
+<li><code>src/views/html/</code>: inicio, formularios, aprobación y estadísticas.</li>
+<li><code>src/views/css/</code>: estilos de las vistas.</li>
+<li><code>src/views/js/inspeccion-sst.js</code>: navegación, validación y envío SST.</li>
+<li><code>src/views/js/inspeccion-epp.js</code>: navegación, resumen y envío EPP.</li>
+<li><code>src/views/js/trabajadoresEpp.js</code>: trabajadores, catálogo, planes y evidencias EPP.</li>
+<li><code>src/views/js/extintores.js</code>, <code>camillas.js</code>, <code>senalizaciones.js</code>, <code>equiposTecnologicos.js</code> y <code>botiquines.js</code>: módulos SST.</li>
+<li><code>src/views/js/aprobar.js</code>: aprobación común para SST y EPP.</li>
+<li><code>src/views/js/estadisticas.js</code> y <code>estadisticas-epp.js</code>: paneles estadísticos.</li>
+<li><code>src/views/js/imageOptimizer.js</code>: optimización de imágenes.</li>
+<li><code>src/views/js/shared.js</code>: datos y utilidades compartidas.</li>
+</ul>
+<h2>Tecnologías</h2>
+<ul>
+<li>Node.js y Express.</li>
+<li>PostgreSQL mediante <code>pg</code>.</li>
+<li>Multer para archivos en memoria.</li>
+<li>PDFKit para informes.</li>
+<li>Ghostscript para optimización de PDF.</li>
+<li>Microsoft Graph para OneDrive y correo.</li>
+<li>ExcelJS y @param {AdmZip} zip para seguimiento Excel.</li>
+<li><code>exifr</code> para metadatos de imágenes.</li>
+<li>HTML5, CSS3, JavaScript ES6+, Fetch, FormData, Canvas API y Flatpickr.</li>
+</ul>
+<h2>Estructura principal</h2>
+<pre class="prettyprint source lang-text"><code>sstInspeccion/
+├── .github/
+│   └── workflows/
+│       └── sincronizar-epp.yml
+├── src/
+│   ├── backend/
+│   │   ├── app.js
+│   │   ├── controllers/
+│   │   ├── db/
+│   │   │   └── migrations/
+│   │   ├── middlewares/
+│   │   ├── models/
+│   │   ├── services/
+│   │   │   ├── seguimientoEppExcel/
+│   │   │   └── seguimientoSstExcel/
+│   │   ├── utils/
+│   │   └── validators/
+│   └── views/
+│       ├── css/
+│       ├── html/
+│       ├── img/
+│       └── js/
+├── package.json
+└── README.md
+</code></pre>
+<h2>Base de datos</h2>
+<p>El proyecto utiliza PostgreSQL o Neon PostgreSQL.</p>
+<h3>SST</h3>
+<ul>
+<li><code>inspecciones</code>: información general, estado y aprobaciones.</li>
+<li><code>extintores</code>.</li>
+<li><code>camillas</code>.</li>
+<li><code>senalizaciones</code>.</li>
+<li><code>equipos_tecnologicos</code>.</li>
+<li><code>botiquines</code>.</li>
+<li><code>botiquin_items</code>.</li>
+</ul>
+<h3>EPP</h3>
+<ul>
+<li><code>inspecciones</code>: información general, estado y aprobaciones.</li>
+<li><code>evaluaciones_epp</code>: trabajadores evaluados dentro de la inspección.</li>
+<li><code>detalle_evaluacion_epp</code>: elementos, calificaciones y planes de acción.</li>
+<li><code>elementos_epp</code>: catálogo configurable de EPP.</li>
+</ul>
+<p>Las operaciones críticas de registro utilizan transacciones para mantener la consistencia entre la inspección y sus detalles.</p>
+<h2>Endpoints principales</h2>
+<h3>Vistas</h3>
+<table>
+<thead>
+<tr>
+<th>Método</th>
+<th>Ruta</th>
+<th>Descripción</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>GET</code></td>
+<td><code>/</code></td>
+<td>Página principal</td>
+</tr>
+<tr>
+<td><code>GET</code></td>
+<td><code>/inspeccion-sst</code></td>
+<td>Formulario SST</td>
+</tr>
+<tr>
+<td><code>GET</code></td>
+<td><code>/inspeccion-epp</code></td>
+<td>Formulario EPP</td>
+</tr>
+<tr>
+<td><code>GET</code></td>
+<td><code>/aprobar/:token</code></td>
+<td>Página de aprobación</td>
+</tr>
+<tr>
+<td><code>GET</code></td>
+<td><code>/estadisticas</code></td>
+<td>Dashboard SST</td>
+</tr>
+<tr>
+<td><code>GET</code></td>
+<td><code>/estadisticas-epp</code></td>
+<td>Dashboard EPP</td>
+</tr>
+</tbody>
+</table>
+<h3>Inspecciones y catálogo</h3>
+<table>
+<thead>
+<tr>
+<th>Método</th>
+<th>Ruta</th>
+<th>Descripción</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>POST</code></td>
+<td><code>/enviar-onedrive-extintor</code></td>
+<td>Registra una inspección SST</td>
+</tr>
+<tr>
+<td><code>POST</code></td>
+<td><code>/enviar-inspeccion-epp</code></td>
+<td>Registra una inspección EPP</td>
+</tr>
+<tr>
+<td><code>GET</code></td>
+<td><code>/api/catalogo-epp</code></td>
+<td>Obtiene el catálogo EPP</td>
+</tr>
+<tr>
+<td><code>GET</code></td>
+<td><code>/api/catalogo-epp/predeterminados</code></td>
+<td>Obtiene los EPP predeterminados</td>
+</tr>
+<tr>
+<td><code>GET</code></td>
+<td><code>/api/inspecciones/:id/links</code></td>
+<td>Recupera enlaces y token de vista previa</td>
+</tr>
+</tbody>
+</table>
+<h3>Aprobaciones y estadísticas</h3>
+<table>
+<thead>
+<tr>
+<th>Método</th>
+<th>Ruta</th>
+<th>Descripción</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>GET</code></td>
+<td><code>/api/aprobaciones/:token</code></td>
+<td>Consulta la inspección asociada con un token</td>
+</tr>
+<tr>
+<td><code>POST</code></td>
+<td><code>/api/aprobaciones/:token</code></td>
+<td>Registra una aprobación</td>
+</tr>
+<tr>
+<td><code>GET</code></td>
+<td><code>/api/aprobaciones/:token/preview</code></td>
+<td>Obtiene la vista previa del informe</td>
+</tr>
+<tr>
+<td><code>GET</code></td>
+<td><code>/api/estadisticas/resumen</code></td>
+<td>Obtiene indicadores SST</td>
+</tr>
+<tr>
+<td><code>GET</code></td>
+<td><code>/api/estadisticas/inspecciones</code></td>
+<td>Lista inspecciones SST</td>
+</tr>
+<tr>
+<td><code>GET</code></td>
+<td><code>/api/estadisticas-epp/resumen</code></td>
+<td>Obtiene indicadores EPP</td>
+</tr>
+<tr>
+<td><code>GET</code></td>
+<td><code>/api/estadisticas-epp/inspecciones</code></td>
+<td>Lista inspecciones EPP</td>
+</tr>
+</tbody>
+</table>
+<h3>Seguimiento Excel</h3>
+<table>
+<thead>
+<tr>
+<th>Método</th>
+<th>Ruta</th>
+<th>Descripción</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>POST</code></td>
+<td><code>/api/excel/sst/actualizar-onedrive</code></td>
+<td>Actualiza el seguimiento SST</td>
+</tr>
+<tr>
+<td><code>POST</code></td>
+<td><code>/api/excel/epp/actualizar-onedrive</code></td>
+<td>Actualiza el seguimiento EPP</td>
+</tr>
+<tr>
+<td><code>POST</code></td>
+<td><code>/api/excel/epp/sincronizar-cierres</code></td>
+<td>Sincroniza cierres EPP con PostgreSQL</td>
+</tr>
+</tbody>
+</table>
+<p>Los endpoints <code>/pdf-prueba</code> y <code>/enviar-pdf-prueba-correo</code> se conservan como utilidades de prueba.</p>
+<h2>Requisitos e instalación</h2>
+<ul>
+<li>Node.js y npm.</li>
+<li>PostgreSQL o Neon PostgreSQL.</li>
+<li>Aplicación registrada en Microsoft Entra ID.</li>
+<li>Usuario y rutas de OneDrive configurados.</li>
+<li>Ghostscript si la optimización PDF está habilitada.</li>
+</ul>
+<pre class="prettyprint source lang-bash"><code>git clone https://github.com/DuvanBonilla/sstInspeccion.git
+cd sstInspeccion
+npm install
+</code></pre>
+<h2>Variables de entorno</h2>
+<p>Crea un archivo <code>.env</code> en la raíz. No almacenes credenciales reales en el repositorio.</p>
+<table>
+<thead>
+<tr>
+<th>Variable</th>
+<th>Requerida</th>
+<th>Descripción</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>DATABASE_URL</code></td>
+<td>Sí</td>
+<td>Conexión PostgreSQL</td>
+</tr>
+<tr>
+<td><code>MS_TENANT_ID</code></td>
+<td>Sí</td>
+<td>Tenant de Microsoft Entra ID</td>
+</tr>
+<tr>
+<td><code>MS_CLIENT_ID</code></td>
+<td>Sí</td>
+<td>Identificador de la aplicación</td>
+</tr>
+<tr>
+<td><code>MS_CLIENT_SECRET</code></td>
+<td>Sí</td>
+<td>Secreto de la aplicación</td>
+</tr>
+<tr>
+<td><code>ONEDRIVE_USER_ID</code></td>
+<td>Sí</td>
+<td>Usuario propietario de los archivos</td>
+</tr>
+<tr>
+<td><code>ONEDRIVE_EXCEL_PATH</code></td>
+<td>Sí</td>
+<td>Ruta del seguimiento SST</td>
+</tr>
+<tr>
+<td><code>ONEDRIVE_EPP_EXCEL_PATH</code></td>
+<td>Para EPP</td>
+<td>Ruta <code>.xlsx</code> del seguimiento EPP</td>
+</tr>
+<tr>
+<td><code>ONEDRIVE_EVIDENCIAS_PATH</code></td>
+<td>Opcional</td>
+<td>Ruta base personalizada para evidencias</td>
+</tr>
+<tr>
+<td><code>APP_URL</code></td>
+<td>Recomendada</td>
+<td>URL pública utilizada para construir enlaces</td>
+</tr>
+<tr>
+<td><code>AZURE_EPP_SYNC_SECRET</code></td>
+<td>Para sincronización</td>
+<td>Secreto Bearer del endpoint de cierres EPP</td>
+</tr>
+<tr>
+<td><code>GRAPH_EMAIL_TO_TEST</code></td>
+<td>Opcional</td>
+<td>Destinatario de pruebas de correo</td>
+</tr>
+<tr>
+<td><code>PORT</code></td>
+<td>Opcional</td>
+<td>Puerto HTTP; predeterminado <code>3000</code></td>
+</tr>
+<tr>
+<td><code>GHOSTSCRIPT_PATH</code></td>
+<td>Opcional</td>
+<td>Ruta al ejecutable de Ghostscript</td>
+</tr>
+<tr>
+<td><code>PDF_OPTIMIZE</code></td>
+<td>Opcional</td>
+<td>Usa <code>false</code> para desactivar la optimización</td>
+</tr>
+<tr>
+<td><code>PDF_COMPRESSION_PROFILE</code></td>
+<td>Opcional</td>
+<td>Perfil de compresión predeterminado</td>
+</tr>
+<tr>
+<td><code>PDF_OPTIMIZER_TIMEOUT_MS</code></td>
+<td>Opcional</td>
+<td>Tiempo máximo del proceso</td>
+</tr>
+<tr>
+<td><code>PDF_MAX_INPUT_SIZE_MB</code></td>
+<td>Opcional</td>
+<td>Tamaño máximo que se puede optimizar</td>
+</tr>
+<tr>
+<td><code>PDF_OPTIMIZER_DEBUG</code></td>
+<td>Opcional</td>
+<td>Controla los logs del optimizador</td>
+</tr>
+<tr>
+<td><code>PDF_OPTIMIZER_WARNINGS</code></td>
+<td>Opcional</td>
+<td>Controla sus advertencias</td>
+</tr>
+</tbody>
+</table>
+<p>Ejemplo sin credenciales reales:</p>
+<pre class="prettyprint source lang-dotenv"><code>PORT=3000
+APP_URL=http://localhost:3000
+DATABASE_URL=postgresql://usuario:clave@servidor:5432/base_datos
+
+MS_TENANT_ID=tenant-id
+MS_CLIENT_ID=client-id
+MS_CLIENT_SECRET=client-secret
+ONEDRIVE_USER_ID=usuario@dominio.com
+
+ONEDRIVE_EXCEL_PATH=/ruta/seguimiento_sst.xlsm
+ONEDRIVE_EPP_EXCEL_PATH=/ruta/seguimiento_epp.xlsx
+ONEDRIVE_EVIDENCIAS_PATH=/ruta/evidencias
+
+AZURE_EPP_SYNC_SECRET=secreto-compartido
+</code></pre>
+<h2>Ejecución</h2>
+<p>Iniciar el servidor:</p>
+<pre class="prettyprint source lang-bash"><code>npm start
+</code></pre>
+<p>Por defecto queda disponible en <code>http://localhost:3000</code>.</p>
+<p>Ejecutar la migración configurada:</p>
+<pre class="prettyprint source lang-bash"><code>npm run migrate
+</code></pre>
+<p>Antes de ejecutar migraciones, comprueba que <code>DATABASE_URL</code> corresponda al entorno correcto.</p>
+<h2>Documentación con JSDoc</h2>
+<p>JSDoc está instalado como dependencia de desarrollo. Los bloques <code>/** ... */</code> de las funciones relevantes pueden convertirse en documentación HTML.</p>
+<p>Backend:</p>
+<pre class="prettyprint source lang-bash"><code>npx jsdoc -r src/backend -d docs/backend
+</code></pre>
+<p>Frontend:</p>
+<pre class="prettyprint source lang-bash"><code>npx jsdoc -r src/views/js -d docs/frontend
+</code></pre>
+<p>Toda la documentación JavaScript:</p>
+<pre class="prettyprint source lang-bash"><code>npx jsdoc -r src/backend src/views/js -d docs
+</code></pre>
+<p>Abrir el resultado:</p>
+<ul>
+<li>Windows: <code>start docs/index.html</code></li>
+<li>Linux: <code>xdg-open docs/index.html</code></li>
+<li>macOS: <code>open docs/index.html</code></li>
+</ul>
+<p>La carpeta <code>docs/</code> es un artefacto generado y puede reconstruirse en cualquier momento.</p>
+<h2>Optimización de PDF</h2>
+<p>Verificar Ghostscript:</p>
+<pre class="prettyprint source lang-bash"><code># Linux
+gs --version
+</code></pre>
+<pre class="prettyprint source lang-powershell"><code># Windows
+gswin64c --version
+where.exe gswin64c
+</code></pre>
+<p>Si Ghostscript no está en el <code>PATH</code>, configura <code>GHOSTSCRIPT_PATH</code>.</p>
+<h2>Seguridad</h2>
+<ul>
+<li>Las credenciales se cargan mediante variables de entorno.</li>
+<li>Las consultas PostgreSQL utilizan parámetros.</li>
+<li>Los datos se validan en frontend y backend.</li>
+<li>Las aprobaciones utilizan tokens individuales.</li>
+<li>La sincronización de cierres EPP exige un secreto Bearer.</li>
+<li>Las operaciones críticas utilizan transacciones.</li>
+</ul>
+<p>No publiques archivos <code>.env</code>, secretos de Microsoft Graph ni cadenas de conexión.</p>
+<h2>Solución de problemas</h2>
+<h3>PostgreSQL no conecta</h3>
+<p>Verifica <code>DATABASE_URL</code>, las credenciales, la disponibilidad del servidor y la configuración SSL.</p>
+<h3>Microsoft Graph u OneDrive falla</h3>
+<p>Verifica las credenciales <code>MS_*</code>, <code>ONEDRIVE_USER_ID</code>, las rutas configuradas y los permisos de la aplicación.</p>
+<h3>El Excel está bloqueado</h3>
+<p>Cierra el libro en Excel o OneDrive y vuelve a intentar cuando el recurso deje de estar bloqueado.</p>
+<h3>Las fórmulas SST no se actualizan</h3>
+<p>Abre el archivo con una aplicación compatible con recálculo. El servicio elimina valores anteriores y configura el libro para recalcular al abrirse.</p>
+<h3>Ghostscript no está disponible</h3>
+<p>Instálalo, configura <code>GHOSTSCRIPT_PATH</code> o desactiva la optimización mediante <code>PDF_OPTIMIZE=false</code>.</p>
+<h3>Un enlace de aprobación falla</h3>
+<p>Comprueba que el token exista, corresponda con la inspección esperada y no haya sido utilizado previamente.</p>
+<h2>Mantenimiento</h2>
+<ol>
+<li>Identifica si el cambio corresponde a SST, EPP o código compartido.</li>
+<li>Verifica las validaciones en frontend y backend.</li>
+<li>Prueba las aprobaciones cuando cambien controladores, modelos, PDF o correo.</li>
+<li>Prueba ambos módulos cuando se modifiquen servicios compartidos.</li>
+<li>Comprueba el Excel después de cambiar modelos, XML, columnas o fórmulas.</li>
+<li>Regenera JSDoc cuando cambien funciones documentadas.</li>
+</ol>
+<h2>Estado actual</h2>
+<ul>
+<li>Formularios independientes para SST y EPP.</li>
+<li>Catálogo configurable de EPP.</li>
+<li>Evidencias múltiples en SST y por trabajador en EPP.</li>
+<li>Validaciones específicas por módulo.</li>
+<li>Aprobaciones mediante tokens.</li>
+<li>PDF y correo al completar las aprobaciones.</li>
+<li>Optimización de imágenes y PDF.</li>
+<li>Integración con PostgreSQL, Microsoft Graph y OneDrive.</li>
+<li>Dashboards SST y EPP.</li>
+<li>Seguimientos Excel independientes.</li>
+<li>Sincronización de cierres EPP desde Excel hacia PostgreSQL.</li>
+<li>Documentación de funciones mediante JSDoc.</li>
+</ul>
+<h2>Versión</h2>
+<ul>
+<li>Aplicación: <code>1.0.0</code>.</li>
+<li>Rama documentada: <code>main</code>.</li>
+<li>Referencia revisada: commit <code>4263941</code> (<code>feature: JSDoc</code>).</li>
+<li>Última actualización del README: septiembre de 2026.</li>
+</ul></article>
+    </section>
+
+
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Modules</h3><ul><li><a href="module-app.html">app</a></li></ul><h3>Global</h3><ul><li><a href="global.html#IMAGE_OPTIMIZER_VERSION">IMAGE_OPTIMIZER_VERSION</a></li><li><a href="global.html#KB">KB</a></li><li><a href="global.html#PDF_OPTIMIZER_CONFIG">PDF_OPTIMIZER_CONFIG</a></li><li><a href="global.html#PDF_OPTIMIZER_VERSION">PDF_OPTIMIZER_VERSION</a></li><li><a href="global.html#PROFILES">PROFILES</a></li><li><a href="global.html#activarRecalculoAutomatico">activarRecalculoAutomatico</a></li><li><a href="global.html#actualizarBotiquines">actualizarBotiquines</a></li><li><a href="global.html#actualizarDimensionHojaXml">actualizarDimensionHojaXml</a></li><li><a href="global.html#actualizarEquiposTecnologicos">actualizarEquiposTecnologicos</a></li><li><a href="global.html#actualizarExcelSeguimientoEpp">actualizarExcelSeguimientoEpp</a></li><li><a href="global.html#actualizarExcelSeguimientoEppEnOneDrive">actualizarExcelSeguimientoEppEnOneDrive</a></li><li><a href="global.html#actualizarExcelSeguimientoSst">actualizarExcelSeguimientoSst</a></li><li><a href="global.html#actualizarExcelSeguimientoSstEnMemoria">actualizarExcelSeguimientoSstEnMemoria</a></li><li><a href="global.html#actualizarExcelSeguimientoSstEnOneDrive">actualizarExcelSeguimientoSstEnOneDrive</a></li><li><a href="global.html#actualizarExtintores">actualizarExtintores</a></li><li><a href="global.html#actualizarFilasHojaXml">actualizarFilasHojaXml</a></li><li><a href="global.html#actualizarFormulasExistentes">actualizarFormulasExistentes</a></li><li><a href="global.html#actualizarGeneral">actualizarGeneral</a></li><li><a href="global.html#actualizarPaso">actualizarPaso</a></li><li><a href="global.html#actualizarPreviewArchivo">actualizarPreviewArchivo</a></li><li><a href="global.html#actualizarRangoTablaXml">actualizarRangoTablaXml</a></li><li><a href="global.html#actualizarResumen">actualizarResumen</a></li><li><a href="global.html#actualizarSenalizaciones">actualizarSenalizaciones</a></li><li><a href="global.html#analizarImagen">analizarImagen</a></li><li><a href="global.html#analizarPdf">analizarPdf</a></li><li><a href="global.html#autorizarAzureEpp">autorizarAzureEpp</a></li><li><a href="global.html#buscarPorToken">buscarPorToken</a></li><li><a href="global.html#calcularDiasRestantes">calcularDiasRestantes</a></li><li><a href="global.html#calcularDimensiones">calcularDimensiones</a></li><li><a href="global.html#calcularResumenEpp">calcularResumenEpp</a></li><li><a href="global.html#cargarCatalogoEpp">cargarCatalogoEpp</a></li><li><a href="global.html#cargarExcelSst">cargarExcelSst</a></li><li><a href="global.html#cargarImagen">cargarImagen</a></li><li><a href="global.html#cerrarPlanesAccionDesdeExcel">cerrarPlanesAccionDesdeExcel</a></li><li><a href="global.html#clasificarPlanesPorInspeccion">clasificarPlanesPorInspeccion</a></li><li><a href="global.html#configurarModalExito">configurarModalExito</a></li><li><a href="global.html#construirAprobaciones">construirAprobaciones</a></li><li><a href="global.html#construirArchivoOptimizado">construirArchivoOptimizado</a></li><li><a href="global.html#construirCeldaXml">construirCeldaXml</a></li><li><a href="global.html#construirEvidenciasDesdeOneDrive">construirEvidenciasDesdeOneDrive</a></li><li><a href="global.html#construirEvidenciasEppDesdeOneDrive">construirEvidenciasEppDesdeOneDrive</a></li><li><a href="global.html#construirFilaBotiquin">construirFilaBotiquin</a></li><li><a href="global.html#construirFilaEquipoTecnologico">construirFilaEquipoTecnologico</a></li><li><a href="global.html#construirFilaResumen">construirFilaResumen</a></li><li><a href="global.html#construirFiltrosExcelEpp">construirFiltrosExcelEpp</a></li><li><a href="global.html#construirFiltrosInspecciones">construirFiltrosInspecciones</a></li><li><a href="global.html#construirFormDataEpp">construirFormDataEpp</a></li><li><a href="global.html#construirHojaGeneralEpp">construirHojaGeneralEpp</a></li><li><a href="global.html#construirHojaInspecciones">construirHojaInspecciones</a></li><li><a href="global.html#construirHojaPlanesAccion">construirHojaPlanesAccion</a></li><li><a href="global.html#construirHojaResumenEpp">construirHojaResumenEpp</a></li><li><a href="global.html#construirHojaSeguimientoEpp">construirHojaSeguimientoEpp</a></li><li><a href="global.html#construirHtmlCorreo">construirHtmlCorreo</a></li><li><a href="global.html#construirHtmlCorreoEpp">construirHtmlCorreoEpp</a></li><li><a href="global.html#construirInspeccionEpp">construirInspeccionEpp</a></li><li><a href="global.html#construirLinksAprobacionEpp">construirLinksAprobacionEpp</a></li><li><a href="global.html#construirNombreArchivo">construirNombreArchivo</a></li><li><a href="global.html#construirResumenTrabajadores">construirResumenTrabajadores</a></li><li><a href="global.html#convertirCanvasABlob">convertirCanvasABlob</a></li><li><a href="global.html#convertirFechaAExcel">convertirFechaAExcel</a></li><li><a href="global.html#copiarLink">copiarLink</a></li><li><a href="global.html#corregirFormulasPuntuales">corregirFormulasPuntuales</a></li><li><a href="global.html#crearArchivosTemporales">crearArchivosTemporales</a></li><li><a href="global.html#crearBloqueEvidencias">crearBloqueEvidencias</a></li><li><a href="global.html#crearCanvas">crearCanvas</a></li><li><a href="global.html#crearPdfInspeccionEpp">crearPdfInspeccionEpp</a></li><li><a href="global.html#crearPdfInspeccionExtintor">crearPdfInspeccionExtintor</a></li><li><a href="global.html#crearWorkbook">crearWorkbook</a></li><li><a href="global.html#createBotiquinesManager">createBotiquinesManager</a></li><li><a href="global.html#createCamillasManager">createCamillasManager</a></li><li><a href="global.html#createEquiposTecnologicosManager">createEquiposTecnologicosManager</a></li><li><a href="global.html#createExtintoresManager">createExtintoresManager</a></li><li><a href="global.html#createSenalizacionesManager">createSenalizacionesManager</a></li><li><a href="global.html#createTrabajadoresEppManager">createTrabajadoresEppManager</a></li><li><a href="global.html#descargarArchivoOneDrive">descargarArchivoOneDrive</a></li><li><a href="global.html#descargarEvidenciaOneDrive">descargarEvidenciaOneDrive</a></li><li><a href="global.html#diagnosticarTablaExtintores">diagnosticarTablaExtintores</a></li><li><a href="global.html#dibujarImagen">dibujarImagen</a></li><li><a href="global.html#ejecutarGhostscript">ejecutarGhostscript</a></li><li><a href="global.html#eliminarCadenaCalculo">eliminarCadenaCalculo</a></li><li><a href="global.html#enviarCorreoPorGraph">enviarCorreoPorGraph</a></li><li><a href="global.html#enviarExtintorOneDrive">enviarExtintorOneDrive</a></li><li><a href="global.html#enviarInspeccionEpp">enviarInspeccionEpp</a></li><li><a href="global.html#enviarPdfPruebaCorreo">enviarPdfPruebaCorreo</a></li><li><a href="global.html#esCampoOpcional">esCampoOpcional</a></li><li><a href="global.html#extraerEvidenciasPorIndex">extraerEvidenciasPorIndex</a></li><li><a href="global.html#extraerFechaExif">extraerFechaExif</a></li><li><a href="global.html#fetchConRetry">fetchConRetry</a></li><li><a href="global.html#finalizarInspeccion">finalizarInspeccion</a></li><li><a href="global.html#formatearFechaMs">formatearFechaMs</a></li><li><a href="global.html#fs">fs</a></li><li><a href="global.html#generarBuffer">generarBuffer</a></li><li><a href="global.html#generarExcelSeguimientoEpp">generarExcelSeguimientoEpp</a></li><li><a href="global.html#generarInspeccionId">generarInspeccionId</a></li><li><a href="global.html#generarPdfEppAprobacion">generarPdfEppAprobacion</a></li><li><a href="global.html#generarPdfPrueba">generarPdfPrueba</a></li><li><a href="global.html#generarPdfSstAprobacion">generarPdfSstAprobacion</a></li><li><a href="global.html#getAccessToken">getAccessToken</a></li><li><a href="global.html#getEvidenceFolderPath">getEvidenceFolderPath</a></li><li><a href="global.html#getRequiredEnv">getRequiredEnv</a></li><li><a href="global.html#ghostscriptExecutable">ghostscriptExecutable</a></li><li><a href="global.html#guardarAprobacion">guardarAprobacion</a></li><li><a href="global.html#guardarInspeccionEnDB">guardarInspeccionEnDB</a></li><li><a href="global.html#guardarInspeccionEppEnDB">guardarInspeccionEppEnDB</a></li><li><a href="global.html#guardarPdfTemporal">guardarPdfTemporal</a></li><li><a href="global.html#inicializarEnvioEpp">inicializarEnvioEpp</a></li><li><a href="global.html#leerArchivosEvidencia">leerArchivosEvidencia</a></li><li><a href="global.html#leerCierresDesdeExcelEpp">leerCierresDesdeExcelEpp</a></li><li><a href="global.html#leerFiltros">leerFiltros</a></li><li><a href="global.html#leerPayload">leerPayload</a></li><li><a href="global.html#leerPdfOptimizado">leerPdfOptimizado</a></li><li><a href="global.html#leerRespuesta">leerRespuesta</a></li><li><a href="global.html#liberarImagen">liberarImagen</a></li><li><a href="global.html#limpiarTemporales">limpiarTemporales</a></li><li><a href="global.html#limpiarValoresCalculados">limpiarValoresCalculados</a></li><li><a href="global.html#listarCatalogoEpp">listarCatalogoEpp</a></li><li><a href="global.html#listarEppPredeterminados">listarEppPredeterminados</a></li><li><a href="global.html#listarInspecciones">listarInspecciones</a></li><li><a href="global.html#listarInspeccionesConFiltros">listarInspeccionesConFiltros</a></li><li><a href="global.html#listarInspeccionesEpp">listarInspeccionesEpp</a></li><li><a href="global.html#listarInspeccionesEppConFiltros">listarInspeccionesEppConFiltros</a></li><li><a href="global.html#mapearCamillaAExcel">mapearCamillaAExcel</a></li><li><a href="global.html#mapearExtintorAExcel">mapearExtintorAExcel</a></li><li><a href="global.html#mapearSenalizacionAExcel">mapearSenalizacionAExcel</a></li><li><a href="global.html#mapearTipoExtintor">mapearTipoExtintor</a></li><li><a href="global.html#marcarInspeccionEnviada">marcarInspeccionEnviada</a></li><li><a href="global.html#maximumInputSize">maximumInputSize</a></li><li><a href="global.html#mostrarModal">mostrarModal</a></li><li><a href="global.html#navegarAPaso">navegarAPaso</a></li><li><a href="global.html#normalizarBotiquin">normalizarBotiquin</a></li><li><a href="global.html#normalizarBotiquinItem">normalizarBotiquinItem</a></li><li><a href="global.html#normalizarBotiquines">normalizarBotiquines</a></li><li><a href="global.html#normalizarCamilla">normalizarCamilla</a></li><li><a href="global.html#normalizarCamillas">normalizarCamillas</a></li><li><a href="global.html#normalizarEquipoTecnologico">normalizarEquipoTecnologico</a></li><li><a href="global.html#normalizarEquiposTecnologicos">normalizarEquiposTecnologicos</a></li><li><a href="global.html#normalizarExtintor">normalizarExtintor</a></li><li><a href="global.html#normalizarExtintores">normalizarExtintores</a></li><li><a href="global.html#normalizarSenalizacion">normalizarSenalizacion</a></li><li><a href="global.html#normalizarSenalizaciones">normalizarSenalizaciones</a></li><li><a href="global.html#obtenerArchivos">obtenerArchivos</a></li><li><a href="global.html#obtenerBotiquinItemsSstAprobados">obtenerBotiquinItemsSstAprobados</a></li><li><a href="global.html#obtenerCamillasSstAprobadas">obtenerCamillasSstAprobadas</a></li><li><a href="global.html#obtenerCatalogoEppActivo">obtenerCatalogoEppActivo</a></li><li><a href="global.html#obtenerContextoAprobacion">obtenerContextoAprobacion</a></li><li><a href="global.html#obtenerDiasRestantes">obtenerDiasRestantes</a></li><li><a href="global.html#obtenerEppPredeterminados">obtenerEppPredeterminados</a></li><li><a href="global.html#obtenerEquiposTecnologicosSstAprobados">obtenerEquiposTecnologicosSstAprobados</a></li><li><a href="global.html#obtenerEstrategiaCompresion">obtenerEstrategiaCompresion</a></li><li><a href="global.html#obtenerExtensionOriginal">obtenerExtensionOriginal</a></li><li><a href="global.html#obtenerExtintoresSstAprobados">obtenerExtintoresSstAprobados</a></li><li><a href="global.html#obtenerFilasBotiquinesSstAprobados">obtenerFilasBotiquinesSstAprobados</a></li><li><a href="global.html#obtenerFilasCamillasSstAprobadas">obtenerFilasCamillasSstAprobadas</a></li><li><a href="global.html#obtenerFilasEquiposTecnologicosSstAprobados">obtenerFilasEquiposTecnologicosSstAprobados</a></li><li><a href="global.html#obtenerFilasExtintoresSstAprobados">obtenerFilasExtintoresSstAprobados</a></li><li><a href="global.html#obtenerFilasResumenSstAprobadas">obtenerFilasResumenSstAprobadas</a></li><li><a href="global.html#obtenerFilasSenalizacionesSstAprobadas">obtenerFilasSenalizacionesSstAprobadas</a></li><li><a href="global.html#obtenerInspeccionCompleta">obtenerInspeccionCompleta</a></li><li><a href="global.html#obtenerInspecciones">obtenerInspecciones</a></li><li><a href="global.html#obtenerLinks">obtenerLinks</a></li><li><a href="global.html#obtenerLinksInspeccion">obtenerLinksInspeccion</a></li><li><a href="global.html#obtenerOCrearHoja">obtenerOCrearHoja</a></li><li><a href="global.html#obtenerPerfil">obtenerPerfil</a></li><li><a href="global.html#obtenerPlanesAccion">obtenerPlanesAccion</a></li><li><a href="global.html#obtenerResumen">obtenerResumen</a></li><li><a href="global.html#obtenerResumenAprobacion">obtenerResumenAprobacion</a></li><li><a href="global.html#obtenerResumenEpp">obtenerResumenEpp</a></li><li><a href="global.html#obtenerResumenInspeccionesSstAprobadas">obtenerResumenInspeccionesSstAprobadas</a></li><li><a href="global.html#obtenerRutaExcelEpp">obtenerRutaExcelEpp</a></li><li><a href="global.html#obtenerRutaExcelSst">obtenerRutaExcelSst</a></li><li><a href="global.html#obtenerSeguimientoEpp">obtenerSeguimientoEpp</a></li><li><a href="global.html#obtenerSenalizacionesSstAprobadas">obtenerSenalizacionesSstAprobadas</a></li><li><a href="global.html#obtenerXml">obtenerXml</a></li><li><a href="global.html#optimizarImagen">optimizarImagen</a></li><li><a href="global.html#optimizarPdf">optimizarPdf</a></li><li><a href="global.html#previsualizarAprobacion">previsualizarAprobacion</a></li><li><a href="global.html#query">query</a></li><li><a href="global.html#reemplazarFormulaCelda">reemplazarFormulaCelda</a></li><li><a href="global.html#reemplazarXml">reemplazarXml</a></li><li><a href="global.html#registrarAprobacion">registrarAprobacion</a></li><li><a href="global.html#registrarEstadisticas">registrarEstadisticas</a></li><li><a href="global.html#registrarOriginalConservado">registrarOriginalConservado</a></li><li><a href="global.html#resolverCarpetaDestinoPdf">resolverCarpetaDestinoPdf</a></li><li><a href="global.html#resolverCorreoDestino">resolverCorreoDestino</a></li><li><a href="global.html#resolverCorreoDestinoEpp">resolverCorreoDestinoEpp</a></li><li><a href="global.html#resolverFechaEvidencia">resolverFechaEvidencia</a></li><li><a href="global.html#seleccionarFormatoSalida">seleccionarFormatoSalida</a></li><li><a href="global.html#sincronizarCierresDesdeExcelEpp">sincronizarCierresDesdeExcelEpp</a></li><li><a href="global.html#sincronizarCierresExcelEpp">sincronizarCierresExcelEpp</a></li><li><a href="global.html#subirArchivoOneDrive">subirArchivoOneDrive</a></li><li><a href="global.html#subirEvidenciasMultiples">subirEvidenciasMultiples</a></li><li><a href="global.html#subirPdfAOneDrive">subirPdfAOneDrive</a></li><li><a href="global.html#timeoutMs">timeoutMs</a></li><li><a href="global.html#uploadEvidenceToOneDrive">uploadEvidenceToOneDrive</a></li><li><a href="global.html#validarArchivo">validarArchivo</a></li><li><a href="global.html#validarBotiquines">validarBotiquines</a></li><li><a href="global.html#validarCamillas">validarCamillas</a></li><li><a href="global.html#validarEquiposTecnologicos">validarEquiposTecnologicos</a></li><li><a href="global.html#validarEvidenciaTrabajador">validarEvidenciaTrabajador</a></li><li><a href="global.html#validarExtintores">validarExtintores</a></li><li><a href="global.html#validarInformacionGeneral">validarInformacionGeneral</a></li><li><a href="global.html#validarInspeccion">validarInspeccion</a></li><li><a href="global.html#validarInspeccionEpp">validarInspeccionEpp</a></li><li><a href="global.html#validarPdf">validarPdf</a></li><li><a href="global.html#validarResultado">validarResultado</a></li><li><a href="global.html#validarSenalizaciones">validarSenalizaciones</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.5</a>
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>

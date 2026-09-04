@@ -6,6 +6,18 @@ let ELEMENTOS_EPP_PREDETERMINADOS = [];
 let ELEMENTOS_EPP_OTROS = [];
 let ELEMENTOS_EPP = [];
 
+/**
+ * Carga desde el backend el catálogo de elementos de protección personal.
+ *
+ * Clasifica los elementos obtenidos entre predeterminados y adicionales,
+ * dejando disponible el catálogo completo para la construcción y edición
+ * de las evaluaciones de cada trabajador.
+ *
+ * @async
+ * @returns {Promise<void>}
+ * @throws {Error} Si la solicitud falla o la respuesta no contiene un catálogo válido.
+ */
+
 export async function cargarCatalogoEpp() {
   const response = await fetch("/api/catalogo-epp");
 
@@ -237,6 +249,24 @@ function filtrarElementosEpp(card, terminoBusqueda = "") {
 
 const VALORES_CALIFICACION = ["B", "R", "M", "NA"];
 
+/**
+ * Crea el administrador encargado de gestionar los trabajadores de una
+ * inspección EPP.
+ *
+ * Mantiene el estado de los trabajadores y sus evidencias, registra los
+ * eventos de la interfaz y proporciona las operaciones públicas necesarias
+ * para generar, validar y obtener la información de la inspección.
+ *
+ * @param {Object} elementos - Elementos de la interfaz utilizados por el administrador.
+ * @param {HTMLElement} elementos.container - Contenedor de las tarjetas de trabajadores.
+ * @param {HTMLInputElement} elementos.cantidadInput - Campo con la cantidad de trabajadores.
+ * @param {HTMLButtonElement} elementos.generarButton - Botón para generar trabajadores.
+ * @param {HTMLElement} elementos.estadoElement - Elemento utilizado para mostrar mensajes.
+ * @param {HTMLButtonElement} elementos.agregarButton - Botón para agregar un trabajador.
+ * @param {HTMLElement} elementos.accionesElement - Contenedor de acciones del formulario.
+ * @returns {Object} API para inicializar, generar, validar y leer los trabajadores y evidencias.
+ */
+
 export function createTrabajadoresEppManager({
   container,
   cantidadInput,
@@ -250,6 +280,16 @@ export function createTrabajadoresEppManager({
   let siguienteTrabajadorId = 1;
 
   const evidencias = new Map();
+
+  /**
+   * Inicializa los eventos del administrador de trabajadores EPP.
+   *
+   * Configura la generación y administración de trabajadores, el procesamiento
+   * de evidencias, los cambios de calificación y la interacción con el catálogo
+   * de elementos EPP.
+   *
+   * @returns {void}
+   */
 
   function init() {
     generarButton?.addEventListener("click", generarDesdeInput);
@@ -501,6 +541,21 @@ export function createTrabajadoresEppManager({
     resumen.textContent = nombre || "Sin diligenciar";
   }
 
+  /**
+   * Procesa la evidencia fotográfica seleccionada para un trabajador.
+   *
+   * Optimiza la imagen, almacena el archivo resultante asociado con el
+   * identificador interno del trabajador y actualiza el estado visual de
+   * la evidencia.
+   *
+   * Si el archivo se elimina o no puede procesarse, también elimina la
+   * evidencia previamente almacenada para el trabajador.
+   *
+   * @async
+   * @param {Event} event - Evento de cambio generado por el campo de evidencia.
+   * @returns {Promise<void>}
+   */
+
   async function manejarCambioEvidencia(event) {
     const input = event.target;
 
@@ -596,8 +651,6 @@ export function createTrabajadoresEppManager({
       input.disabled = false;
     }
   }
-
-  // =======================================================
   // FORMATEAR PESO DE ARCHIVO
   // =======================================================
 
@@ -614,10 +667,6 @@ export function createTrabajadoresEppManager({
     // Mostrar MB para archivos mayores.
     return `${(bytes / 1024 / 1024).toFixed(2)} MB`;
   }
-
-  // =======================================================
-  // MANEJAR ACCIONES DEL TRABAJADOR
-  // =======================================================
 
   function manejarAccionesTrabajador(event) {
     // -------------------------------------------------------
@@ -778,10 +827,6 @@ export function createTrabajadoresEppManager({
     }
   }
 
-  // =======================================================
-  // GENERAR DESDE INPUT
-  // =======================================================
-
   function generarDesdeInput() {
     const cantidad = Number.parseInt(cantidadInput?.value, 10);
 
@@ -796,13 +841,15 @@ export function createTrabajadoresEppManager({
     generar(cantidad);
   }
 
-  // =======================================================
-  // GENERAR TRABAJADORES
-  // =======================================================
-
-  // =======================================================
-  // GENERAR TRABAJADORES
-  // =======================================================
+  /**
+   * Genera una nueva colección de trabajadores para la inspección EPP.
+   *
+   * Elimina los trabajadores y evidencias existentes, reinicia los
+   * identificadores internos y crea la cantidad de trabajadores indicada.
+   *
+   * @param {number} cantidad - Cantidad de trabajadores que deben generarse.
+   * @returns {void}
+   */
 
   function generar(cantidad) {
     // Limpiar trabajadores de una generación anterior
@@ -915,10 +962,6 @@ export function createTrabajadoresEppManager({
     cantidadActual = tarjetas.length;
   }
 
-  // =======================================================
-  // ABRIR TRABAJADOR
-  // =======================================================
-
   function abrirTrabajador(tarjeta) {
     if (!tarjeta) {
       return;
@@ -944,9 +987,7 @@ export function createTrabajadoresEppManager({
       }
     });
   }
-  // =======================================================
-  // CREAR TRABAJADOR
-  // =======================================================
+
 
   function crearTrabajador(trabajadorId) {
     const card = document.createElement("article");
@@ -1282,9 +1323,6 @@ export function createTrabajadoresEppManager({
     return card;
   }
 
-  // =======================================================
-  // FILA EPP
-  // =======================================================
 
   function crearFilaEpp(datosElemento, elementoIndex) {
     const elementoEppId = datosElemento?.elementoEppId || "";
@@ -1404,6 +1442,18 @@ export function createTrabajadoresEppManager({
   `;
   }
 
+  /**
+   * Determina si la evaluación de un elemento EPP requiere un plan de acción.
+   *
+   * El plan es obligatorio cuando la condición o el uso del elemento recibe
+   * una calificación regular (`R`) o mala (`M`).
+   *
+   * @param {string} condicion - Calificación correspondiente a la condición del EPP.
+   * @param {string} uso - Calificación correspondiente al uso del EPP.
+   * @returns {boolean} `true` si debe registrarse un plan de acción;
+   * de lo contrario, `false`.
+   */
+
   function requierePlanAccion(condicion, uso) {
     if (!condicion || !uso) {
       return false;
@@ -1427,6 +1477,17 @@ export function createTrabajadoresEppManager({
 
     actualizarPlanElemento(fila);
   }
+
+  /**
+   * Actualiza la sección del plan de acción asociada con un elemento EPP.
+   *
+   * Evalúa las calificaciones de condición y uso para determinar si debe
+   * mostrarse el plan de acción. También establece como fecha mínima la fecha
+   * de la inspección y limpia el plan cuando deja de ser obligatorio.
+   *
+   * @param {HTMLTableRowElement} fila - Fila que contiene la evaluación del elemento EPP.
+   * @returns {void}
+   */
 
   function actualizarPlanElemento(fila) {
     if (!fila) {
@@ -1487,7 +1548,7 @@ export function createTrabajadoresEppManager({
     }
   }
 
-  // =======================================================
+
   // SELECT M / R / B / NA
   // =======================================================
 
@@ -1523,8 +1584,6 @@ export function createTrabajadoresEppManager({
       card.querySelectorAll(".epp-table tbody tr[data-elemento]"),
     ).map((fila) => fila.dataset.elemento);
   }
-
-
 
   function limpiarSeleccionCatalogoEpp(card) {
     if (!card) {
@@ -1613,6 +1672,17 @@ export function createTrabajadoresEppManager({
       ? "− Ocultar elementos EPP"
       : "+ Agregar elementos EPP";
   }
+
+  /**
+   * Agrega a un trabajador los elementos seleccionados desde el catálogo EPP.
+   *
+   * Evita agregar elementos duplicados, genera las filas de evaluación
+   * correspondientes y actualiza el estado del catálogo después de completar
+   * la operación.
+   *
+   * @param {HTMLElement} card - Tarjeta del trabajador que recibirá los elementos.
+   * @returns {void}
+   */
 
   function agregarElementosSeleccionados(card) {
     if (!card) {
@@ -1756,9 +1826,6 @@ export function createTrabajadoresEppManager({
     sincronizarCatalogoEpp(card);
   }
 
-  // =======================================================
-  // ESTADO
-  // =======================================================
 
   function mostrarEstado(mensaje) {
     if (!estadoElement) {
@@ -1770,13 +1837,20 @@ export function createTrabajadoresEppManager({
     estadoElement.classList.remove("hidden");
   }
 
-  // =======================================================
-  // VALIDAR TRABAJADORES
-  // =======================================================
 
-  // =======================================================
-  // VALIDAR TRABAJADORES
-  // =======================================================
+/**
+ * Valida todos los trabajadores registrados en la inspección EPP.
+ *
+ * Comprueba los datos personales, la unicidad y formato de los códigos,
+ * la existencia y calificación de los elementos EPP, los planes de acción
+ * requeridos, sus fechas límite y la evidencia fotográfica de cada trabajador.
+ *
+ * Cuando encuentra un dato inválido, abre la tarjeta correspondiente,
+ * marca el campo afectado y detiene el proceso de validación.
+ *
+ * @returns {{valido: boolean, mensaje: string}} Resultado de la validación
+ * y descripción del primer incumplimiento encontrado.
+ */
 
   function validar() {
     const tarjetas = container.querySelectorAll(".trabajador-card");
@@ -2108,10 +2182,6 @@ export function createTrabajadoresEppManager({
     };
   }
 
-  // =======================================================
-  // MARCAR ERROR
-  // =======================================================
-
   function marcarError(elemento, mensaje) {
     mostrarEstado(mensaje);
 
@@ -2134,9 +2204,6 @@ export function createTrabajadoresEppManager({
     };
   }
 
-  // =======================================================
-  // OCULTAR ESTADO
-  // =======================================================
 
   function ocultarEstado() {
     if (!estadoElement) {
@@ -2148,9 +2215,16 @@ export function createTrabajadoresEppManager({
     estadoElement.classList.add("hidden");
   }
 
-  // =======================================================
-  // LEER TRABAJADORES
-  // =======================================================
+
+/**
+ * Obtiene la información estructurada de los trabajadores de la inspección.
+ *
+ * Lee desde la interfaz los datos de cada trabajador, sus elementos EPP,
+ * las calificaciones de condición y uso, las observaciones y los planes
+ * de acción asociados con cada elemento.
+ *
+ * @returns {Array<Object>} Lista de trabajadores con sus evaluaciones EPP.
+ */
 
   function leer() {
     const tarjetas = container.querySelectorAll(".trabajador-card");
@@ -2269,9 +2343,19 @@ export function createTrabajadoresEppManager({
     return trabajadores;
   }
 
-  // =======================================================
-  // OBTENER EVIDENCIAS
-  // =======================================================
+/**
+ * Obtiene las evidencias fotográficas procesadas de los trabajadores.
+ *
+ * Relaciona cada archivo optimizado con el identificador del trabajador
+ * y con su posición actual dentro del formulario, utilizada posteriormente
+ * para construir los campos enviados al backend.
+ *
+ * @returns {Array<{
+ *   trabajadorId: number,
+ *   indice: number,
+ *   archivo: File
+ * }>} Evidencias disponibles para el envío de la inspección.
+ */
 
   function obtenerEvidencias() {
     const tarjetas = container.querySelectorAll(".trabajador-card");

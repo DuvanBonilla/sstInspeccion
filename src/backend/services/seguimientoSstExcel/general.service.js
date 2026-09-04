@@ -139,6 +139,17 @@ function corregirRangosFormula(formula) {
   return resultado;
 }
 
+/**
+ * Corrige los rangos desplazados en las fórmulas existentes de la hoja General.
+ *
+ * Recorre las etiquetas de fórmula del XML, ajusta las referencias iniciales
+ * de las hojas de seguimiento y contabiliza cuántas fórmulas fueron modificadas.
+ *
+ * @param {string} hojaXml - Contenido XML de la hoja General.
+ * @returns {{xml: string, formulasCorregidas: number}}
+ * XML actualizado y cantidad de fórmulas cuyos rangos fueron corregidos.
+ */
+
 function actualizarFormulasExistentes(hojaXml) {
   let formulasCorregidas = 0;
 
@@ -169,6 +180,19 @@ function actualizarFormulasExistentes(hojaXml) {
     formulasCorregidas,
   };
 }
+
+/**
+ * Reemplaza la fórmula de una celda específica dentro del XML de la hoja.
+ *
+ * Conserva los demás atributos y contenidos de la celda, elimina la fórmula
+ * y el valor calculado anteriores e incorpora la nueva expresión escapada.
+ *
+ * @param {string} hojaXml - Contenido XML de la hoja General.
+ * @param {string} referencia - Referencia de la celda que debe modificarse.
+ * @param {string} formula - Nueva fórmula que debe asignarse.
+ * @returns {string} XML con la fórmula de la celda actualizada.
+ * @throws {Error} Si la referencia indicada no existe en la hoja General.
+ */
 
 function reemplazarFormulaCelda(
   hojaXml,
@@ -221,6 +245,17 @@ function reemplazarFormulaCelda(
   return xmlActualizado;
 }
 
+/**
+ * Actualiza las fórmulas específicas configuradas para la hoja General.
+ *
+ * Recorre el mapa `FORMULAS_CELDAS` y reemplaza la fórmula de cada referencia
+ * mediante la modificación directa del XML.
+ *
+ * @param {string} hojaXml - Contenido XML de la hoja General.
+ * @returns {string} XML con todas las fórmulas puntuales actualizadas.
+ * @throws {Error} Si alguna de las celdas configuradas no existe.
+ */
+
 function corregirFormulasPuntuales(hojaXml) {
   let xmlActualizado = hojaXml;
 
@@ -240,6 +275,16 @@ function corregirFormulasPuntuales(hojaXml) {
 
   return xmlActualizado;
 }
+
+/**
+ * Elimina los valores calculados almacenados para las celdas con fórmula.
+ *
+ * Conserva las fórmulas y retira sus resultados anteriores para que Excel
+ * vuelva a calcularlos cuando se abra el archivo.
+ *
+ * @param {string} hojaXml - Contenido XML de la hoja General.
+ * @returns {string} XML sin valores calculados obsoletos en las celdas con fórmula.
+ */
 
 function limpiarValoresCalculados(hojaXml) {
   return hojaXml.replace(
@@ -269,6 +314,16 @@ function limpiarValoresCalculados(hojaXml) {
     },
   );
 }
+
+/**
+ * Configura el libro para recalcular automáticamente todas sus fórmulas.
+ *
+ * Actualiza o crea el elemento `calcPr` del XML principal y activa el cálculo
+ * automático, el recálculo completo al abrir y el recálculo forzado.
+ *
+ * @param {string} workbookXml - Contenido XML principal del libro.
+ * @returns {string} XML del libro con el recálculo automático habilitado.
+ */
 
 function activarRecalculoAutomatico(workbookXml) {
   const atributosRecalculo = [
@@ -330,6 +385,17 @@ function activarRecalculoAutomatico(workbookXml) {
   );
 }
 
+/**
+ * Elimina la cadena de cálculo almacenada en el archivo Excel.
+ *
+ * Retira las referencias a `calcChain.xml` de las relaciones y tipos de
+ * contenido del libro, y elimina el archivo interno cuando está presente.
+ * Esto permite que Excel reconstruya la cadena al abrir el documento.
+ *
+ * @param {@param {AdmZip} zip} zip - Archivo Excel abierto como contenedor ZIP.
+ * @returns {boolean} `true` cuando finaliza el proceso de eliminación.
+ */
+
 function eliminarCadenaCalculo(zip) {
   const relacionesWorkbookXml =
     obtenerXml(
@@ -373,6 +439,24 @@ function eliminarCadenaCalculo(zip) {
 
   return true;
 }
+
+/**
+ * Actualiza las fórmulas y la configuración de cálculo de la hoja General.
+ *
+ * Corrige los rangos de fórmulas existentes, reemplaza las fórmulas puntuales,
+ * elimina resultados calculados anteriormente y activa el recálculo automático
+ * del libro. Finalmente elimina la cadena de cálculo para que Excel la genere
+ * nuevamente al abrir el archivo.
+ *
+ * @param {@param {AdmZip} zip} zip - Archivo Excel abierto como contenedor ZIP.
+ * @returns {{
+ *   hoja: string,
+ *   formulasPuntualesActualizadas: number,
+ *   formulasConRangosCorregidos: number,
+ *   recalculoAutomatico: boolean,
+ *   cadenaCalculoEliminada: boolean
+ * }} Resultado de la actualización de la hoja General.
+ */
 
 function actualizarGeneral(zip) {
   const hojaXml = obtenerXml(

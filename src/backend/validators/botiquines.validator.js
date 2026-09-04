@@ -2,8 +2,29 @@ const { normalizarTexto } = require("../utils/texto.util");
 const ESTADOS_VALIDOS = new Set(["B", "R", "M", "NC", "NA"]);
 const VALORES_SI_NO   = new Set(["Sí", "No", ""]);
 
-
-// Función para normalizar un ítem de botiquín
+/**
+ * Normaliza la información de un insumo perteneciente a un botiquín.
+ *
+ * Limpia sus campos de texto, convierte la integridad y el plan de
+ * intervención a mayúsculas y admite nombres alternativos para la evidencia.
+ *
+ * @param {Object} item - Insumo recibido en el payload.
+ * @returns {{
+ *   no: number|string,
+ *   item: string,
+ *   cantidadIdeal: string,
+ *   cantidadReal: string,
+ *   integridadEmpaque: string,
+ *   fechaVencimiento: string,
+ *   planIntervencion: string,
+ *   fechaIntervencion: string,
+ *   cumplimiento: string,
+ *   observaciones: string,
+ *   afectacionServicio: string,
+ *   evidenciaArchivo: string,
+ *   evidenciaRuta: string
+ * }|null} Insumo normalizado, o `null` si el valor recibido no es un objeto.
+ */
 function normalizarBotiquinItem(item) {
   if (!item || typeof item !== "object") return null;
 
@@ -25,7 +46,23 @@ function normalizarBotiquinItem(item) {
   };
 }
 
-// Función para normalizar un botiquín completo, incluyendo sus ítems
+/**
+ * Normaliza un botiquín y todos sus insumos.
+ *
+ * Limpia los datos generales y de evidencia del botiquín, y normaliza
+ * individualmente los elementos incluidos en su colección `items`.
+ *
+ * @param {Object} botiquin - Botiquín recibido en el payload.
+ * @returns {{
+ *   numero: string,
+ *   ubicacion: string,
+ *   observacionGeneral: string,
+ *   evidenciaGeneralArchivo: string,
+ *   evidenciaArchivo: string,
+ *   evidenciaRuta: string,
+ *   items: Array<Object>
+ * }|null} Botiquín normalizado, o `null` si el valor recibido no es un objeto.
+ */
 function normalizarBotiquin(botiquin) {
   if (!botiquin || typeof botiquin !== "object") return null;
 
@@ -39,8 +76,16 @@ function normalizarBotiquin(botiquin) {
     items: Array.isArray(botiquin.items) ? botiquin.items.map(normalizarBotiquinItem).filter(Boolean) : []
   };
 }
-
-// Función principal para normalizar un payload de botiquines, que puede ser un array o un objeto único
+/**
+ * Obtiene y normaliza los botiquines presentes en el payload.
+ *
+ * Admite tanto la colección `botiquines` como el objeto individual
+ * `botiquin` y devuelve siempre una lista uniforme, descartando valores
+ * inválidos.
+ *
+ * @param {Object} payload - Payload recibido para la inspección SST.
+ * @returns {Array<Object>} Botiquines normalizados.
+ */
 function normalizarBotiquines(payload) {
   if (Array.isArray(payload?.botiquines)) {
     return payload.botiquines.map(normalizarBotiquin).filter(Boolean);
@@ -49,8 +94,20 @@ function normalizarBotiquines(payload) {
   const unico = normalizarBotiquin(payload?.botiquin);
   return unico ? [unico] : [];
 }
+/**
+ * Valida los botiquines y los insumos registrados en cada uno.
+ *
+ * Comprueba el número y ubicación del botiquín, así como la existencia
+ * de insumos. Para cada elemento verifica su nombre, cantidades, integridad
+ * del empaque, cumplimiento y afectación al servicio.
+ *
+ * Los incumplimientos encontrados se agregan al arreglo de errores recibido.
+ *
+ * @param {Array<Object>} botiquines - Botiquines previamente normalizados.
+ * @param {string[]} errores - Arreglo donde deben acumularse los errores.
+ * @returns {Array<Object>} Botiquines validados junto con sus insumos.
+ */
 
-// Función para validar un array de botiquines, registrando errores en un array proporcionado
 function validarBotiquines(botiquines, errores) {
   return botiquines.map((botiquin, index) => {
     if (!botiquin.numero) errores.push(`Numero de botiquin es obligatorio en botiquin ${index + 1}`);

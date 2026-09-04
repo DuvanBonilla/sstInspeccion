@@ -2,6 +2,26 @@ const { getAccessToken, getRequiredEnv } = require("./graph.service");
 
 const LOGO_URL = "https://sstinspeccion.onrender.com/img/Cargo.png";
 
+/**
+ * Envía un correo electrónico mediante Microsoft Graph.
+ *
+ * Acepta uno o varios destinatarios, construye el mensaje en formato HTML y,
+ * cuando se proporciona un PDF, lo incorpora como archivo adjunto codificado
+ * en Base64. El mensaje enviado se conserva en la carpeta de elementos enviados
+ * de la cuenta remitente.
+ *
+ * @async
+ * @param {Object} opciones Configuración del correo.
+ * @param {string|Array<string>} opciones.to Destinatarios del mensaje.
+ * @param {string} opciones.subject Asunto del correo.
+ * @param {string} opciones.html Contenido HTML del mensaje.
+ * @param {Buffer|null} [opciones.pdfBuffer=null] Documento PDF adjunto.
+ * @param {string} [opciones.nombre="inspeccion-sst.pdf"] Nombre del adjunto.
+ * @returns {Promise<void>} Finaliza cuando Microsoft Graph acepta el envío.
+ * @throws {Error} Si no existen destinatarios, el adjunto no es un Buffer,
+ * falla la autenticación o Microsoft Graph rechaza el correo.
+ */
+
 async function enviarCorreoPorGraph({
   to,
   subject,
@@ -92,12 +112,45 @@ async function enviarCorreoPorGraph({
   }
 }
 
+/**
+ * Determina el correo destinatario de una inspección SST según la sede.
+ *
+ * Para Santa Marta y Urabá utiliza los correos institucionales configurados
+ * directamente. Para las demás sedes utiliza el correo manual recibido o la
+ * variable de entorno `GRAPH_EMAIL_TO_TEST`.
+ *
+ * @param {string} sedeOperacion Sede donde se realizó la inspección.
+ * @param {string|null} correoManual Correo alternativo proporcionado manualmente.
+ * @returns {string|undefined} Dirección de correo que recibirá el informe.
+ */
+
 function resolverCorreoDestino(sedeOperacion, correoManual) {
   const sede = (sedeOperacion || "").toLowerCase().trim();
   if (sede.includes("santa marta")) return "sstsantamarta@cargoban.com.co";
   if (sede.includes("urab")) return "s.ocupacional@cargoban.com.co";
   return correoManual || process.env.GRAPH_EMAIL_TO_TEST;
 }
+
+/**
+ * Construye el contenido HTML del correo de una inspección SST.
+ *
+ * Genera una plantilla con la identificación de la inspección, fecha, sede,
+ * área de trabajo, responsables y acceso al documento almacenado en OneDrive.
+ * El enlace solamente se incorpora cuando existe una URL disponible.
+ *
+ * @param {Object} datos Información utilizada para construir el correo.
+ * @param {string} datos.inspeccionId Identificador único de la inspección.
+ * @param {number} [datos.numInspeccion] Número consecutivo de la inspección.
+ * @param {string} datos.fecha Fecha de realización.
+ * @param {string} datos.sedeOperacion Sede operacional.
+ * @param {string} datos.areaTrabajo Área inspeccionada.
+ * @param {string} datos.jefeResponsable Nombre del jefe responsable.
+ * @param {string} datos.responsableInspeccion Responsable de la inspección.
+ * @param {string} datos.cargoResponsable Cargo del responsable.
+ * @param {string|null} datos.webUrl URL del documento almacenado en OneDrive.
+ * @param {string} [datos.titulo="Nueva inspección registrada"] Título del mensaje.
+ * @returns {string} Plantilla HTML completa del correo.
+ */
 
 function construirHtmlCorreo({
   inspeccionId,

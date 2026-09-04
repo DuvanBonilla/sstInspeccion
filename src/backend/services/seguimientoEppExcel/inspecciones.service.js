@@ -8,6 +8,43 @@ const {
   aplicarFormatoCuerpo,
 } = require("../excel.service");
 
+/**
+ * Construye la hoja principal de inspecciones EPP dentro del libro de seguimiento.
+ *
+ * Configura las columnas de la hoja `01 - Inspecciones` y agrega la información
+ * general de cada inspección, sus responsables, resultados consolidados y
+ * aprobaciones registradas.
+ *
+ * Después de insertar los datos, aplica formatos al encabezado, cuerpo y fechas,
+ * congela la fila superior y activa el filtro sobre el rango utilizado.
+ *
+ * @param {ExcelJS.Workbook} workbook
+ * Libro de Excel donde debe construirse la hoja.
+ * @param {Array<{
+ *   inspeccion_id: string,
+ *   fecha: string|Date,
+ *   sede_operacion: string,
+ *   area_trabajo: string,
+ *   estado: string,
+ *   responsable_inspeccion: string,
+ *   cargo_responsable: string,
+ *   jefe_responsable: string,
+ *   cargo_jefe: string,
+ *   total_trabajadores: number|string,
+ *   trabajadores_con_novedad: number|string,
+ *   total_epp_evaluados: number|string,
+ *   epp_con_novedad: number|string,
+ *   aprobacion_inspector_nombre: string,
+ *   aprobacion_inspector_at: string|Date|null,
+ *   aprobacion_jefe_nombre: string,
+ *   aprobacion_jefe_at: string|Date|null,
+ *   aprobacion_copasst_nombre: string,
+ *   aprobacion_copasst_at: string|Date|null
+ * }>} inspecciones - Inspecciones EPP obtenidas desde la base de datos.
+ * @returns { @returns {ExcelJS.Worksheet}
+ * Hoja principal de inspecciones configurada y formateada.
+ */
+
 function construirHojaInspecciones(workbook, inspecciones) {
   const hoja = obtenerOCrearHoja(workbook, "01 - Inspecciones");
 

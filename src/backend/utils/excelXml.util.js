@@ -1,3 +1,15 @@
+/**
+ * Obtiene el contenido XML de un archivo interno del libro de Excel.
+ *
+ * Busca la entrada indicada dentro del contenedor ZIP y convierte su contenido
+ * binario en una cadena UTF-8.
+ *
+ * @param {@param {AdmZip} zip} zip - Archivo Excel abierto como contenedor ZIP.
+ * @param {string} rutaInterna - Ruta del archivo XML dentro del contenedor.
+ * @returns {string} Contenido XML de la entrada solicitada.
+ * @throws {Error} Si la ruta indicada no existe dentro del archivo Excel.
+ */
+
 function obtenerXml(zip, rutaInterna) {
   const entrada = zip.getEntry(rutaInterna);
 
@@ -7,6 +19,19 @@ function obtenerXml(zip, rutaInterna) {
 
   return entrada.getData().toString("utf8");
 }
+
+/**
+ * Reemplaza el contenido de un archivo XML dentro del libro de Excel.
+ *
+ * Convierte el XML actualizado en un Buffer UTF-8 y lo almacena nuevamente
+ * en la misma ruta interna del contenedor.
+ *
+ * @param {@param {AdmZip} zip} zip - Archivo Excel abierto como contenedor ZIP.
+ * @param {string} rutaInterna - Ruta del archivo XML que debe reemplazarse.
+ * @param {string} contenidoXml - Nuevo contenido XML.
+ * @returns {void}
+ * @throws {Error} Si la ruta indicada no existe dentro del archivo Excel.
+ */
 
 function reemplazarXml(zip, rutaInterna, contenidoXml) {
   const entrada = zip.getEntry(rutaInterna);
@@ -65,6 +90,17 @@ function escaparXml(valor) {
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&apos;");
 }
+
+/**
+ * Convierte una fecha de calendario al número serial utilizado por Excel.
+ *
+ * Valida que el valor tenga el formato `AAAA-MM-DD` y que represente una
+ * fecha real antes de calcular los días transcurridos desde el origen
+ * utilizado por Excel.
+ *
+ * @param {string} fecha - Fecha que debe convertirse.
+ * @returns {number|null} Número serial de Excel, o `null` si la fecha no es válida.
+ */
 
 function convertirFechaAExcel(fecha) {
   const valor = String(fecha || "").trim();
@@ -136,6 +172,26 @@ function limpiarCeldaExistenteXml(celdaXml) {
   return `<c r="${referencia}"${atributoEstilo}/>`;
 }
 
+/**
+ * Construye el XML de una celda para una fila del seguimiento.
+ *
+ * Conserva el estilo configurado para la columna y escribe el valor como
+ * fecha, número o texto según la configuración recibida. Los valores vacíos
+ * generan una celda sin contenido.
+ *
+ * @param {Object} configuracion - Configuración de la celda.
+ * @param {string} configuracion.columna - Letra de la columna.
+ * @param {number} configuracion.numeroFila - Número de la fila.
+ * @param {*} configuracion.valor - Valor que debe escribirse.
+ * @param {Object<string, string|null>} configuracion.estilos
+ * Estilos obtenidos desde la fila utilizada como plantilla.
+ * @param {string[]} [configuracion.columnasFecha=[]]
+ * Columnas que deben almacenar fechas de Excel.
+ * @param {string[]} [configuracion.columnasNumericas=[]]
+ * Columnas que deben almacenar valores numéricos.
+ * @returns {string} Representación XML de la celda.
+ */
+
 function construirCeldaXml({
   columna,
   numeroFila,
@@ -177,6 +233,17 @@ function construirCeldaXml({
   );
 }
 
+/**
+ * Actualiza el rango de dimensiones declarado para una hoja de Excel.
+ *
+ * Amplía la última fila de la dimensión cuando los datos escritos superan
+ * el rango existente, conservando el límite actual cuando ya es suficiente.
+ *
+ * @param {string} hojaXml - Contenido XML de la hoja.
+ * @param {number} ultimaFilaNecesaria - Última fila requerida por los datos.
+ * @returns {string} XML con la dimensión de la hoja actualizada.
+ */
+
 function actualizarDimensionHojaXml(hojaXml, ultimaFilaNecesaria) {
   return hojaXml.replace(
     /(<dimension\b[^>]*\bref=")([A-Z]+\d+):([A-Z]+)(\d+)(")/,
@@ -204,6 +271,33 @@ function actualizarDimensionHojaXml(hojaXml, ultimaFilaNecesaria) {
     },
   );
 }
+
+/**
+ * Reconstruye las filas administradas de una hoja de Excel.
+ *
+ * Conserva el encabezado y los estilos de la fila plantilla, reemplaza los
+ * datos dentro del rango administrado y mantiene las celdas ubicadas después
+ * de la última columna configurada. Las filas sobrantes se conservan con sus
+ * estilos, pero sus valores administrados se eliminan.
+ *
+ * Finalmente actualiza la dimensión declarada de la hoja para cubrir todas
+ * las filas necesarias.
+ *
+ * @param {Object} configuracion - Configuración de la actualización.
+ * @param {string} configuracion.hojaXml - Contenido XML actual de la hoja.
+ * @param {Array<Object<string, *>>} configuracion.filas
+ * Filas que deben escribirse, indexadas mediante letras de columnas.
+ * @param {string} configuracion.ultimaColumna
+ * Última columna que pertenece al rango administrado.
+ * @param {string} configuracion.nombreHoja
+ * Nombre utilizado para identificar la hoja en los errores.
+ * @param {string[]} [configuracion.columnasFecha=[]]
+ * Columnas que deben escribirse como fechas.
+ * @param {string[]} [configuracion.columnasNumericas=[]]
+ * Columnas que deben escribirse como números.
+ * @returns {string} XML de la hoja con sus filas actualizadas.
+ * @throws {Error} Si no existe `sheetData`, el encabezado o la fila plantilla.
+ */
 
 function actualizarFilasHojaXml({
   hojaXml,
@@ -341,6 +435,21 @@ function actualizarFilasHojaXml({
 
   return actualizarDimensionHojaXml(hojaActualizada, ultimaFilaDatos);
 }
+
+/**
+ * Actualiza el rango ocupado por una tabla estructurada de Excel.
+ *
+ * Calcula el rango desde `A1` hasta la última columna y fila necesarias,
+ * manteniendo como mínimo una fila de datos. Actualiza tanto la referencia
+ * principal de la tabla como la del filtro automático.
+ *
+ * @param {Object} configuracion - Configuración del rango.
+ * @param {string} configuracion.tablaXml - Contenido XML de la tabla.
+ * @param {string} configuracion.ultimaColumna - Última columna de la tabla.
+ * @param {number} configuracion.cantidadFilas - Cantidad de filas de datos.
+ * @returns {{xml: string, rango: string}}
+ * XML actualizado y nuevo rango asignado a la tabla.
+ */
 
 function actualizarRangoTablaXml({ tablaXml, ultimaColumna, cantidadFilas }) {
   const ultimaFila = Math.max(2, cantidadFilas + 1);

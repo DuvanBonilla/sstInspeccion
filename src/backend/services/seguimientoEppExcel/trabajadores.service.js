@@ -9,9 +9,40 @@ const {
   aplicarColorPorValor,
 } = require("../excel.service");
 
-const {
-  COLORES_RESULTADO,
-} = require("./estilos.service");
+const { COLORES_RESULTADO } = require("./estilos.service");
+
+/**
+ * Construye la hoja de seguimiento individual de trabajadores EPP.
+ *
+ * Configura la hoja `02 - Seguimiento EPP` y agrega una fila por cada
+ * trabajador inspeccionado, incluyendo sus datos generales, cantidad de
+ * elementos evaluados, novedades, resultado, hallazgos y observaciones.
+ *
+ * Cuando existe una evidencia, genera un hipervínculo para consultarla.
+ * Finalmente aplica formatos de fecha, colores según el resultado, ajuste
+ * de texto, estilo para los enlaces y filtros sobre el rango utilizado.
+ *
+ * @param {ExcelJS.Workbook} workbook
+ * Libro de Excel donde debe construirse la hoja.
+ * @param {Array<{
+ *   inspeccion_id: string,
+ *   fecha: string|Date,
+ *   sede_operacion: string,
+ *   area_trabajo: string,
+ *   codigo_trabajador: string,
+ *   nombre_trabajador: string,
+ *   cargo: string,
+ *   total_epp_evaluados: number|string,
+ *   epp_con_novedad: number|string,
+ *   resultado_general: string,
+ *   hallazgos_epp: string,
+ *   observaciones: string,
+ *   evidencia_url: string|null,
+ *   evidencia_fecha: string|Date|null
+ * }>} seguimiento - Registros de seguimiento obtenidos desde la base de datos.
+ * @returns { @returns {ExcelJS.Worksheet}
+ * Hoja de seguimiento de trabajadores configurada y formateada.
+ */
 
 function construirHojaSeguimientoEpp(workbook, seguimiento) {
   const hoja = obtenerOCrearHoja(workbook, "02 - Seguimiento EPP");

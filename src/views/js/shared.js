@@ -1,28 +1,3 @@
-/*
-  shared.js — Datos y utilidades compartidas entre todos los módulos del formulario.
-
-  Qué hace:
-  - Exporta las listas de datos estáticos que usan los managers:
-      condiciones        → 19 ítems de verificación para extintores (acceso, manómetro, etc.)
-      condicionesCamilla → 7 ítems de verificación para camillas
-      tipoOptionsHtml    → opciones HTML del select "Tipo de agente" (Solkaflam, CO2, etc.)
-      itemsBotiquin      → 28 insumos del botiquín con nombre y cantidad ideal
-      equiposTecnologicos → 4 equipos fijos (sensor de humo, cámaras, etc.)
-  - Exporta funciones utilitarias reutilizables:
-      esCampoOpcional()       → detecta inputs que no deben validarse (observaciones, evidencia)
-      crearOpciones()         → genera el HTML de <option> para los selects de estado (B/R/M/NC/NA)
-      crearOpcionesAfectacion() → genera opciones SI/NO para afectación al servicio
-      actualizarPreviewArchivo() → muestra vista previa de imagen al seleccionar un archivo
-      activarSoloNumeros()    → restringe inputs numéricos a solo dígitos
-      abrirSelectorFecha()    → abre el picker nativo del input type="date"
-      asignarFechaHoy()       → deja vacío el campo de fecha si ya estaba vacío
-      leerRespuesta()         → parsea la respuesta del servidor (JSON o texto plano)
-
-  Cómo interactúa:
-  - Es importado por inspeccion-sst.js, que distribuye los datos y funciones
-    a cada manager (extintores.js, camillas.js, senalizaciones.js, etc.)
-  - No depende de ningún otro archivo del proyecto.
-*/
 export const estados = ["B", "R", "M", "NC", "NA"];
 export const afectacionServicio = ["SI", "NO"];
 
@@ -111,6 +86,16 @@ const CAMPOS_OPCIONALES = new Set([
   "observacionGeneral"
 ]);
 
+/**
+ * Determina si un campo debe excluirse de las validaciones obligatorias.
+ *
+ * Considera opcionales los campos configurados explícitamente, los relacionados
+ * con observaciones y aquellos marcados mediante `data-optional="true"`.
+ *
+ * @param {HTMLElement} el - Campo del formulario que debe evaluarse.
+ * @returns {boolean} `true` si el campo es opcional; de lo contrario, `false`.
+ */
+
 export function esCampoOpcional(el) {
   const nombre = (el.name || "").toLowerCase();
   return (
@@ -135,6 +120,18 @@ function crearSlotEvidenciaHtml(rolePrefix, requerido) {
     </div>
   `;
 }
+
+/**
+ * Genera la estructura HTML de un bloque de evidencias múltiples.
+ *
+ * Crea una cantidad inicial de espacios para fotografías, dejando el primero
+ * como obligatorio y los restantes como opcionales. También incorpora el
+ * botón utilizado para agregar nuevas evidencias.
+ *
+ * @param {string} rolePrefix - Prefijo utilizado para identificar los elementos del bloque.
+ * @param {number} [minSlots=2] - Cantidad inicial de espacios para evidencias.
+ * @returns {string} Estructura HTML del bloque de evidencias.
+ */
 
 export function crearBloqueEvidencias(rolePrefix, minSlots = 2) {
   const slots = Array.from({ length: minSlots }, (_, i) => crearSlotEvidenciaHtml(rolePrefix, i === 0)).join("");
@@ -191,7 +188,17 @@ export function inicializarBloqueEvidencias(card, rolePrefix) {
   });
 }
 
-// Devuelve los archivos seleccionados (no vacíos) de un bloque de evidencias, en orden.
+/**
+ * Obtiene los archivos seleccionados en un bloque de evidencias.
+ *
+ * Recorre los campos correspondientes al prefijo indicado, descarta los
+ * espacios vacíos y conserva el orden en el que aparecen las fotografías.
+ *
+ * @param {HTMLElement} card - Tarjeta que contiene las evidencias.
+ * @param {string} rolePrefix - Prefijo que identifica el bloque.
+ * @returns {File[]} Archivos seleccionados y ordenados.
+ */
+
 export function leerArchivosEvidencia(card, rolePrefix) {
   return Array.from(card.querySelectorAll(`[data-role="${rolePrefix}-input"]`))
     .map((input) => input.files[0])
@@ -209,6 +216,18 @@ export function crearOpcionesAfectacion() {
     .concat(afectacionServicio.map((valor) => `<option value="${valor}">${valor}</option>`))
     .join("");
 }
+
+/**
+ * Actualiza la vista previa de una evidencia fotográfica.
+ *
+ * Muestra el nombre y contenido visual del archivo seleccionado. Cuando el
+ * campo está vacío, restablece el texto y oculta la imagen de previsualización.
+ *
+ * @param {HTMLInputElement} input - Campo utilizado para seleccionar el archivo.
+ * @param {HTMLElement} nombreEl - Elemento donde se muestra el nombre del archivo.
+ * @param {HTMLImageElement} previewEl - Imagen utilizada para la vista previa.
+ * @returns {void}
+ */
 
 export function actualizarPreviewArchivo(input, nombreEl, previewEl) {
   const archivo = input?.files?.[0];
@@ -259,6 +278,18 @@ export function asignarFechaHoy() {
     fecha.value = "";
   }
 }
+
+/**
+ * Procesa una respuesta HTTP recibida desde el servidor.
+ *
+ * Lee el contenido como texto y, cuando corresponde a JSON, intenta
+ * convertirlo en un objeto. Si la respuesta está vacía, contiene un JSON
+ * inválido o corresponde a texto plano, genera una estructura de errores.
+ *
+ * @async
+ * @param {Response} respuesta - Respuesta HTTP que debe procesarse.
+ * @returns {Promise<Object>} Contenido JSON procesado o estructura con los errores encontrados.
+ */
 
 export async function leerRespuesta(respuesta) {
   const contentType = respuesta.headers.get("content-type") || "";

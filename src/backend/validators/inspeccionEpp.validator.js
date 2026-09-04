@@ -7,6 +7,23 @@ const TIPOS_IMAGEN_PERMITIDOS = new Set([
 
 const TAMANO_MAXIMO_EVIDENCIA = 10 * 1024 * 1024; // 10 MB
 
+/**
+ * Valida la evidencia fotográfica asociada a un trabajador.
+ *
+ * Comprueba que el archivo exista, contenga información, corresponda a una
+ * imagen JPG o PNG y no supere el tamaño máximo permitido de 10 MB.
+ *
+ * @param {Object} file Archivo recibido mediante Multer.
+ * @param {Buffer} file.buffer Contenido binario del archivo.
+ * @param {string} file.mimetype Tipo MIME del archivo.
+ * @param {number} file.size Tamaño del archivo en bytes.
+ * @param {number} numeroTrabajador Número utilizado para identificar al
+ * trabajador dentro de los mensajes de validación.
+ * @returns {Object} Resultado de la validación. Si el archivo es válido,
+ * devuelve `ok: true` y el archivo en `data`; de lo contrario, devuelve
+ * `ok: false` y la lista `errores`.
+ */
+
 function validarEvidenciaTrabajador(file, numeroTrabajador) {
   const errores = [];
 
@@ -54,6 +71,30 @@ function validarEvidenciaTrabajador(file, numeroTrabajador) {
     data: file,
   };
 }
+
+/**
+ * Normaliza y valida la información de una inspección EPP.
+ *
+ * Valida la información general, los trabajadores y las evaluaciones de sus
+ * elementos de protección personal. Cada trabajador debe tener nombre, código,
+ * cargo y al menos una evaluación EPP.
+ *
+ * Las calificaciones permitidas para condición y uso son `M`, `R`, `B` y
+ * `NA`. Cuando alguna evaluación contiene una calificación `M` o `R`, exige
+ * un plan de acción y su fecha límite.
+ *
+ * Esta función valida los datos del formulario, pero no procesa los archivos
+ * de evidencia, cuya validación se realiza mediante
+ * {@link validarEvidenciaTrabajador}.
+ *
+ * @param {Object} payload Información recibida desde el formulario EPP.
+ * @param {string} [payload.inspeccionId] Identificador de la inspección.
+ * @param {Object} [payload.informacionGeneral] Información general.
+ * @param {Array<Object>} [payload.trabajadores] Trabajadores inspeccionados.
+ * @returns {Object} Resultado de la validación. Si existen errores, devuelve
+ * `ok: false` y la lista `errores`; si es válida, devuelve `ok: true` y la
+ * inspección normalizada en `data`.
+ */
 
 function validarInspeccionEpp(payload) {
   const errores = [];

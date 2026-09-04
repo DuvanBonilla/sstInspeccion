@@ -1,0 +1,910 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: views/js/inspeccion-epp.js</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+    <link type="text/css" rel="stylesheet" href="styles/sst-docs.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: views/js/inspeccion-epp.js</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>/**
+ * inspeccion-epp.js
+ *
+ * Controlador principal del formulario de Inspección EPP.
+ *
+ * Responsabilidades actuales:
+ * - Inicializar la fecha de inspección.
+ * - Controlar la navegación entre pasos.
+ * - Validar Información General.
+ * - Actualizar la barra de progreso.
+ * - Construir el resumen de Información General.
+ * - Controlar la salida del formulario.
+ *
+ * Posteriormente:
+ * - Gestión dinámica de trabajadores.
+ * - Evaluación de elementos EPP.
+ * - Evidencias.
+ * - Construcción del payload.
+ * - Envío al backend.
+ */
+
+import { asignarFechaHoy, abrirSelectorFecha } from "/js/shared.js";
+
+import {
+  createTrabajadoresEppManager,
+  cargarCatalogoEpp,
+} from "./trabajadoresEpp.js";
+
+
+let pasoActual = 1;
+
+const TOTAL_PASOS = 3;
+
+
+const fecha = document.getElementById("fecha");
+
+const btnSalir = document.getElementById("btn-salir");
+
+const btnLogoInicio = document.getElementById("btn-logo-inicio");
+
+const cancelarModal = document.getElementById("cancelar-modal");
+
+const btnCancelarNo = document.getElementById("btn-cancelar-no");
+
+const btnCancelarSi = document.getElementById("btn-cancelar-si");
+
+const trabajadoresManager = createTrabajadoresEppManager({
+  container: document.getElementById("trabajadores-container"),
+
+  cantidadInput: document.getElementById("cantidadTrabajadores"),
+
+  generarButton: document.getElementById("btn-generar-trabajadores"),
+
+  estadoElement: document.getElementById("trabajadores-estado"),
+
+  agregarButton: document.getElementById("btn-agregar-trabajador"),
+
+  accionesElement: document.getElementById("acciones-trabajadores"),
+});
+
+const camposInformacionGeneral = [
+  "fecha",
+  "sedeOperacion",
+  "areaTrabajo",
+  "jefeResponsable",
+  "cargoJefe",
+  "responsableInspeccion",
+  "cargoResponsable",
+];
+
+document.addEventListener("DOMContentLoaded", async () => {
+  try {
+    await cargarCatalogoEpp();
+
+    inicializarFecha();
+
+    inicializarNavegacion();
+
+    inicializarSalida();
+
+    trabajadoresManager.init();
+
+    inicializarEnvioEpp();
+
+    actualizarPaso();
+
+    inicializarAccionesModalExito();
+  } catch (error) {
+    console.error("[EPP] Error inicializando inspección:", error);
+
+    alert(
+      "No fue posible cargar el catálogo de elementos EPP. " +
+        "Recarga la página e intenta nuevamente.",
+    );
+  }
+});
+
+function inicializarFecha() {
+  if (!fecha) {
+    return;
+  }
+
+  // Asignar automáticamente la fecha actual
+  asignarFechaHoy(fecha);
+
+  // El selector nativo solo puede abrirse
+  // como consecuencia de una acción del usuario.
+  fecha.addEventListener("click", () => {
+    abrirSelectorFecha(fecha);
+  });
+}
+
+function inicializarAccionesModalExito() {
+  const btnInicio = document.getElementById("btn-modal-inicio");
+  const btnNueva = document.getElementById("btn-modal-nueva");
+
+  btnInicio?.addEventListener("click", () => {
+    window.location.href = "/";
+  });
+
+  btnNueva?.addEventListener("click", () => {
+    window.location.href = "/inspeccion-epp";
+  });
+}
+
+function inicializarNavegacion() {
+  document.querySelectorAll("[data-step-target]").forEach((boton) => {
+    boton.addEventListener("click", () => {
+      const destino = Number(boton.dataset.stepTarget);
+
+      if (!destino) {
+        return;
+      }
+
+      navegarAPaso(destino);
+    });
+  });
+}
+
+/**
+ * Controla la navegación entre las etapas del formulario de inspección EPP.
+ *
+ * Antes de avanzar, valida la información correspondiente al paso actual.
+ * Cuando se accede al resumen, actualiza la información general, el detalle
+ * de los trabajadores y las verificaciones previas al envío.
+ *
+ * @param {number} destino - Número del paso al que se desea navegar.
+ * @returns {void}
+ */
+
+function navegarAPaso(destino) {
+  if (destino &lt; 1 || destino > TOTAL_PASOS) {
+    return;
+  }
+
+  if (pasoActual === 1 &amp;&amp; destino > pasoActual) {
+    const formularioValido = validarInformacionGeneral();
+
+    if (!formularioValido) {
+      return;
+    }
+  }
+
+
+  if (pasoActual === 2 &amp;&amp; destino > pasoActual) {
+    const resultado = trabajadoresManager.validar();
+
+    if (!resultado.valido) {
+      return;
+    }
+  }
+
+  if (destino === 3) {
+    construirResumenGeneral();
+
+    construirResumenTrabajadores();
+
+    verificarInspeccionEpp();
+
+    verificarFormDataEpp();
+  }
+
+  pasoActual = destino;
+
+  actualizarPaso();
+}
+
+/**
+ * Actualiza visualmente el paso activo del formulario.
+ *
+ * Muestra el panel correspondiente, actualiza los indicadores de progreso
+ * y desplaza la página hacia la parte superior.
+ *
+ * @returns {void}
+ */
+
+function actualizarPaso() {
+  document.querySelectorAll("[data-step-panel]").forEach((panel) => {
+    const numeroPaso = Number(panel.dataset.stepPanel);
+
+    panel.classList.toggle("hidden", numeroPaso !== pasoActual);
+  });
+
+  document.querySelectorAll("[data-step-indicator]").forEach((indicador) => {
+    const numeroPaso = Number(indicador.dataset.stepIndicator);
+
+    indicador.classList.toggle("active", numeroPaso === pasoActual);
+
+    indicador.classList.toggle("completed", numeroPaso &lt; pasoActual);
+  });
+
+  window.scrollTo({
+    top: 0,
+    behavior: "smooth",
+  });
+}
+
+/**
+ * Valida que los campos obligatorios de la información general estén completos.
+ *
+ * Marca visualmente los campos vacíos y posiciona el foco sobre el primer
+ * campo que no cumple la validación.
+ *
+ * @returns {boolean} `true` si todos los campos requeridos tienen información;
+ * de lo contrario, `false`.
+ */
+
+function validarInformacionGeneral() {
+  let valido = true;
+
+  let primerCampoInvalido = null;
+
+  camposInformacionGeneral.forEach((id) => {
+    const campo = document.getElementById(id);
+
+    if (!campo) {
+      return;
+    }
+
+    const valor = campo.value.trim();
+
+    if (!valor) {
+      valido = false;
+
+      campo.classList.add("campo-error");
+
+      if (!primerCampoInvalido) {
+        primerCampoInvalido = campo;
+      }
+    } else {
+      campo.classList.remove("campo-error");
+    }
+  });
+
+  if (primerCampoInvalido) {
+    primerCampoInvalido.focus();
+  }
+
+  return valido;
+}
+
+camposInformacionGeneral.forEach((id) => {
+  const campo = document.getElementById(id);
+
+  if (!campo) {
+    return;
+  }
+
+  const limpiarError = () => {
+    if (campo.value.trim()) {
+      campo.classList.remove("campo-error");
+    }
+  };
+
+  campo.addEventListener("input", limpiarError);
+
+  campo.addEventListener("change", limpiarError);
+});
+
+
+function construirResumenGeneral() {
+  asignarTextoResumen("resumen-fecha", obtenerValor("fecha"));
+
+  asignarTextoResumen("resumen-sede", obtenerValor("sedeOperacion"));
+
+  asignarTextoResumen("resumen-area", obtenerValor("areaTrabajo"));
+
+  asignarTextoResumen("resumen-jefe", obtenerValor("jefeResponsable"));
+
+  asignarTextoResumen("resumen-cargo-jefe", obtenerValor("cargoJefe"));
+
+  asignarTextoResumen(
+    "resumen-responsable",
+    obtenerValor("responsableInspeccion"),
+  );
+
+  asignarTextoResumen(
+    "resumen-cargo-responsable",
+    obtenerValor("cargoResponsable"),
+  );
+}
+
+/**
+ * Construye el resumen visual de los trabajadores incluidos en la inspección.
+ *
+ * Por cada trabajador muestra sus datos principales, la cantidad de elementos
+ * EPP evaluados, las novedades encontradas, el estado del plan de acción y la
+ * existencia de evidencia. También calcula los totales generales del resumen.
+ *
+ * @returns {void}
+ */
+
+function construirResumenTrabajadores() {
+  const trabajadores = trabajadoresManager.leer();
+
+  const evidencias = trabajadoresManager.obtenerEvidencias();
+
+  // -------------------------------------------------------
+  // CONTENEDOR
+  // -------------------------------------------------------
+
+  const container = document.getElementById("resumen-trabajadores");
+
+  if (!container) {
+    return;
+  }
+
+  // -------------------------------------------------------
+  // LIMPIAR RESUMEN ANTERIOR
+  // -------------------------------------------------------
+
+  container.innerHTML = "";
+
+  // -------------------------------------------------------
+  // CALCULAR TOTALES
+  // -------------------------------------------------------
+
+  let totalNovedades = 0;
+
+  let trabajadoresConNovedades = 0;
+
+  trabajadores.forEach((trabajador) => {
+    const novedades = trabajador.elementos.filter(
+      (elemento) =>
+        elemento.condicion === "M" ||
+        elemento.condicion === "R" ||
+        elemento.uso === "M" ||
+        elemento.uso === "R",
+    );
+
+    if (novedades.length > 0) {
+      trabajadoresConNovedades++;
+    }
+
+    totalNovedades += novedades.length;
+
+    // ---------------------------------------------------
+    // BUSCAR EVIDENCIA
+    // ---------------------------------------------------
+
+    const tieneEvidencia = evidencias.some(
+      (evidencia) => evidencia.trabajadorId === trabajador.trabajadorId,
+    );
+
+    // ---------------------------------------------------
+    // CREAR TARJETA RESUMEN
+    // ---------------------------------------------------
+
+    const card = document.createElement("div");
+
+    card.className = "resumen-trabajador-card";
+
+    card.innerHTML = `
+
+        &lt;div class="resumen-trabajador-header">
+
+          &lt;div>
+
+            &lt;strong>
+              Trabajador ${trabajador.indice + 1}
+            &lt;/strong>
+
+            &lt;span class="resumen-trabajador-nombre">
+              ${escaparHtml(trabajador.nombre)}
+            &lt;/span>
+
+          &lt;/div>
+
+          &lt;span class="resumen-estado">
+            Completo
+          &lt;/span>
+
+        &lt;/div>
+
+
+        &lt;div class="resumen-trabajador-grid">
+
+          &lt;div>
+            &lt;span class="resumen-label">
+              Código
+            &lt;/span>
+
+            &lt;strong>
+              ${escaparHtml(trabajador.codigo)}
+            &lt;/strong>
+          &lt;/div>
+
+
+          &lt;div>
+            &lt;span class="resumen-label">
+              Labor / Cargo
+            &lt;/span>
+
+            &lt;strong>
+              ${escaparHtml(trabajador.cargo)}
+            &lt;/strong>
+          &lt;/div>
+
+
+          &lt;div>
+            &lt;span class="resumen-label">
+              EPP evaluados
+            &lt;/span>
+
+            &lt;strong>
+              ${trabajador.elementos.length}
+            &lt;/strong>
+          &lt;/div>
+
+
+          &lt;div>
+            &lt;span class="resumen-label">
+              Novedades
+            &lt;/span>
+
+            &lt;strong>
+              ${novedades.length}
+            &lt;/strong>
+          &lt;/div>
+
+
+          &lt;div>
+            &lt;span class="resumen-label">
+              Plan de acción
+            &lt;/span>
+
+            &lt;strong>
+              ${trabajador.planAccion ? "Registrado" : "No requerido"}
+            &lt;/strong>
+          &lt;/div>
+
+
+          &lt;div>
+            &lt;span class="resumen-label">
+              Evidencia
+            &lt;/span>
+
+            &lt;strong>
+              ${tieneEvidencia ? "Registrada" : "Sin evidencia"}
+            &lt;/strong>
+          &lt;/div>
+
+        &lt;/div>
+
+      `;
+
+    container.appendChild(card);
+  });
+
+  // -------------------------------------------------------
+  // TOTALES GENERALES
+  // -------------------------------------------------------
+
+  asignarTextoResumen("resumen-total-trabajadores", trabajadores.length);
+
+  asignarTextoResumen("resumen-trabajadores-novedad", trabajadoresConNovedades);
+
+  asignarTextoResumen(
+    "resumen-trabajadores-sin-novedad",
+    trabajadores.length - trabajadoresConNovedades,
+  );
+
+  asignarTextoResumen("resumen-total-novedades", totalNovedades);
+}
+
+function escaparHtml(valor) {
+  return String(valor ?? "")
+    .replaceAll("&amp;", "&amp;amp;")
+    .replaceAll("&lt;", "&amp;lt;")
+    .replaceAll(">", "&amp;gt;")
+    .replaceAll('"', "&amp;quot;")
+    .replaceAll("'", "&amp;#039;");
+}
+
+/**
+ * Genera un identificador único para una inspección EPP.
+ *
+ * El identificador combina el prefijo de inspección, la fecha actual y una
+ * cadena aleatoria en mayúsculas.
+ *
+ * @returns {string} Identificador con formato `INSP-AAAAMMDD-XXXX`.
+ */
+
+function generarInspeccionId() {
+  const hoy = new Date();
+
+  const fecha =
+    `${hoy.getFullYear()}` +
+    `${String(hoy.getMonth() + 1).padStart(2, "0")}` +
+    `${String(hoy.getDate()).padStart(2, "0")}`;
+
+  const aleatorio = Math.random().toString(36).slice(2, 6).toUpperCase();
+
+  return `INSP-${fecha}-${aleatorio}`;
+}
+// CONSTRUIR INSPECCIÓN EPP
+// =========================================================
+
+/**
+ * Construye el objeto principal de la inspección EPP.
+ *
+ * Recopila la información general registrada en el formulario y los datos
+ * de los trabajadores administrados por el gestor de trabajadores.
+ *
+ * @param {string|null} [inspeccionId=null] - Identificador asignado a la inspección.
+ * @returns {Object} Datos estructurados de la inspección EPP.
+ */
+
+function construirInspeccionEpp(inspeccionId = null) {
+  const trabajadores = trabajadoresManager.leer();
+
+  const informacionGeneral = {
+    fecha: obtenerValor("fecha"),
+
+    sede: obtenerValor("sedeOperacion"),
+
+    area: obtenerValor("areaTrabajo"),
+
+    jefeArea: obtenerValor("jefeResponsable"),
+
+    cargoJefe: obtenerValor("cargoJefe"),
+
+    responsableInspeccion: obtenerValor("responsableInspeccion"),
+
+    cargoResponsable: obtenerValor("cargoResponsable"),
+  };
+
+  return {
+    tipoInspeccion: "EPP",
+
+    inspeccionId: inspeccionId,
+
+    informacionGeneral,
+
+    trabajadores,
+  };
+}
+
+/**
+ * Construye el contenido multipart utilizado para enviar la inspección EPP.
+ *
+ * Agrega la inspección serializada en el campo `payload` y adjunta las
+ * evidencias de cada trabajador utilizando nombres de campo asociados
+ * con su posición dentro de la inspección.
+ *
+ * También incorpora la fecha de modificación de cada archivo como respaldo
+ * para determinar la fecha de la evidencia.
+ *
+ * @param {string|null} [inspeccionId=null] - Identificador de la inspección.
+ * @returns {FormData} FormData con el payload y las evidencias de los trabajadores.
+ */
+
+function construirFormDataEpp(inspeccionId = null) {
+  const inspeccion = construirInspeccionEpp(inspeccionId);
+
+  const evidencias = trabajadoresManager.obtenerEvidencias();
+
+  const formData = new FormData();
+
+  // -------------------------------------------------------
+  // PAYLOAD JSON
+  // -------------------------------------------------------
+
+  formData.append("payload", JSON.stringify(inspeccion));
+
+  // -------------------------------------------------------
+  // EVIDENCIAS DE TRABAJADORES
+  // -------------------------------------------------------
+
+  evidencias.forEach((evidencia) => {
+    /*
+      El backend trabaja con la posición actual del trabajador:
+
+      evidencia_trabajador_0
+      evidencia_trabajador_1
+      evidencia_trabajador_2
+      ...
+    */
+
+    const indice = evidencia.indice;
+
+    const archivo = evidencia.archivo;
+
+    if (!archivo) {
+      return;
+    }
+
+    const nombreCampo = `evidencia_trabajador_${indice}`;
+
+    formData.append(nombreCampo, archivo, archivo.name);
+
+    // Fecha original/modificación como respaldo del EXIF.
+    formData.append(
+      `${nombreCampo}_lastmod`,
+      String(archivo.lastModified || ""),
+    );
+  });
+
+  return formData;
+}
+
+/**
+ * Envía la inspección EPP y sus evidencias al backend.
+ *
+ * Genera un identificador para la operación, construye el FormData y realiza
+ * una solicitud POST al endpoint encargado de registrar la inspección.
+ *
+ * @async
+ * @returns {Promise&lt;Object>} Respuesta procesada enviada por el backend.
+ * @throws {Error} Si el servidor rechaza la solicitud o no puede completarse el envío.
+ */
+
+async function enviarInspeccionEpp() {
+  try {
+    // Generar el ID una sola vez para este envío
+    const inspeccionId = generarInspeccionId();
+
+    // Construir todo el FormData utilizando el mismo ID
+    const formData = construirFormDataEpp(inspeccionId);
+
+    const respuesta = await fetch("/enviar-inspeccion-epp", {
+      method: "POST",
+      body: formData,
+    });
+
+    const data = await respuesta.json();
+
+    if (!respuesta.ok || !data.ok) {
+      throw new Error(
+        data.mensaje || "No fue posible registrar la inspección EPP.",
+      );
+    }
+
+    return data;
+  } catch (error) {
+    console.error("❌ Error enviando inspección EPP:", error);
+
+    throw error;
+  }
+}
+
+/**
+ * Construye los enlaces de aprobación de una inspección EPP.
+ *
+ * Utiliza el origen actual de la aplicación y los tokens entregados por el
+ * backend para generar los enlaces del jefe responsable y de COPASST.
+ *
+ * @param {Object|null} tokens - Tokens de aprobación generados por el backend.
+ * @param {string} [tokens.jefe] - Token asignado al jefe responsable.
+ * @param {string} [tokens.copasst] - Token asignado a COPASST.
+ * @returns {{jefe: string|null, copasst: string|null}|null}
+ * Enlaces de aprobación disponibles, o `null` si no se reciben tokens.
+ */
+
+function construirLinksAprobacionEpp(tokens) {
+  if (!tokens) {
+    return null;
+  }
+
+  const baseUrl = window.location.origin;
+
+  return {
+    jefe: tokens.jefe ? `${baseUrl}/aprobar/${tokens.jefe}` : null,
+
+    copasst: tokens.copasst ? `${baseUrl}/aprobar/${tokens.copasst}` : null,
+  };
+}
+
+/**
+ * Inicializa el proceso de envío de la inspección EPP.
+ *
+ * Registra el evento del botón de envío, controla su estado durante la
+ * solicitud y muestra los modales correspondientes al resultado de la
+ * operación. Cuando el registro finaliza correctamente, construye los
+ * enlaces de aprobación recibidos desde el backend.
+ *
+ * @returns {void}
+ */
+
+function inicializarEnvioEpp() {
+  const btnEnviar = document.getElementById("btn-enviar-inspeccion-epp");
+
+  if (!btnEnviar) {
+    return;
+  }
+
+  btnEnviar.addEventListener("click", async () => {
+    try {
+      // ---------------------------------------------------
+      // BLOQUEAR BOTÓN
+      // ---------------------------------------------------
+
+      btnEnviar.disabled = true;
+      btnEnviar.textContent = "Enviando...";
+
+      // ---------------------------------------------------
+      // MOSTRAR MODAL DE CARGA
+      // ---------------------------------------------------
+
+      if (typeof window.mostrarModal === "function") {
+        window.mostrarModal("cargando");
+      }
+
+      // ---------------------------------------------------
+      // ENVIAR INSPECCIÓN
+      // ---------------------------------------------------
+
+      const resultado = await enviarInspeccionEpp();
+
+      // ---------------------------------------------------
+      // CONSTRUIR LINKS DE APROBACIÓN
+      // ---------------------------------------------------
+
+      const links = construirLinksAprobacionEpp(resultado.tokens);
+
+      // ---------------------------------------------------
+      // MOSTRAR MODAL DE ÉXITO
+      // ---------------------------------------------------
+
+      if (typeof window.mostrarModal === "function") {
+        window.mostrarModal(
+          "exito",
+          resultado.inspeccionId,
+          resultado.numInspeccion,
+          links,
+          "crear",
+        );
+      }
+
+      btnEnviar.textContent = "Inspección enviada";
+    } catch (error) {
+      console.error("❌ No fue posible completar el envío EPP:", error);
+
+      // ---------------------------------------------------
+      // MODAL ERROR
+      // ---------------------------------------------------
+
+      if (typeof window.mostrarModal === "function") {
+        window.mostrarModal("error");
+      }
+
+      btnEnviar.disabled = false;
+      btnEnviar.textContent = "Enviar inspección";
+    }
+  });
+}
+
+function verificarFormDataEpp() {
+  const formData = construirFormDataEpp();
+
+  for (const [clave, valor] of formData.entries()) {
+    if (valor instanceof File) {
+      console.log(clave, {
+        nombre: valor.name,
+        tipo: valor.type,
+        tamaño: valor.size,
+        lastModified: valor.lastModified,
+      });
+    } else {
+      console.log(clave, valor);
+    }
+  }
+}
+
+function verificarInspeccionEpp() {
+  const inspeccion = construirInspeccionEpp();
+
+  const evidencias = trabajadoresManager.obtenerEvidencias();
+
+  console.log("======================================");
+
+  console.log("INSPECCIÓN EPP FINAL:", inspeccion);
+
+  console.log("EVIDENCIAS EPP:", evidencias);
+
+  console.log("======================================");
+}
+
+function obtenerValor(id) {
+  const elemento = document.getElementById(id);
+
+  if (!elemento) {
+    return "";
+  }
+
+  return elemento.value.trim();
+}
+
+function asignarTextoResumen(id, valor) {
+  const elemento = document.getElementById(id);
+
+  if (!elemento) {
+    return;
+  }
+
+  elemento.textContent = valor || "—";
+}
+
+function inicializarSalida() {
+  // Botón de salida de la esquina superior derecha
+  btnSalir?.addEventListener("click", abrirModalSalida);
+
+  // Logo de Cargoban de la esquina superior izquierda
+  btnLogoInicio?.addEventListener("click", abrirModalSalida);
+
+  // Continuar trabajando
+  btnCancelarNo?.addEventListener("click", cerrarModalSalida);
+
+  // Confirmar salida
+  btnCancelarSi?.addEventListener("click", () => {
+    window.location.href = "/";
+  });
+
+  // Cerrar pulsando fuera del cuadro
+  cancelarModal?.addEventListener("click", (event) => {
+    if (event.target === cancelarModal) {
+      cerrarModalSalida();
+    }
+  });
+
+  // Cerrar con ESC
+  document.addEventListener("keydown", (event) => {
+    if (
+      event.key === "Escape" &amp;&amp;
+      cancelarModal?.classList.contains("visible")
+    ) {
+      cerrarModalSalida();
+    }
+  });
+}
+
+function abrirModalSalida() {
+  cancelarModal?.classList.add("visible");
+}
+
+function cerrarModalSalida() {
+  cancelarModal?.classList.remove("visible");
+}
+</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Modules</h3><ul><li><a href="module-app.html">app</a></li></ul><h3>Global</h3><ul><li><a href="global.html#IMAGE_OPTIMIZER_VERSION">IMAGE_OPTIMIZER_VERSION</a></li><li><a href="global.html#KB">KB</a></li><li><a href="global.html#PDF_OPTIMIZER_CONFIG">PDF_OPTIMIZER_CONFIG</a></li><li><a href="global.html#PDF_OPTIMIZER_VERSION">PDF_OPTIMIZER_VERSION</a></li><li><a href="global.html#PROFILES">PROFILES</a></li><li><a href="global.html#activarRecalculoAutomatico">activarRecalculoAutomatico</a></li><li><a href="global.html#actualizarBotiquines">actualizarBotiquines</a></li><li><a href="global.html#actualizarDimensionHojaXml">actualizarDimensionHojaXml</a></li><li><a href="global.html#actualizarEquiposTecnologicos">actualizarEquiposTecnologicos</a></li><li><a href="global.html#actualizarExcelSeguimientoEpp">actualizarExcelSeguimientoEpp</a></li><li><a href="global.html#actualizarExcelSeguimientoEppEnOneDrive">actualizarExcelSeguimientoEppEnOneDrive</a></li><li><a href="global.html#actualizarExcelSeguimientoSst">actualizarExcelSeguimientoSst</a></li><li><a href="global.html#actualizarExcelSeguimientoSstEnMemoria">actualizarExcelSeguimientoSstEnMemoria</a></li><li><a href="global.html#actualizarExcelSeguimientoSstEnOneDrive">actualizarExcelSeguimientoSstEnOneDrive</a></li><li><a href="global.html#actualizarExtintores">actualizarExtintores</a></li><li><a href="global.html#actualizarFilasHojaXml">actualizarFilasHojaXml</a></li><li><a href="global.html#actualizarFormulasExistentes">actualizarFormulasExistentes</a></li><li><a href="global.html#actualizarGeneral">actualizarGeneral</a></li><li><a href="global.html#actualizarPaso">actualizarPaso</a></li><li><a href="global.html#actualizarPreviewArchivo">actualizarPreviewArchivo</a></li><li><a href="global.html#actualizarRangoTablaXml">actualizarRangoTablaXml</a></li><li><a href="global.html#actualizarResumen">actualizarResumen</a></li><li><a href="global.html#actualizarSenalizaciones">actualizarSenalizaciones</a></li><li><a href="global.html#analizarImagen">analizarImagen</a></li><li><a href="global.html#analizarPdf">analizarPdf</a></li><li><a href="global.html#autorizarAzureEpp">autorizarAzureEpp</a></li><li><a href="global.html#buscarPorToken">buscarPorToken</a></li><li><a href="global.html#calcularDiasRestantes">calcularDiasRestantes</a></li><li><a href="global.html#calcularDimensiones">calcularDimensiones</a></li><li><a href="global.html#calcularResumenEpp">calcularResumenEpp</a></li><li><a href="global.html#cargarCatalogoEpp">cargarCatalogoEpp</a></li><li><a href="global.html#cargarExcelSst">cargarExcelSst</a></li><li><a href="global.html#cargarImagen">cargarImagen</a></li><li><a href="global.html#cerrarPlanesAccionDesdeExcel">cerrarPlanesAccionDesdeExcel</a></li><li><a href="global.html#clasificarPlanesPorInspeccion">clasificarPlanesPorInspeccion</a></li><li><a href="global.html#configurarModalExito">configurarModalExito</a></li><li><a href="global.html#construirAprobaciones">construirAprobaciones</a></li><li><a href="global.html#construirArchivoOptimizado">construirArchivoOptimizado</a></li><li><a href="global.html#construirCeldaXml">construirCeldaXml</a></li><li><a href="global.html#construirEvidenciasDesdeOneDrive">construirEvidenciasDesdeOneDrive</a></li><li><a href="global.html#construirEvidenciasEppDesdeOneDrive">construirEvidenciasEppDesdeOneDrive</a></li><li><a href="global.html#construirFilaBotiquin">construirFilaBotiquin</a></li><li><a href="global.html#construirFilaEquipoTecnologico">construirFilaEquipoTecnologico</a></li><li><a href="global.html#construirFilaResumen">construirFilaResumen</a></li><li><a href="global.html#construirFiltrosExcelEpp">construirFiltrosExcelEpp</a></li><li><a href="global.html#construirFiltrosInspecciones">construirFiltrosInspecciones</a></li><li><a href="global.html#construirFormDataEpp">construirFormDataEpp</a></li><li><a href="global.html#construirHojaGeneralEpp">construirHojaGeneralEpp</a></li><li><a href="global.html#construirHojaInspecciones">construirHojaInspecciones</a></li><li><a href="global.html#construirHojaPlanesAccion">construirHojaPlanesAccion</a></li><li><a href="global.html#construirHojaResumenEpp">construirHojaResumenEpp</a></li><li><a href="global.html#construirHojaSeguimientoEpp">construirHojaSeguimientoEpp</a></li><li><a href="global.html#construirHtmlCorreo">construirHtmlCorreo</a></li><li><a href="global.html#construirHtmlCorreoEpp">construirHtmlCorreoEpp</a></li><li><a href="global.html#construirInspeccionEpp">construirInspeccionEpp</a></li><li><a href="global.html#construirLinksAprobacionEpp">construirLinksAprobacionEpp</a></li><li><a href="global.html#construirNombreArchivo">construirNombreArchivo</a></li><li><a href="global.html#construirResumenTrabajadores">construirResumenTrabajadores</a></li><li><a href="global.html#convertirCanvasABlob">convertirCanvasABlob</a></li><li><a href="global.html#convertirFechaAExcel">convertirFechaAExcel</a></li><li><a href="global.html#copiarLink">copiarLink</a></li><li><a href="global.html#corregirFormulasPuntuales">corregirFormulasPuntuales</a></li><li><a href="global.html#crearArchivosTemporales">crearArchivosTemporales</a></li><li><a href="global.html#crearBloqueEvidencias">crearBloqueEvidencias</a></li><li><a href="global.html#crearCanvas">crearCanvas</a></li><li><a href="global.html#crearPdfInspeccionEpp">crearPdfInspeccionEpp</a></li><li><a href="global.html#crearPdfInspeccionExtintor">crearPdfInspeccionExtintor</a></li><li><a href="global.html#crearWorkbook">crearWorkbook</a></li><li><a href="global.html#createBotiquinesManager">createBotiquinesManager</a></li><li><a href="global.html#createCamillasManager">createCamillasManager</a></li><li><a href="global.html#createEquiposTecnologicosManager">createEquiposTecnologicosManager</a></li><li><a href="global.html#createExtintoresManager">createExtintoresManager</a></li><li><a href="global.html#createSenalizacionesManager">createSenalizacionesManager</a></li><li><a href="global.html#createTrabajadoresEppManager">createTrabajadoresEppManager</a></li><li><a href="global.html#descargarArchivoOneDrive">descargarArchivoOneDrive</a></li><li><a href="global.html#descargarEvidenciaOneDrive">descargarEvidenciaOneDrive</a></li><li><a href="global.html#diagnosticarTablaExtintores">diagnosticarTablaExtintores</a></li><li><a href="global.html#dibujarImagen">dibujarImagen</a></li><li><a href="global.html#ejecutarGhostscript">ejecutarGhostscript</a></li><li><a href="global.html#eliminarCadenaCalculo">eliminarCadenaCalculo</a></li><li><a href="global.html#enviarCorreoPorGraph">enviarCorreoPorGraph</a></li><li><a href="global.html#enviarExtintorOneDrive">enviarExtintorOneDrive</a></li><li><a href="global.html#enviarInspeccionEpp">enviarInspeccionEpp</a></li><li><a href="global.html#enviarPdfPruebaCorreo">enviarPdfPruebaCorreo</a></li><li><a href="global.html#esCampoOpcional">esCampoOpcional</a></li><li><a href="global.html#extraerEvidenciasPorIndex">extraerEvidenciasPorIndex</a></li><li><a href="global.html#extraerFechaExif">extraerFechaExif</a></li><li><a href="global.html#fetchConRetry">fetchConRetry</a></li><li><a href="global.html#finalizarInspeccion">finalizarInspeccion</a></li><li><a href="global.html#formatearFechaMs">formatearFechaMs</a></li><li><a href="global.html#fs">fs</a></li><li><a href="global.html#generarBuffer">generarBuffer</a></li><li><a href="global.html#generarExcelSeguimientoEpp">generarExcelSeguimientoEpp</a></li><li><a href="global.html#generarInspeccionId">generarInspeccionId</a></li><li><a href="global.html#generarPdfEppAprobacion">generarPdfEppAprobacion</a></li><li><a href="global.html#generarPdfPrueba">generarPdfPrueba</a></li><li><a href="global.html#generarPdfSstAprobacion">generarPdfSstAprobacion</a></li><li><a href="global.html#getAccessToken">getAccessToken</a></li><li><a href="global.html#getEvidenceFolderPath">getEvidenceFolderPath</a></li><li><a href="global.html#getRequiredEnv">getRequiredEnv</a></li><li><a href="global.html#ghostscriptExecutable">ghostscriptExecutable</a></li><li><a href="global.html#guardarAprobacion">guardarAprobacion</a></li><li><a href="global.html#guardarInspeccionEnDB">guardarInspeccionEnDB</a></li><li><a href="global.html#guardarInspeccionEppEnDB">guardarInspeccionEppEnDB</a></li><li><a href="global.html#guardarPdfTemporal">guardarPdfTemporal</a></li><li><a href="global.html#inicializarEnvioEpp">inicializarEnvioEpp</a></li><li><a href="global.html#leerArchivosEvidencia">leerArchivosEvidencia</a></li><li><a href="global.html#leerCierresDesdeExcelEpp">leerCierresDesdeExcelEpp</a></li><li><a href="global.html#leerFiltros">leerFiltros</a></li><li><a href="global.html#leerPayload">leerPayload</a></li><li><a href="global.html#leerPdfOptimizado">leerPdfOptimizado</a></li><li><a href="global.html#leerRespuesta">leerRespuesta</a></li><li><a href="global.html#liberarImagen">liberarImagen</a></li><li><a href="global.html#limpiarTemporales">limpiarTemporales</a></li><li><a href="global.html#limpiarValoresCalculados">limpiarValoresCalculados</a></li><li><a href="global.html#listarCatalogoEpp">listarCatalogoEpp</a></li><li><a href="global.html#listarEppPredeterminados">listarEppPredeterminados</a></li><li><a href="global.html#listarInspecciones">listarInspecciones</a></li><li><a href="global.html#listarInspeccionesConFiltros">listarInspeccionesConFiltros</a></li><li><a href="global.html#listarInspeccionesEpp">listarInspeccionesEpp</a></li><li><a href="global.html#listarInspeccionesEppConFiltros">listarInspeccionesEppConFiltros</a></li><li><a href="global.html#mapearCamillaAExcel">mapearCamillaAExcel</a></li><li><a href="global.html#mapearExtintorAExcel">mapearExtintorAExcel</a></li><li><a href="global.html#mapearSenalizacionAExcel">mapearSenalizacionAExcel</a></li><li><a href="global.html#mapearTipoExtintor">mapearTipoExtintor</a></li><li><a href="global.html#marcarInspeccionEnviada">marcarInspeccionEnviada</a></li><li><a href="global.html#maximumInputSize">maximumInputSize</a></li><li><a href="global.html#mostrarModal">mostrarModal</a></li><li><a href="global.html#navegarAPaso">navegarAPaso</a></li><li><a href="global.html#normalizarBotiquin">normalizarBotiquin</a></li><li><a href="global.html#normalizarBotiquinItem">normalizarBotiquinItem</a></li><li><a href="global.html#normalizarBotiquines">normalizarBotiquines</a></li><li><a href="global.html#normalizarCamilla">normalizarCamilla</a></li><li><a href="global.html#normalizarCamillas">normalizarCamillas</a></li><li><a href="global.html#normalizarEquipoTecnologico">normalizarEquipoTecnologico</a></li><li><a href="global.html#normalizarEquiposTecnologicos">normalizarEquiposTecnologicos</a></li><li><a href="global.html#normalizarExtintor">normalizarExtintor</a></li><li><a href="global.html#normalizarExtintores">normalizarExtintores</a></li><li><a href="global.html#normalizarSenalizacion">normalizarSenalizacion</a></li><li><a href="global.html#normalizarSenalizaciones">normalizarSenalizaciones</a></li><li><a href="global.html#obtenerArchivos">obtenerArchivos</a></li><li><a href="global.html#obtenerBotiquinItemsSstAprobados">obtenerBotiquinItemsSstAprobados</a></li><li><a href="global.html#obtenerCamillasSstAprobadas">obtenerCamillasSstAprobadas</a></li><li><a href="global.html#obtenerCatalogoEppActivo">obtenerCatalogoEppActivo</a></li><li><a href="global.html#obtenerContextoAprobacion">obtenerContextoAprobacion</a></li><li><a href="global.html#obtenerDiasRestantes">obtenerDiasRestantes</a></li><li><a href="global.html#obtenerEppPredeterminados">obtenerEppPredeterminados</a></li><li><a href="global.html#obtenerEquiposTecnologicosSstAprobados">obtenerEquiposTecnologicosSstAprobados</a></li><li><a href="global.html#obtenerEstrategiaCompresion">obtenerEstrategiaCompresion</a></li><li><a href="global.html#obtenerExtensionOriginal">obtenerExtensionOriginal</a></li><li><a href="global.html#obtenerExtintoresSstAprobados">obtenerExtintoresSstAprobados</a></li><li><a href="global.html#obtenerFilasBotiquinesSstAprobados">obtenerFilasBotiquinesSstAprobados</a></li><li><a href="global.html#obtenerFilasCamillasSstAprobadas">obtenerFilasCamillasSstAprobadas</a></li><li><a href="global.html#obtenerFilasEquiposTecnologicosSstAprobados">obtenerFilasEquiposTecnologicosSstAprobados</a></li><li><a href="global.html#obtenerFilasExtintoresSstAprobados">obtenerFilasExtintoresSstAprobados</a></li><li><a href="global.html#obtenerFilasResumenSstAprobadas">obtenerFilasResumenSstAprobadas</a></li><li><a href="global.html#obtenerFilasSenalizacionesSstAprobadas">obtenerFilasSenalizacionesSstAprobadas</a></li><li><a href="global.html#obtenerInspeccionCompleta">obtenerInspeccionCompleta</a></li><li><a href="global.html#obtenerInspecciones">obtenerInspecciones</a></li><li><a href="global.html#obtenerLinks">obtenerLinks</a></li><li><a href="global.html#obtenerLinksInspeccion">obtenerLinksInspeccion</a></li><li><a href="global.html#obtenerOCrearHoja">obtenerOCrearHoja</a></li><li><a href="global.html#obtenerPerfil">obtenerPerfil</a></li><li><a href="global.html#obtenerPlanesAccion">obtenerPlanesAccion</a></li><li><a href="global.html#obtenerResumen">obtenerResumen</a></li><li><a href="global.html#obtenerResumenAprobacion">obtenerResumenAprobacion</a></li><li><a href="global.html#obtenerResumenEpp">obtenerResumenEpp</a></li><li><a href="global.html#obtenerResumenInspeccionesSstAprobadas">obtenerResumenInspeccionesSstAprobadas</a></li><li><a href="global.html#obtenerRutaExcelEpp">obtenerRutaExcelEpp</a></li><li><a href="global.html#obtenerRutaExcelSst">obtenerRutaExcelSst</a></li><li><a href="global.html#obtenerSeguimientoEpp">obtenerSeguimientoEpp</a></li><li><a href="global.html#obtenerSenalizacionesSstAprobadas">obtenerSenalizacionesSstAprobadas</a></li><li><a href="global.html#obtenerXml">obtenerXml</a></li><li><a href="global.html#optimizarImagen">optimizarImagen</a></li><li><a href="global.html#optimizarPdf">optimizarPdf</a></li><li><a href="global.html#previsualizarAprobacion">previsualizarAprobacion</a></li><li><a href="global.html#query">query</a></li><li><a href="global.html#reemplazarFormulaCelda">reemplazarFormulaCelda</a></li><li><a href="global.html#reemplazarXml">reemplazarXml</a></li><li><a href="global.html#registrarAprobacion">registrarAprobacion</a></li><li><a href="global.html#registrarEstadisticas">registrarEstadisticas</a></li><li><a href="global.html#registrarOriginalConservado">registrarOriginalConservado</a></li><li><a href="global.html#resolverCarpetaDestinoPdf">resolverCarpetaDestinoPdf</a></li><li><a href="global.html#resolverCorreoDestino">resolverCorreoDestino</a></li><li><a href="global.html#resolverCorreoDestinoEpp">resolverCorreoDestinoEpp</a></li><li><a href="global.html#resolverFechaEvidencia">resolverFechaEvidencia</a></li><li><a href="global.html#seleccionarFormatoSalida">seleccionarFormatoSalida</a></li><li><a href="global.html#sincronizarCierresDesdeExcelEpp">sincronizarCierresDesdeExcelEpp</a></li><li><a href="global.html#sincronizarCierresExcelEpp">sincronizarCierresExcelEpp</a></li><li><a href="global.html#subirArchivoOneDrive">subirArchivoOneDrive</a></li><li><a href="global.html#subirEvidenciasMultiples">subirEvidenciasMultiples</a></li><li><a href="global.html#subirPdfAOneDrive">subirPdfAOneDrive</a></li><li><a href="global.html#timeoutMs">timeoutMs</a></li><li><a href="global.html#uploadEvidenceToOneDrive">uploadEvidenceToOneDrive</a></li><li><a href="global.html#validarArchivo">validarArchivo</a></li><li><a href="global.html#validarBotiquines">validarBotiquines</a></li><li><a href="global.html#validarCamillas">validarCamillas</a></li><li><a href="global.html#validarEquiposTecnologicos">validarEquiposTecnologicos</a></li><li><a href="global.html#validarEvidenciaTrabajador">validarEvidenciaTrabajador</a></li><li><a href="global.html#validarExtintores">validarExtintores</a></li><li><a href="global.html#validarInformacionGeneral">validarInformacionGeneral</a></li><li><a href="global.html#validarInspeccion">validarInspeccion</a></li><li><a href="global.html#validarInspeccionEpp">validarInspeccionEpp</a></li><li><a href="global.html#validarPdf">validarPdf</a></li><li><a href="global.html#validarResultado">validarResultado</a></li><li><a href="global.html#validarSenalizaciones">validarSenalizaciones</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.5</a>
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>

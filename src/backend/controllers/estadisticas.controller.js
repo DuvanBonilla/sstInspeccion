@@ -1,13 +1,4 @@
-/*
-  estadisticas.controller.js — Endpoints para resumen y listado de inspecciones.
 
-  Qué hace:
-  - GET /api/estadisticas/resumen: devuelve KPIs y distribución por sede.
-  - GET /api/estadisticas/inspecciones: devuelve listado paginado con filtros.
-
-  Cómo interactúa:
-  - Reutiliza el modelo inspeccion.model.js para ejecutar consultas en Neon.
-*/
 const {
   obtenerResumenEstadisticas,
   listarInspeccionesConFiltros,
@@ -19,6 +10,17 @@ function normalizarTextoQuery(valor) {
   return valor.trim();
 }
 
+/**
+ * Obtiene y normaliza los filtros enviados en la consulta HTTP.
+ *
+ * Extrae el rango de fechas, sede, estado y texto de búsqueda utilizados por
+ * los endpoints de estadísticas SST y EPP.
+ *
+ * @param {Object} req Solicitud HTTP de Express.
+ * @param {Object} req.query Parámetros recibidos en la URL.
+ * @returns {Object} Filtros normalizados para consultar las inspecciones.
+ */
+
 function leerFiltros(req) {
   return {
     fechaDesde: normalizarTextoQuery(req.query.fechaDesde),
@@ -28,6 +30,21 @@ function leerFiltros(req) {
     q: normalizarTextoQuery(req.query.q),
   };
 }
+
+/**
+ * Obtiene el resumen estadístico de las inspecciones SST.
+ *
+ * Lee los filtros enviados en la URL, fuerza el tipo de inspección SST y
+ * consulta los indicadores y la distribución por sede.
+ *
+ * Corresponde al endpoint GET /api/estadisticas/resumen.
+ *
+ * @async
+ * @param {Object} req Solicitud HTTP de Express.
+ * @param {Object} res Respuesta HTTP de Express.
+ * @returns {Promise<Object>} Respuesta con el resumen estadístico o estado 500
+ * si falla la consulta.
+ */
 
 async function obtenerResumen(req, res) {
   try {
@@ -52,6 +69,22 @@ async function obtenerResumen(req, res) {
     });
   }
 }
+
+/**
+ * Obtiene el listado paginado de inspecciones SST.
+ *
+ * Aplica filtros, paginación y ordenamiento a la consulta, limitando los
+ * resultados exclusivamente a inspecciones SST.
+ *
+ * Corresponde al endpoint GET /api/estadisticas/inspecciones.
+ *
+ * @async
+ * @param {Object} req Solicitud HTTP de Express.
+ * @param {Object} req.query Filtros y opciones de paginación.
+ * @param {Object} res Respuesta HTTP de Express.
+ * @returns {Promise<Object>} Listado paginado de inspecciones o estado 500
+ * si falla la consulta.
+ */
 
 async function listarInspecciones(req, res) {
   try {
@@ -81,9 +114,20 @@ async function listarInspecciones(req, res) {
   }
 }
 
-// =====================================================
-// RESUMEN ESTADÍSTICAS EPP
-// =====================================================
+/**
+ * Obtiene el resumen estadístico de las inspecciones EPP.
+ *
+ * Lee los filtros enviados en la URL, fuerza el tipo de inspección EPP y
+ * consulta sus indicadores y distribución por sede.
+ *
+ * Corresponde al endpoint GET /api/estadisticas-epp/resumen.
+ *
+ * @async
+ * @param {Object} req Solicitud HTTP de Express.
+ * @param {Object} res Respuesta HTTP de Express.
+ * @returns {Promise<Object>} Resumen estadístico EPP o estado 500 si falla
+ * la consulta.
+ */
 
 async function obtenerResumenEpp(req, res) {
   try {
@@ -106,9 +150,21 @@ async function obtenerResumenEpp(req, res) {
   }
 }
 
-// =====================================================
-// LISTADO ESTADÍSTICAS EPP
-// =====================================================
+/**
+ * Obtiene el listado paginado de inspecciones EPP.
+ *
+ * Procesa los filtros, paginación y ordenamiento recibidos y delega la consulta
+ * del listado EPP al modelo de inspecciones.
+ *
+ * Corresponde al endpoint GET /api/estadisticas-epp/inspecciones.
+ *
+ * @async
+ * @param {Object} req Solicitud HTTP de Express.
+ * @param {Object} req.query Filtros y opciones de paginación.
+ * @param {Object} res Respuesta HTTP de Express.
+ * @returns {Promise<Object>} Listado paginado de inspecciones EPP o estado 500
+ * si falla la consulta.
+ */
 
 async function listarInspeccionesEpp(req, res) {
   try {

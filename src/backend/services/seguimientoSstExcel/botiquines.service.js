@@ -17,6 +17,19 @@ const RUTA_TABLA_BOTIQUINES =
 
 const ULTIMA_COLUMNA_BOTIQUINES = "W";
 
+/**
+ * Transforma un insumo de botiquín en una fila del seguimiento SST.
+ *
+ * Distribuye la información de la inspección, el botiquín y el insumo entre
+ * las columnas utilizadas por la hoja `Botiquin`, incluyendo cantidades,
+ * integridad, vencimiento, intervención, cumplimiento y evidencia.
+ *
+ * @param {Object} itemBotiquin
+ * Registro de un insumo de botiquín obtenido desde la base de datos.
+ * @returns {Object<string, string|number|Date>}
+ * Fila preparada para escribirse en las columnas `A` hasta `W`.
+ */
+
 function construirFilaBotiquin(itemBotiquin) {
   return {
     A: itemBotiquin.inspeccion_id ?? "",
@@ -67,6 +80,17 @@ function construirFilaBotiquin(itemBotiquin) {
   };
 }
 
+/**
+ * Obtiene los insumos de botiquines pertenecientes a inspecciones SST aprobadas.
+ *
+ * Consulta los registros mediante el modelo de seguimiento y transforma
+ * cada insumo en una fila compatible con la hoja `Botiquin`.
+ *
+ * @async
+ * @returns {Promise<Array<Object>>}
+ * Filas de insumos de botiquines preparadas para el Excel.
+ */
+
 async function obtenerFilasBotiquinesSstAprobados() {
   const itemsBotiquin =
     await obtenerBotiquinItemsSstAprobados();
@@ -74,6 +98,26 @@ async function obtenerFilasBotiquinesSstAprobados() {
   return itemsBotiquin.map(construirFilaBotiquin);
 }
 
+/**
+ * Actualiza la hoja y la tabla de botiquines del seguimiento SST.
+ *
+ * Obtiene los insumos aprobados, reemplaza las filas del XML de la hoja,
+ * ajusta el rango de la tabla estructurada y guarda ambos contenidos dentro
+ * del archivo Excel cargado en memoria.
+ *
+ * Durante la actualización identifica las columnas de fecha y las columnas
+ * numéricas para que sean escritas con el tipo correspondiente.
+ *
+ * @async
+ * @param {@param {AdmZip} zip} zip - Archivo Excel abierto como contenedor ZIP.
+ * @returns {Promise<{
+ *   totalBotiquinItems: number,
+ *   rango: string,
+ *   inspecciones: string[],
+ *   botiquines: string[]
+ * }>} Resultado de la actualización, rango utilizado e identificadores
+ * únicos de inspecciones y botiquines incluidos.
+ */
 async function actualizarBotiquines(zip) {
   const filas =
     await obtenerFilasBotiquinesSstAprobados();

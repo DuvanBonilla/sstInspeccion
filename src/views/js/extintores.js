@@ -1,34 +1,41 @@
-/*
-  extintores.js — Manager de tarjetas de extintor en el formulario (Paso 2).
+import {
+  crearBloqueEvidencias,
+  inicializarBloqueEvidencias,
+  leerArchivosEvidencia,
+} from "/js/shared.js";
 
-  Qué hace:
-  - Genera dinámicamente una tarjeta (article) por cada extintor agregado,
-    con campos: número, ubicación, tipo, capacidad, mes/año de próxima recarga,
-    observaciones, imagen de evidencia y tabla de 19 condiciones (B/R/M/NC/NA).
-  - Permite agregar múltiples extintores y eliminar cualquiera (incluida la
-    única/primera tarjeta): la sección puede quedar vacía si la sede lo permite
-    (ver esSedeUrabana() en inspeccion-sst.js y validarInspeccion en el backend).
-  - Muestra una vista previa de la imagen de evidencia al seleccionarla.
-  - Lee todos los valores del DOM y los devuelve como array de objetos (leer()).
+/**
+ * Crea el administrador de extintores de la inspección SST.
+ *
+ * Gestiona la creación dinámica de tarjetas, las condiciones evaluadas,
+ * las evidencias fotográficas y la lectura de la información registrada
+ * para cada extintor.
+ *
+ * @param {Object} dependencias - Configuración requerida por el administrador.
+ * @param {Array<Array<string>>} dependencias.condiciones
+ * Lista de condiciones que deben evaluarse.
+ * @param {Function} dependencias.crearOpciones
+ * Función que genera las opciones disponibles para cada calificación.
+ * @param {string} dependencias.tipoOptionsHtml
+ * Opciones HTML disponibles para seleccionar el tipo de extintor.
+ * @returns {{
+ *   agregar: Function,
+ *   leer: Function
+ * }} Operaciones públicas del administrador de extintores.
+ */
 
-  Cómo interactúa:
-  - Es instanciado por inspeccion-sst.js, que le pasa las dependencias:
-      condiciones       → lista de ítems de la tabla (de shared.js)
-      crearOpciones()   → genera los <option> B/R/M/NC/NA (de shared.js)
-      tipoOptionsHtml   → HTML de opciones del select "Tipo" (de shared.js)
-      actualizarPreviewArchivo() → maneja la vista previa de imagen (de shared.js)
-  - Los datos leídos por leer() son recogidos por inspeccion-sst.js
-    para armar el payload JSON que se envía al servidor.
-*/
-import { crearBloqueEvidencias, inicializarBloqueEvidencias, leerArchivosEvidencia } from "/js/shared.js";
-
-export function createExtintoresManager({ condiciones, crearOpciones, tipoOptionsHtml }) {
+export function createExtintoresManager({
+  condiciones,
+  crearOpciones,
+  tipoOptionsHtml,
+}) {
   let extintorCounter = 0;
 
   function renderCondiciones(extintorIndex, container) {
     const body = container.querySelector("[data-role='tabla-condiciones']");
     body.innerHTML = condiciones
-      .map(([clave, etiqueta]) => `
+      .map(
+        ([clave, etiqueta]) => `
         <tr>
           <td class="left">${etiqueta}</td>
           <td>
@@ -37,7 +44,8 @@ export function createExtintoresManager({ condiciones, crearOpciones, tipoOption
             </select>
           </td>
         </tr>
-      `)
+      `,
+      )
       .join("");
   }
 
@@ -108,10 +116,21 @@ export function createExtintoresManager({ condiciones, crearOpciones, tipoOption
     const container = document.getElementById("extintores-container");
     const cards = container.querySelectorAll("[data-extintor-index]");
     cards.forEach((card) => {
-      card.querySelector('[data-action="remove-extintor"]')?.classList.toggle("hidden", cards.length <= 1);
+      card
+        .querySelector('[data-action="remove-extintor"]')
+        ?.classList.toggle("hidden", cards.length <= 1);
     });
   }
 
+  /**
+   * Agrega una nueva tarjeta de extintor al formulario.
+   *
+   * Genera un identificador interno, renderiza las condiciones que deben
+   * evaluarse, inicializa el bloque de evidencias y configura la acción
+   * utilizada para eliminar la tarjeta.
+   *
+   * @returns {void}
+   */
   function agregar() {
     const container = document.getElementById("extintores-container");
     const index = extintorCounter++;
@@ -119,37 +138,77 @@ export function createExtintoresManager({ condiciones, crearOpciones, tipoOption
     const card = container.querySelector(`[data-extintor-index="${index}"]`);
     renderCondiciones(index, card);
     inicializarBloqueEvidencias(card, "evidencia");
-    card.querySelector('[data-action="remove-extintor"]')?.addEventListener("click", () => {
-      card.remove();
-      actualizarBotonesEliminar();
-    });
+    card
+      .querySelector('[data-action="remove-extintor"]')
+      ?.addEventListener("click", () => {
+        card.remove();
+        actualizarBotonesEliminar();
+      });
     actualizarBotonesEliminar();
   }
 
+  /**
+   * Obtiene las calificaciones registradas para las condiciones de un extintor.
+   *
+   * Relaciona cada condición configurada en el módulo con el valor seleccionado
+   * por el usuario dentro de la tarjeta correspondiente.
+   *
+   * @param {HTMLElement} container - Tarjeta del extintor que contiene las condiciones.
+   * @returns {Object<string, string>} Condiciones evaluadas y sus calificaciones.
+   */
   function leerCondiciones(container) {
     const salida = {};
     for (const [clave] of condiciones) {
-      salida[clave] = container.querySelector(`[name^="cond-"][name$="-${clave}"]`).value;
+      salida[clave] = container.querySelector(
+        `[name^="cond-"][name$="-${clave}"]`,
+      ).value;
     }
     return salida;
   }
 
+  /**
+   * Obtiene la información de todos los extintores registrados.
+   *
+   * Lee los datos generales, la fecha de próxima recarga, las observaciones,
+   * los nombres de las evidencias y las condiciones evaluadas de cada tarjeta.
+   *
+   * @returns {Array<{
+   *   numero: string,
+   *   ubicacion: string,
+   *   tipo: string,
+   *   capacidad: string,
+   *   mesRecarga: string,
+   *   anioRecarga: string,
+   *   observaciones: string,
+   *   evidenciaArchivo: string,
+   *   condiciones: Object<string, string>
+   * }>} Extintores registrados en la inspección.
+   */
+
   function leer() {
-    return Array.from(document.querySelectorAll("[data-extintor-index]")).map((card) => {
-      const proximaRecarga = card.querySelector('[name="proximaRecarga"]').value;
-      const [anioRecarga = "", mesRecarga = ""] = proximaRecarga ? proximaRecarga.split("-") : [];
-      return {
-        numero: card.querySelector('[name="numero"]').value,
-        ubicacion: card.querySelector('[name="ubicacion"]').value,
-        tipo: card.querySelector('[name="tipo"]').value,
-        capacidad: card.querySelector('[name="capacidad"]').value,
-        mesRecarga,
-        anioRecarga,
-        observaciones: card.querySelector('[name="observaciones"]').value,
-        evidenciaArchivo: leerArchivosEvidencia(card, "evidencia").map((f) => f.name).join(", "),
-        condiciones: leerCondiciones(card)
-      };
-    });
+    return Array.from(document.querySelectorAll("[data-extintor-index]")).map(
+      (card) => {
+        const proximaRecarga = card.querySelector(
+          '[name="proximaRecarga"]',
+        ).value;
+        const [anioRecarga = "", mesRecarga = ""] = proximaRecarga
+          ? proximaRecarga.split("-")
+          : [];
+        return {
+          numero: card.querySelector('[name="numero"]').value,
+          ubicacion: card.querySelector('[name="ubicacion"]').value,
+          tipo: card.querySelector('[name="tipo"]').value,
+          capacidad: card.querySelector('[name="capacidad"]').value,
+          mesRecarga,
+          anioRecarga,
+          observaciones: card.querySelector('[name="observaciones"]').value,
+          evidenciaArchivo: leerArchivosEvidencia(card, "evidencia")
+            .map((f) => f.name)
+            .join(", "),
+          condiciones: leerCondiciones(card),
+        };
+      },
+    );
   }
 
   return { agregar, leer };

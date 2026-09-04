@@ -1,30 +1,26 @@
-/*
-  botiquines.js — Manager de tarjetas de botiquín en el formulario (Paso 5).
-
-  Qué hace:
-  - Genera dinámicamente una tarjeta por cada botiquín, que incluye:
-    número, ubicación, una tabla con los 28 insumos estándar (itemsBotiquin de shared.js)
-    donde cada fila tiene: cantidad ideal (solo lectura), cantidad real, integridad
-    del empaque, fecha de vencimiento, plan de intervención, fecha de intervención,
-    cumplimiento y afectación al servicio.
-  - También registra observación general y evidencia fotográfica del botiquín completo.
-  - Permite agregar varios botiquines y eliminar cualquiera (incluida la
-    única/primera tarjeta): la sección puede quedar vacía si la sede lo permite
-    (ver esSedeUrabana() en inspeccion-sst.js y validarInspeccion en el backend).
-  - Devuelve un array de objetos anidados (botiquín → items[]) con leer().
-
-  Cómo interactúa:
-  - Es instanciado por inspeccion-sst.js, que le pasa:
-      itemsBotiquin             → lista de 28 insumos con nombre y cantidad ideal (de shared.js)
-      crearOpciones()           → genera los <option> B/R/M/NC/NA (de shared.js)
-      actualizarPreviewArchivo() → maneja la vista previa de imagen (de shared.js)
-  - Los datos de leer() son incluidos en el payload enviado al servidor.
-*/
 import {
   crearBloqueEvidencias,
   inicializarBloqueEvidencias,
   leerArchivosEvidencia,
 } from "/js/shared.js";
+
+/**
+ * Crea el administrador de botiquines de la inspección SST.
+ *
+ * Gestiona la creación de botiquines, la evaluación de sus insumos,
+ * la aplicación de reglas de intervención, las evidencias y la lectura
+ * de la información registrada.
+ *
+ * @param {Object} dependencias - Configuración requerida por el administrador.
+ * @param {Array<Array<*>>} dependencias.itemsBotiquin
+ * Lista de insumos, cantidades ideales y configuración de vencimiento.
+ * @param {Function} dependencias.crearOpciones
+ * Función que genera las opciones disponibles para las calificaciones.
+ * @returns {{
+ *   agregar: Function,
+ *   leer: Function
+ * }} Operaciones públicas del administrador de botiquines.
+ */
 
 export function createBotiquinesManager({ itemsBotiquin, crearOpciones }) {
   let botiquinCounter = 0;
@@ -137,6 +133,16 @@ export function createBotiquinesManager({ itemsBotiquin, crearOpciones }) {
     `;
   }
 
+  /**
+   * Actualiza los campos condicionales de acuerdo con el plan de intervención.
+   *
+   * Cuando el plan seleccionado es `Ninguna`, deshabilita y limpia la fecha
+   * de intervención, el cumplimiento y la afectación al servicio de la fila.
+   *
+   * @param {HTMLTableRowElement} tr - Fila correspondiente al insumo evaluado.
+   * @returns {void}
+   */
+
   function aplicarLogicaPlan(tr) {
     const plan = tr.querySelector('[name$="-planIntervencion"]');
     if (!plan) return;
@@ -152,6 +158,17 @@ export function createBotiquinesManager({ itemsBotiquin, crearOpciones }) {
       }
     });
   }
+
+  /**
+   * Evalúa si un insumo del botiquín requiere intervención.
+   *
+   * Compara la cantidad real con la cantidad ideal y analiza la integridad
+   * del empaque. Cuando el insumo cumple las condiciones, establece que no
+   * requiere intervención y deshabilita los campos relacionados.
+   *
+   * @param {HTMLTableRowElement} tr - Fila correspondiente al insumo evaluado.
+   * @returns {void}
+   */
 
   function aplicarLogicaFila(tr) {
     const ideal =
@@ -214,6 +231,16 @@ export function createBotiquinesManager({ itemsBotiquin, crearOpciones }) {
     });
   }
 
+  /**
+   * Agrega un nuevo botiquín al formulario.
+   *
+   * Genera la tarjeta con sus insumos, configura las reglas dinámicas para
+   * cantidades, integridad, vencimiento y planes de intervención, inicializa
+   * las evidencias y registra la acción para eliminar el botiquín.
+   *
+   * @returns {void}
+   */
+
   function agregar() {
     const container = document.getElementById("botiquines-container");
     const index = botiquinCounter++;
@@ -263,6 +290,35 @@ export function createBotiquinesManager({ itemsBotiquin, crearOpciones }) {
       });
     actualizarBotonesEliminar();
   }
+
+  /**
+   * Obtiene la información de todos los botiquines registrados.
+   *
+   * Lee los datos generales y las evidencias de cada botiquín, junto con
+   * las cantidades, integridad, vencimiento, intervención, cumplimiento
+   * y afectación al servicio de cada uno de sus insumos.
+   *
+   * @returns {Array<{
+   *   numero: string,
+   *   ubicacion: string,
+   *   observacionGeneral: string,
+   *   evidenciaGeneralArchivo: string,
+   *   items: Array<{
+   *     no: number,
+   *     item: string,
+   *     cantidadIdeal: string,
+   *     cantidadReal: string,
+   *     integridadEmpaque: string,
+   *     fechaVencimiento: string,
+   *     planIntervencion: string,
+   *     fechaIntervencion: string,
+   *     cumplimiento: string,
+   *     afectacionServicio: string,
+   *     observaciones: string,
+   *     evidenciaArchivo: string
+   *   }>
+   * }>} Botiquines e insumos registrados en la inspección.
+   */
 
   function leer() {
     return Array.from(document.querySelectorAll("[data-botiquin-index]")).map(

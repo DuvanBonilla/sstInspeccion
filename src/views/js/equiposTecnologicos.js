@@ -1,27 +1,38 @@
-/*
-  equiposTecnologicos.js — Manager de equipos tecnológicos en el formulario (Paso 6).
+import {
+  crearBloqueEvidencias,
+  inicializarBloqueEvidencias,
+  leerArchivosEvidencia,
+} from "/js/shared.js";
 
-  Qué hace:
-  - A diferencia de los otros managers, NO permite agregar ni eliminar tarjetas:
-    los 4 equipos (sensor de humo, sensor de movimiento, cámaras, alarma)
-    son fijos y se renderizan todos de una vez con render().
-  - Cada tarjeta tiene: ubicación, afectación al servicio (SI/NO), observaciones,
-    imagen de evidencia y tabla con cantidad, estado y mantenimiento (B/R/M/NC/NA).
-  - Devuelve un array de 4 objetos con los valores del DOM (leer()).
+/**
+ * Crea el administrador de equipos tecnológicos de la inspección SST.
+ *
+ * Gestiona la representación de los equipos configurados y la lectura de
+ * sus ubicaciones, cantidades, estados, mantenimientos, afectaciones,
+ * observaciones y evidencias.
+ *
+ * @param {Object} dependencias - Configuración requerida por el administrador.
+ * @param {Array<Array<string>>} dependencias.equiposTecnologicos
+ * Lista de equipos tecnológicos que deben inspeccionarse.
+ * @param {Function} dependencias.crearOpciones
+ * Función que genera las opciones de calificación.
+ * @param {Function} dependencias.crearOpcionesAfectacion
+ * Función que genera las opciones de afectación al servicio.
+ * @returns {{
+ *   render: Function,
+ *   leer: Function
+ * }} Operaciones públicas del administrador de equipos tecnológicos.
+ */
 
-  Cómo interactúa:
-  - Es instanciado por inspeccion-sst.js, que le pasa:
-      equiposTecnologicos       → lista de 4 equipos fijos (de shared.js)
-      crearOpciones()           → genera los <option> B/R/M/NC/NA (de shared.js)
-      crearOpcionesAfectacion() → genera los <option> SI/NO (de shared.js)
-      actualizarPreviewArchivo() → maneja la vista previa de imagen (de shared.js)
-  - Los datos de leer() son incluidos en el payload enviado al servidor.
-*/
-import { crearBloqueEvidencias, inicializarBloqueEvidencias, leerArchivosEvidencia } from "/js/shared.js";
-
-export function createEquiposTecnologicosManager({ equiposTecnologicos, crearOpciones, crearOpcionesAfectacion }) {
+export function createEquiposTecnologicosManager({
+  equiposTecnologicos,
+  crearOpciones,
+  crearOpcionesAfectacion,
+}) {
   function renderCondicionesEquipoTecnologico(container) {
-    const body = container.querySelector("[data-role='tabla-condiciones-equipo-tecnologico']");
+    const body = container.querySelector(
+      "[data-role='tabla-condiciones-equipo-tecnologico']",
+    );
     body.innerHTML = `
       <tr>
         <td class="left">Cantidad</td>
@@ -92,32 +103,76 @@ export function createEquiposTecnologicosManager({ equiposTecnologicos, crearOpc
     `;
   }
 
+  /**
+   * Renderiza los equipos tecnológicos configurados para la inspección.
+   *
+   * Genera una tarjeta por cada equipo, incorpora sus campos de evaluación
+   * e inicializa el bloque destinado a las evidencias fotográficas.
+   *
+   * @param {HTMLElement} container - Contenedor donde deben mostrarse los equipos.
+   * @returns {void}
+   */
+
   function render(container) {
     container.innerHTML = equiposTecnologicos
       .map(([, etiqueta], index) => crearEquipoTecnologicoCard(index, etiqueta))
       .join("");
 
     equiposTecnologicos.forEach(([, etiqueta], index) => {
-      const card = container.querySelector(`[data-equipo-tecnologico-index="${index}"]`);
+      const card = container.querySelector(
+        `[data-equipo-tecnologico-index="${index}"]`,
+      );
       renderCondicionesEquipoTecnologico(card);
       inicializarBloqueEvidencias(card, "equipo-tecnologico-evidencia");
     });
   }
 
+  /**
+   * Obtiene la información registrada para los equipos tecnológicos.
+   *
+   * Lee el tipo, ubicación, cantidad, estado, mantenimiento, observaciones,
+   * afectación al servicio y nombres de las evidencias de cada equipo.
+   *
+   * @returns {Array<{
+   *   no: number,
+   *   tipo: string,
+   *   ubicacion: string,
+   *   cantidad: string,
+   *   estado: string,
+   *   mantenimiento: string,
+   *   observaciones: string,
+   *   afectacionServicio: string,
+   *   evidenciaArchivo: string
+   * }>} Equipos tecnológicos evaluados en la inspección.
+   */
+
   function leer() {
     return equiposTecnologicos.map(([, etiqueta], index) => {
-      const card = document.querySelector(`[data-equipo-tecnologico-index="${index}"]`);
+      const card = document.querySelector(
+        `[data-equipo-tecnologico-index="${index}"]`,
+      );
 
       return {
         no: index + 1,
         tipo: etiqueta,
-        ubicacion: card.querySelector(`[name="equipoTec-${index}-ubicacion"]`).value,
+        ubicacion: card.querySelector(`[name="equipoTec-${index}-ubicacion"]`)
+          .value,
         cantidad: card.querySelector('[name="equipoTecCantidad"]').value,
         estado: card.querySelector('[name="equipoTecEstado"]').value,
-        mantenimiento: card.querySelector('[name="equipoTecMantenimiento"]').value,
-        observaciones: card.querySelector(`[name="equipoTec-${index}-observaciones"]`).value,
-        afectacionServicio: card.querySelector(`[name="equipoTec-${index}-afectacion"]`).value,
-        evidenciaArchivo: leerArchivosEvidencia(card, "equipo-tecnologico-evidencia").map((f) => f.name).join(", ")
+        mantenimiento: card.querySelector('[name="equipoTecMantenimiento"]')
+          .value,
+        observaciones: card.querySelector(
+          `[name="equipoTec-${index}-observaciones"]`,
+        ).value,
+        afectacionServicio: card.querySelector(
+          `[name="equipoTec-${index}-afectacion"]`,
+        ).value,
+        evidenciaArchivo: leerArchivosEvidencia(
+          card,
+          "equipo-tecnologico-evidencia",
+        )
+          .map((f) => f.name)
+          .join(", "),
       };
     });
   }

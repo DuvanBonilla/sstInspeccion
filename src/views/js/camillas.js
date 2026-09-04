@@ -1,33 +1,37 @@
-/*
-  camillas.js — Manager de tarjetas de camilla en el formulario (Paso 3).
+import {
+  crearBloqueEvidencias,
+  inicializarBloqueEvidencias,
+  leerArchivosEvidencia,
+} from "/js/shared.js";
 
-  Qué hace:
-  - Genera dinámicamente una tarjeta por cada camilla agregada, con campos:
-    número, ubicación, afectación a la productividad (SI/NO), observaciones,
-    imagen de evidencia y tabla de 7 condiciones (señalización, acceso, soporte,
-    instalación a pared, correas, limpieza, inmovilizador).
-  - Permite agregar varias camillas y eliminar cualquiera (incluida la única/
-    primera tarjeta): la sección puede quedar vacía si la sede lo permite
-    (ver esSedeUrabana() en inspeccion-sst.js y validarInspeccion en el backend).
-  - Muestra vista previa de la imagen al seleccionarla.
-  - Devuelve un array de objetos con todos los valores del DOM (leer()).
-
-  Cómo interactúa:
-  - Es instanciado por inspeccion-sst.js, que le pasa:
-      condicionesCamilla        → lista de ítems de la tabla (de shared.js)
-      crearOpciones()           → genera los <option> B/R/M/NC/NA (de shared.js)
-      actualizarPreviewArchivo() → maneja la vista previa de imagen (de shared.js)
-  - Los datos de leer() son incluidos en el payload enviado al servidor.
-*/
-import { crearBloqueEvidencias, inicializarBloqueEvidencias, leerArchivosEvidencia } from "/js/shared.js";
+/**
+ * Crea el administrador de camillas de la inspección SST.
+ *
+ * Gestiona la creación dinámica de tarjetas, las condiciones evaluadas,
+ * las evidencias fotográficas y la lectura de los datos registrados para
+ * cada camilla.
+ *
+ * @param {Object} dependencias - Configuración requerida por el administrador.
+ * @param {Array<Array<string>>} dependencias.condicionesCamilla
+ * Lista de condiciones que deben evaluarse en cada camilla.
+ * @param {Function} dependencias.crearOpciones
+ * Función que genera las opciones disponibles para cada calificación.
+ * @returns {{
+ *   agregar: Function,
+ *   leer: Function
+ * }} Operaciones públicas del administrador de camillas.
+ */
 
 export function createCamillasManager({ condicionesCamilla, crearOpciones }) {
   let camillaCounter = 0;
 
   function renderCondicionesCamilla(camillaIndex, container) {
-    const body = container.querySelector("[data-role='tabla-condiciones-camilla']");
+    const body = container.querySelector(
+      "[data-role='tabla-condiciones-camilla']",
+    );
     body.innerHTML = condicionesCamilla
-      .map(([clave, etiqueta]) => `
+      .map(
+        ([clave, etiqueta]) => `
         <tr>
           <td class="left">${etiqueta}</td>
           <td>
@@ -36,7 +40,8 @@ export function createCamillasManager({ condicionesCamilla, crearOpciones }) {
             </select>
           </td>
         </tr>
-      `)
+      `,
+      )
       .join("");
   }
 
@@ -96,9 +101,20 @@ export function createCamillasManager({ condicionesCamilla, crearOpciones }) {
     const container = document.getElementById("camillas-container");
     const cards = container.querySelectorAll("[data-camilla-index]");
     cards.forEach((card) => {
-      card.querySelector('[data-action="remove-camilla"]')?.classList.toggle("hidden", cards.length <= 1);
+      card
+        .querySelector('[data-action="remove-camilla"]')
+        ?.classList.toggle("hidden", cards.length <= 1);
     });
   }
+  /**
+   * Agrega una nueva tarjeta de camilla al formulario.
+   *
+   * Genera un identificador interno, renderiza las condiciones que deben
+   * evaluarse, inicializa el bloque de evidencias y configura la acción
+   * utilizada para eliminar la tarjeta.
+   *
+   * @returns {void}
+   */
 
   function agregar() {
     const container = document.getElementById("camillas-container");
@@ -107,30 +123,66 @@ export function createCamillasManager({ condicionesCamilla, crearOpciones }) {
     const card = container.querySelector(`[data-camilla-index="${index}"]`);
     renderCondicionesCamilla(index, card);
     inicializarBloqueEvidencias(card, "camilla-evidencia");
-    card.querySelector('[data-action="remove-camilla"]')?.addEventListener("click", () => {
-      card.remove();
-      actualizarBotonesEliminar();
-    });
+    card
+      .querySelector('[data-action="remove-camilla"]')
+      ?.addEventListener("click", () => {
+        card.remove();
+        actualizarBotonesEliminar();
+      });
     actualizarBotonesEliminar();
   }
+
+  /**
+   * Obtiene las calificaciones registradas para las condiciones de una camilla.
+   *
+   * Relaciona cada condición configurada en el módulo con el valor seleccionado
+   * dentro de la tarjeta correspondiente.
+   *
+   * @param {HTMLElement} container - Tarjeta que contiene la evaluación de la camilla.
+   * @returns {Object<string, string>} Condiciones evaluadas y sus calificaciones.
+   */
 
   function leerCondicionesCamilla(container) {
     const salida = {};
     for (const [clave] of condicionesCamilla) {
-      salida[clave] = container.querySelector(`[name^="camilla-cond-"][name$="-${clave}"]`).value;
+      salida[clave] = container.querySelector(
+        `[name^="camilla-cond-"][name$="-${clave}"]`,
+      ).value;
     }
     return salida;
   }
 
+  /**
+   * Obtiene la información de todas las camillas registradas.
+   *
+   * Lee el número, ubicación, observaciones, afectación a la productividad,
+   * nombres de las evidencias y condiciones evaluadas de cada tarjeta.
+   *
+   * @returns {Array<{
+   *   numero: string,
+   *   ubicacion: string,
+   *   observaciones: string,
+   *   afectacionProductividad: string,
+   *   evidenciaArchivo: string,
+   *   condiciones: Object<string, string>
+   * }>} Camillas registradas en la inspección.
+   */
   function leer() {
-    return Array.from(document.querySelectorAll("[data-camilla-index]")).map((card) => ({
-      numero: card.querySelector('[name="camillaNumero"]').value,
-      ubicacion: card.querySelector('[name="camillaUbicacion"]').value,
-      observaciones: card.querySelector('[name="camillaObservaciones"]').value,
-      afectacionProductividad: card.querySelector('[name="camillaAfectacion"]').value,
-      evidenciaArchivo: leerArchivosEvidencia(card, "camilla-evidencia").map((f) => f.name).join(", "),
-      condiciones: leerCondicionesCamilla(card)
-    }));
+    return Array.from(document.querySelectorAll("[data-camilla-index]")).map(
+      (card) => ({
+        numero: card.querySelector('[name="camillaNumero"]').value,
+        ubicacion: card.querySelector('[name="camillaUbicacion"]').value,
+        observaciones: card.querySelector('[name="camillaObservaciones"]')
+          .value,
+        afectacionProductividad: card.querySelector(
+          '[name="camillaAfectacion"]',
+        ).value,
+        evidenciaArchivo: leerArchivosEvidencia(card, "camilla-evidencia")
+          .map((f) => f.name)
+          .join(", "),
+        condiciones: leerCondicionesCamilla(card),
+      }),
+    );
   }
 
   return { agregar, leer };

@@ -19,6 +19,18 @@ const RUTA_TABLA_SENALIZACIONES =
 const ULTIMA_COLUMNA_SENALIZACIONES =
   "P";
 
+  /**
+ * Transforma una señalización en una fila de la hoja de seguimiento SST.
+ *
+ * Combina la información general de la inspección con el tipo, ubicación,
+ * cantidad, estado, aseo, observaciones y evidencia de la señalización.
+ *
+ * @param {Object} inspeccion - Información general de la inspección SST.
+ * @param {Object} senalizacion - Señalización que debe incorporarse al seguimiento.
+ * @returns {Object<string, string|number|Date>}
+ * Fila preparada para escribirse en las columnas `A` hasta `P`.
+ */
+
 function mapearSenalizacionAExcel(
   inspeccion,
   senalizacion,
@@ -58,6 +70,17 @@ function mapearSenalizacionAExcel(
   };
 }
 
+/**
+ * Obtiene las señalizaciones de inspecciones SST aprobadas y las prepara para Excel.
+ *
+ * Consulta los registros mediante el modelo de seguimiento y transforma
+ * cada resultado en una fila compatible con la hoja `Señalizacion`.
+ *
+ * @async
+ * @returns {Promise<Array<Object>>}
+ * Filas de señalizaciones preparadas para el Excel.
+ */
+
 async function obtenerFilasSenalizacionesSstAprobadas() {
   const registros =
     await obtenerSenalizacionesSstAprobadas();
@@ -69,6 +92,23 @@ async function obtenerFilasSenalizacionesSstAprobadas() {
     ),
   );
 }
+
+/**
+ * Actualiza la hoja y la tabla de señalizaciones del seguimiento SST.
+ *
+ * Obtiene las señalizaciones aprobadas, reemplaza las filas del XML de la
+ * hoja, ajusta el rango de la tabla estructurada y guarda ambos contenidos
+ * dentro del archivo Excel cargado en memoria.
+ *
+ * @async
+ * @param {@param {AdmZip} zip} zip - Archivo Excel abierto como contenedor ZIP.
+ * @returns {Promise<{
+ *   totalSenalizaciones: number,
+ *   rango: string,
+ *   inspecciones: string[]
+ * }>} Resultado de la actualización, rango de la tabla e inspecciones incluidas.
+ * @throws {Error} Si no se proporciona el archivo Excel cargado en memoria.
+ */
 
 async function actualizarSenalizaciones(zip) {
   if (!zip) {

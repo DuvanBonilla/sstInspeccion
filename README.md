@@ -1,463 +1,307 @@
-﻿# SST Inspección
+# SST Inspección
 
-Sistema web para la gestión de inspecciones de **Seguridad y Salud en el Trabajo (SST)** y **Elementos de Protección Personal (EPP)**.
+Sistema web para registrar, aprobar y consultar inspecciones de **Seguridad y Salud en el Trabajo (SST)** y **Elementos de Protección Personal (EPP)**.
 
-La aplicación permite registrar inspecciones, almacenar evidencias fotográficas, gestionar aprobaciones, generar informes PDF, consultar estadísticas y almacenar archivos en OneDrive mediante Microsoft Graph.
-
----
+La aplicación administra evidencias fotográficas, genera informes PDF, integra archivos con OneDrive mediante Microsoft Graph y actualiza libros de seguimiento para SST y EPP.
 
 ## Funcionalidades principales
 
 ### Inspecciones SST
 
-El módulo SST permite realizar inspecciones de diferentes elementos relacionados con Seguridad y Salud en el Trabajo.
-
-Actualmente incluye:
+El formulario SST permite inspeccionar:
 
 - Extintores.
 - Camillas.
 - Señalizaciones.
 - Equipos tecnológicos.
-- Botiquines.
+- Botiquines y sus insumos.
 
-Cada sección cuenta con sus propios campos, validaciones y evidencias.
+Cada módulo dispone de campos, calificaciones, validaciones y evidencias propias. Según la sede seleccionada, el formulario puede permitir omitir determinados módulos.
 
-Las inspecciones almacenan información general como:
-
-- Fecha.
-- Sede operacional.
-- Área de trabajo.
-- Jefe responsable.
-- Cargo del jefe.
-- Responsable de la inspección.
-- Cargo del responsable.
-
----
+| Valor | Significado |
+| --- | --- |
+| `B` | Bueno |
+| `R` | Regular |
+| `M` | Malo |
+| `NC` | No contiene |
+| `NA` | No aplica |
 
 ### Inspecciones EPP
 
-El módulo EPP permite realizar inspecciones de Elementos de Protección Personal por trabajador.
+Una inspección EPP puede incluir varios trabajadores. Para cada uno se registra:
 
-Una misma inspección puede contener múltiples trabajadores.
-
-Para cada trabajador se registra:
-
-- Nombre.
-- Código.
-- Cargo o labor.
-- Evaluación de los elementos EPP.
-- Plan de acción cuando corresponde.
-- Fecha límite del plan de acción.
+- Nombre, código y cargo o labor.
+- Elementos EPP asignados desde un catálogo configurable.
+- Condición y uso de cada elemento.
+- Plan de acción y fecha límite cuando corresponda.
 - Observaciones.
 - Evidencia fotográfica.
 
-#### Elementos evaluados
-
-Actualmente se evalúan:
-
-1. Dotación.
-2. Botas de seguridad.
-3. Casco.
-4. Tafilete.
-5. Guantes patio.
-6. Guantes fríos.
-7. Guantes de vaqueta.
-8. Gafas claras.
-9. Gafas oscuras.
-10. Barbuquejo.
-11. Guantes de lavado.
-
-Cada elemento se evalúa en:
-
-- **Condición**
-- **Uso**
-
-Las calificaciones disponibles son:
-
-| Valor | Significado |
-|---|---|
-| B | Bueno |
-| R | Regular |
-| M | Malo |
-| NA | No aplica |
-
-Cuando un elemento presenta una calificación **R** o **M** en condición o uso, el sistema exige registrar un **plan de acción** y una **fecha límite**.
-
-Las observaciones son opcionales.
-
----
-
-### Evidencias
-
-Las inspecciones permiten adjuntar fotografías como evidencia.
-
-Las imágenes son validadas y optimizadas antes de ser enviadas al servidor para reducir su tamaño.
-
-En EPP, las evidencias se relacionan individualmente con cada trabajador.
-
-Los archivos se almacenan en OneDrive y su información se conserva en PostgreSQL para poder recuperarlos posteriormente.
-
----
+Las calificaciones EPP son `B`, `R`, `M` y `NA`. Cuando la condición o el uso se califican como `R` o `M`, el sistema exige un plan de acción y una fecha límite.
 
 ### Aprobaciones
 
-El sistema dispone de un módulo de aprobaciones mediante enlaces identificados con tokens únicos.
+Al registrar una inspección, el inspector queda aprobado automáticamente. El sistema genera enlaces individuales para el Jefe de Área y COPASST.
 
-Las aprobaciones almacenan información como:
+Cada enlace utiliza un token único. Desde la página de aprobación se puede consultar el resumen, abrir una vista previa del informe y registrar el nombre del aprobador.
 
-- Nombre del aprobador.
-- Cédula.
-- Fecha y hora de aprobación.
+Cuando se completan las aprobaciones requeridas, el backend:
 
-Desde la pantalla de aprobación también es posible consultar una vista previa del informe correspondiente.
+1. Recupera los datos y evidencias de la inspección.
+2. Genera el informe PDF correspondiente a SST o EPP.
+3. Optimiza el PDF cuando la configuración lo permite.
+4. Almacena el informe en OneDrive.
+5. Envía el correo con el resultado.
+6. Actualiza el archivo de seguimiento correspondiente.
 
-Una vez cumplidas las aprobaciones requeridas, el sistema genera el informe final de la inspección.
+### Evidencias y optimización
 
----
+Los formularios permiten adjuntar múltiples evidencias en los módulos SST y una evidencia por trabajador en EPP.
+
+El frontend incluye un optimizador reutilizable que valida archivos JPEG, PNG y WebP, selecciona una estrategia según el tamaño, redimensiona sin alterar la proporción y conserva el archivo original cuando la optimización no produce una reducción útil o presenta un error.
+
+El backend obtiene y almacena las evidencias mediante Microsoft Graph. También utiliza la fecha disponible en los archivos como respaldo para determinar la fecha de evidencia.
 
 ### Informes PDF
 
-El proyecto cuenta con generadores independientes para:
-
-- Informes SST.
-- Informes EPP.
-
-Los informes pueden incluir:
+Existen generadores independientes para SST y EPP. Los informes incluyen, según el tipo de inspección:
 
 - Información general.
-- Resultados de la inspección.
-- Evaluaciones.
-- Evidencias.
+- Elementos inspeccionados o trabajadores evaluados.
+- Calificaciones y hallazgos.
 - Planes de acción.
-- Fechas límite.
-- Observaciones.
-- Información de aprobación.
+- Evidencias.
+- Aprobaciones.
 
-Los PDF finales pueden ser optimizados mediante Ghostscript antes de ser almacenados y enviados.
-
----
+La optimización de PDF utiliza Ghostscript y puede configurarse mediante variables de entorno.
 
 ### Estadísticas
 
-El sistema cuenta con paneles independientes para:
+La aplicación ofrece paneles independientes para SST y EPP con indicadores, filtros, ordenamiento, paginación, recuperación de enlaces de aprobación, vista previa del informe y actualización manual del seguimiento en OneDrive.
 
-- Estadísticas SST.
-- Estadísticas EPP.
+### Seguimiento en Excel
 
-Los paneles consultan información almacenada en PostgreSQL y permiten visualizar información general y aplicar los filtros disponibles en cada módulo.
+El seguimiento SST actualiza un libro existente mediante modificación de su XML interno. Incluye hojas para extintores, camillas, señalizaciones, equipos tecnológicos, botiquines, resumen de inspecciones y tablero General. Durante la actualización se conservan los estilos de la plantilla, se ajustan los rangos de las tablas y se fuerza el recálculo de fórmulas.
 
----
+El seguimiento EPP genera o actualiza hojas para inspecciones, trabajadores, resultados EPP, planes de acción, resumen consolidado y tablero General.
 
-### OneDrive y Microsoft Graph
+Los cierres registrados en el Excel EPP pueden sincronizarse nuevamente con PostgreSQL mediante un endpoint protegido. El workflow `.github/workflows/sincronizar-epp.yml` ejecuta esta sincronización.
 
-Microsoft Graph es utilizado para las funciones relacionadas con Microsoft 365.
+## Flujo general
 
-Actualmente permite:
-
-- Autenticación mediante credenciales de aplicación.
-- Almacenamiento de evidencias.
-- Recuperación de archivos.
-- Almacenamiento de informes PDF.
-- Envío de correos electrónicos.
-
-Las credenciales y configuraciones se administran mediante variables de entorno.
-
----
+```mermaid
+flowchart TD
+    A[Formulario SST o EPP] --> B[Validación frontend]
+    B --> C[Validación backend]
+    C --> D[PostgreSQL y evidencias]
+    D --> E[Enlaces de aprobación]
+    E --> F[Jefe de Área y COPASST]
+    F --> G{Aprobaciones completas}
+    G -- No --> E
+    G -- Sí --> H[Generación y optimización PDF]
+    H --> I[OneDrive y correo]
+    I --> J[Seguimiento Excel SST o EPP]
+```
 
 ## Arquitectura
 
-El proyecto utiliza una arquitectura web tradicional.
+El proyecto utiliza una arquitectura MVC modular.
 
 ### Backend
 
-Desarrollado con **Node.js y Express**.
-
-La lógica se distribuye principalmente entre:
-
-- `controllers/` — Controladores de inspecciones, aprobaciones, estadísticas y PDF.
-- `models/` — Acceso a datos, validaciones y operaciones relacionadas con las inspecciones.
-- `db/` — Configuración y conexión con PostgreSQL.
-- `utils/` — Funciones auxiliares utilizadas por diferentes módulos.
-- `app.js` — Configuración principal del servidor y rutas.
-
-### Frontend
-
-Desarrollado con:
-
-- HTML.
-- CSS.
-- JavaScript Vanilla.
-
-No se utiliza un framework frontend.
-
-Las vistas y scripts se encuentran organizados dentro de `src/views`.
-
----
-
-## Tecnologías utilizadas
-
-### Backend
-
-- Node.js.
-- Express.js.
-- PostgreSQL.
-- `pg`.
-- Multer.
-- PDFKit.
-- dotenv.
-- exifr.
-- Microsoft Graph.
-- Ghostscript.
+- `src/backend/app.js`: configuración de Express, archivos estáticos y rutas.
+- `src/backend/controllers/`: coordinación de solicitudes HTTP y respuestas.
+- `src/backend/models/`: consultas PostgreSQL y operaciones transaccionales.
+- `src/backend/services/`: PDF, correo, Microsoft Graph y seguimiento Excel.
+- `src/backend/validators/`: normalización y reglas de validación SST/EPP.
+- `src/backend/middlewares/`: autorización de procesos protegidos.
+- `src/backend/utils/`: optimización PDF, fechas, solicitudes y manipulación XML.
+- `src/backend/db/`: conexión y migraciones de PostgreSQL.
 
 ### Frontend
 
-- HTML5.
-- CSS3.
-- JavaScript ES6+.
-- FormData.
-- Canvas API.
+El frontend utiliza HTML, CSS y JavaScript Vanilla:
 
----
+- `src/views/html/`: inicio, formularios, aprobación y estadísticas.
+- `src/views/css/`: estilos de las vistas.
+- `src/views/js/inspeccion-sst.js`: navegación, validación y envío SST.
+- `src/views/js/inspeccion-epp.js`: navegación, resumen y envío EPP.
+- `src/views/js/trabajadoresEpp.js`: trabajadores, catálogo, planes y evidencias EPP.
+- `src/views/js/extintores.js`, `camillas.js`, `senalizaciones.js`, `equiposTecnologicos.js` y `botiquines.js`: módulos SST.
+- `src/views/js/aprobar.js`: aprobación común para SST y EPP.
+- `src/views/js/estadisticas.js` y `estadisticas-epp.js`: paneles estadísticos.
+- `src/views/js/imageOptimizer.js`: optimización de imágenes.
+- `src/views/js/shared.js`: datos y utilidades compartidas.
 
-## Estructura del proyecto
+## Tecnologías
+
+- Node.js y Express.
+- PostgreSQL mediante `pg`.
+- Multer para archivos en memoria.
+- PDFKit para informes.
+- Ghostscript para optimización de PDF.
+- Microsoft Graph para OneDrive y correo.
+- ExcelJS y @param {AdmZip} zip para seguimiento Excel.
+- `exifr` para metadatos de imágenes.
+- HTML5, CSS3, JavaScript ES6+, Fetch, FormData, Canvas API y Flatpickr.
+
+## Estructura principal
 
 ```text
 sstInspeccion/
-│
-├── README.md
+├── .github/
+│   └── workflows/
+│       └── sincronizar-epp.yml
+├── src/
+│   ├── backend/
+│   │   ├── app.js
+│   │   ├── controllers/
+│   │   ├── db/
+│   │   │   └── migrations/
+│   │   ├── middlewares/
+│   │   ├── models/
+│   │   ├── services/
+│   │   │   ├── seguimientoEppExcel/
+│   │   │   └── seguimientoSstExcel/
+│   │   ├── utils/
+│   │   └── validators/
+│   └── views/
+│       ├── css/
+│       ├── html/
+│       ├── img/
+│       └── js/
 ├── package.json
-├── package-lock.json
-│
-└── src/
-    ├── backend/
-    │   ├── app.js
-    │   │
-    │   ├── controllers/
-    │   │   ├── inspeccion.controller.js
-    │   │   ├── inspeccionEpp.controller.js
-    │   │   ├── aprobaciones.controller.js
-    │   │   ├── estadisticas.controller.js
-    │   │   ├── pdfInspeccion.controller.js
-    │   │   
-    │   │
-    │   ├── models/
-    │   ├── db/
-    │   └── utils/
-    │
-    └── views/
-        ├── html/
-        ├── css/
-        ├── img/
-        └── js/
-            ├── inspeccion-sst.js
-            ├── inspeccion-epp.js
-            ├── trabajadoresEpp.js
-            ├── estadisticas.js
-            ├── estadisticas-epp.js
-            ├── aprobar.js
-            ├── imageOptimizer.js
-            └── shared.js
+└── README.md
 ```
-
-La estructura anterior muestra los componentes principales del proyecto y puede omitir archivos auxiliares.
-
----
 
 ## Base de datos
 
-El proyecto utiliza **PostgreSQL** para almacenar la información de las inspecciones.
+El proyecto utiliza PostgreSQL o Neon PostgreSQL.
 
-### Tabla principal
+### SST
 
-La tabla:
+- `inspecciones`: información general, estado y aprobaciones.
+- `extintores`.
+- `camillas`.
+- `senalizaciones`.
+- `equipos_tecnologicos`.
+- `botiquines`.
+- `botiquin_items`.
 
-```text
-inspecciones
-```
+### EPP
 
-almacena la información general de cada inspección, incluyendo:
+- `inspecciones`: información general, estado y aprobaciones.
+- `evaluaciones_epp`: trabajadores evaluados dentro de la inspección.
+- `detalle_evaluacion_epp`: elementos, calificaciones y planes de acción.
+- `elementos_epp`: catálogo configurable de EPP.
 
-- Identificación.
-- Número de inspección.
-- Tipo de inspección.
-- Información general.
-- Estado.
-- Información relacionada con aprobaciones.
-- Tokens.
-- Fechas de aprobación.
-- Información del PDF final.
-
-### Tablas SST
-
-Las principales tablas utilizadas por SST incluyen:
-
-```text
-extintores
-camillas
-senalizaciones
-equipos_tecnologicos
-botiquines
-botiquin_items
-```
-
-Estas tablas mantienen relación con la inspección correspondiente.
-
-### Tablas EPP
-
-El módulo EPP utiliza principalmente:
-
-```text
-
-evaluaciones_epp
-```
-
-#### `trabajadores_epp`
-
-Almacena la información de cada trabajador inspeccionado:
-
-- Nombre.
-- Código.
-- Cargo.
-- Plan de acción.
-- Fecha del plan de acción.
-- Observaciones.
-- Información de evidencia.
-
-#### `evaluaciones_epp`
-
-Almacena las evaluaciones realizadas a los elementos EPP de cada trabajador:
-
-- Elemento.
-- Condición.
-- Uso.
-
----
+Las operaciones críticas de registro utilizan transacciones para mantener la consistencia entre la inspección y sus detalles.
 
 ## Endpoints principales
 
-### Páginas
+### Vistas
 
 | Método | Ruta | Descripción |
-|---|---|---|
-| GET | `/` | Página principal |
-| GET | `/inspeccion-sst` | Formulario SST |
-| GET | `/inspeccion-epp` | Formulario EPP |
-| GET | `/aprobar/:token` | Página de aprobación |
-| GET | `/estadisticas` | Estadísticas SST |
-| GET | `/estadisticas-epp` | Estadísticas EPP |
+| --- | --- | --- |
+| `GET` | `/` | Página principal |
+| `GET` | `/inspeccion-sst` | Formulario SST |
+| `GET` | `/inspeccion-epp` | Formulario EPP |
+| `GET` | `/aprobar/:token` | Página de aprobación |
+| `GET` | `/estadisticas` | Dashboard SST |
+| `GET` | `/estadisticas-epp` | Dashboard EPP |
 
-### Inspecciones
-
-| Método | Ruta | Descripción |
-|---|---|---|
-| POST | `/enviar-onedrive-extintor` | Registra una inspección SST |
-| POST | `/enviar-inspeccion-epp` | Registra una inspección EPP |
-
-### Aprobaciones
+### Inspecciones y catálogo
 
 | Método | Ruta | Descripción |
-|---|---|---|
-| GET | `/api/aprobaciones/:token` | Consulta información para una aprobación |
-| POST | `/api/aprobaciones/:token` | Registra una aprobación |
-| GET | `/api/aprobaciones/:token/preview` | Obtiene la vista previa del informe |
+| --- | --- | --- |
+| `POST` | `/enviar-onedrive-extintor` | Registra una inspección SST |
+| `POST` | `/enviar-inspeccion-epp` | Registra una inspección EPP |
+| `GET` | `/api/catalogo-epp` | Obtiene el catálogo EPP |
+| `GET` | `/api/catalogo-epp/predeterminados` | Obtiene los EPP predeterminados |
+| `GET` | `/api/inspecciones/:id/links` | Recupera enlaces y token de vista previa |
 
-### Estadísticas SST
-
-| Método | Ruta | Descripción |
-|---|---|---|
-| GET | `/api/estadisticas/resumen` | Obtiene resumen SST |
-| GET | `/api/estadisticas/inspecciones` | Lista inspecciones SST |
-
-### Estadísticas EPP
+### Aprobaciones y estadísticas
 
 | Método | Ruta | Descripción |
-|---|---|---|
-| GET | `/api/estadisticas-epp/resumen` | Obtiene resumen EPP |
-| GET | `/api/estadisticas-epp/inspecciones` | Lista inspecciones EPP |
+| --- | --- | --- |
+| `GET` | `/api/aprobaciones/:token` | Consulta la inspección asociada con un token |
+| `POST` | `/api/aprobaciones/:token` | Registra una aprobación |
+| `GET` | `/api/aprobaciones/:token/preview` | Obtiene la vista previa del informe |
+| `GET` | `/api/estadisticas/resumen` | Obtiene indicadores SST |
+| `GET` | `/api/estadisticas/inspecciones` | Lista inspecciones SST |
+| `GET` | `/api/estadisticas-epp/resumen` | Obtiene indicadores EPP |
+| `GET` | `/api/estadisticas-epp/inspecciones` | Lista inspecciones EPP |
 
----
+### Seguimiento Excel
 
-## Requisitos
+| Método | Ruta | Descripción |
+| --- | --- | --- |
+| `POST` | `/api/excel/sst/actualizar-onedrive` | Actualiza el seguimiento SST |
+| `POST` | `/api/excel/epp/actualizar-onedrive` | Actualiza el seguimiento EPP |
+| `POST` | `/api/excel/epp/sincronizar-cierres` | Sincroniza cierres EPP con PostgreSQL |
 
-Para ejecutar el proyecto se requiere:
+Los endpoints `/pdf-prueba` y `/enviar-pdf-prueba-correo` se conservan como utilidades de prueba.
 
-- Node.js.
-- npm.
-- PostgreSQL o Neon.
-- Ghostscript.
-- Acceso a Microsoft Graph.
-- Aplicación registrada en Microsoft Entra ID / Azure AD.
-- Usuario de OneDrive configurado.
-- Navegador web moderno.
+## Requisitos e instalación
 
----
-
-## Instalación
-
-### 1. Clonar el repositorio
+- Node.js y npm.
+- PostgreSQL o Neon PostgreSQL.
+- Aplicación registrada en Microsoft Entra ID.
+- Usuario y rutas de OneDrive configurados.
+- Ghostscript si la optimización PDF está habilitada.
 
 ```bash
-git clone <repository-url>
+git clone https://github.com/DuvanBonilla/sstInspeccion.git
 cd sstInspeccion
-```
-
-### 2. Instalar dependencias
-
-```bash
 npm install
 ```
-
-### 3. Configurar variables de entorno
-
-Crear un archivo `.env` en la raíz del proyecto con las variables requeridas.
-
-No almacenar credenciales reales directamente en el repositorio.
-
-### 4. Preparar la base de datos
-
-Cuando sea necesario crear o actualizar la estructura configurada por el proyecto:
-
-```bash
-npm run migrate
-```
-
-Antes de ejecutar migraciones sobre producción, verificar que `DATABASE_URL` corresponda al entorno correcto.
-
-### 5. Iniciar el servidor
-
-```bash
-npm start
-```
-
----
 
 ## Variables de entorno
 
-Entre las principales variables utilizadas se encuentran:
+Crea un archivo `.env` en la raíz. No almacenes credenciales reales en el repositorio.
 
-| Variable | Descripción |
-|---|---|
-| `DATABASE_URL` | Cadena de conexión PostgreSQL |
-| `MS_TENANT_ID` | Tenant de Microsoft |
-| `MS_CLIENT_ID` | Identificador de la aplicación |
-| `MS_CLIENT_SECRET` | Secreto de la aplicación |
-| `ONEDRIVE_USER_ID` | Usuario utilizado para OneDrive |
-| `ONEDRIVE_EXCEL_PATH` | Ruta configurada para recursos de OneDrive |
-| `PORT` | Puerto utilizado por el servidor |
+| Variable | Requerida | Descripción |
+| --- | --- | --- |
+| `DATABASE_URL` | Sí | Conexión PostgreSQL |
+| `MS_TENANT_ID` | Sí | Tenant de Microsoft Entra ID |
+| `MS_CLIENT_ID` | Sí | Identificador de la aplicación |
+| `MS_CLIENT_SECRET` | Sí | Secreto de la aplicación |
+| `ONEDRIVE_USER_ID` | Sí | Usuario propietario de los archivos |
+| `ONEDRIVE_EXCEL_PATH` | Sí | Ruta del seguimiento SST |
+| `ONEDRIVE_EPP_EXCEL_PATH` | Para EPP | Ruta `.xlsx` del seguimiento EPP |
+| `ONEDRIVE_EVIDENCIAS_PATH` | Opcional | Ruta base personalizada para evidencias |
+| `APP_URL` | Recomendada | URL pública utilizada para construir enlaces |
+| `AZURE_EPP_SYNC_SECRET` | Para sincronización | Secreto Bearer del endpoint de cierres EPP |
+| `GRAPH_EMAIL_TO_TEST` | Opcional | Destinatario de pruebas de correo |
+| `PORT` | Opcional | Puerto HTTP; predeterminado `3000` |
+| `GHOSTSCRIPT_PATH` | Opcional | Ruta al ejecutable de Ghostscript |
+| `PDF_OPTIMIZE` | Opcional | Usa `false` para desactivar la optimización |
+| `PDF_COMPRESSION_PROFILE` | Opcional | Perfil de compresión predeterminado |
+| `PDF_OPTIMIZER_TIMEOUT_MS` | Opcional | Tiempo máximo del proceso |
+| `PDF_MAX_INPUT_SIZE_MB` | Opcional | Tamaño máximo que se puede optimizar |
+| `PDF_OPTIMIZER_DEBUG` | Opcional | Controla los logs del optimizador |
+| `PDF_OPTIMIZER_WARNINGS` | Opcional | Controla sus advertencias |
 
-Pueden existir variables adicionales dependiendo del entorno y de la configuración utilizada.
+Ejemplo sin credenciales reales:
 
-Los valores reales de credenciales y secretos no deben almacenarse en este archivo.
+```dotenv
+PORT=3000
+APP_URL=http://localhost:3000
+DATABASE_URL=postgresql://usuario:clave@servidor:5432/base_datos
 
----
+MS_TENANT_ID=tenant-id
+MS_CLIENT_ID=client-id
+MS_CLIENT_SECRET=client-secret
+ONEDRIVE_USER_ID=usuario@dominio.com
+
+ONEDRIVE_EXCEL_PATH=/ruta/seguimiento_sst.xlsm
+ONEDRIVE_EPP_EXCEL_PATH=/ruta/seguimiento_epp.xlsx
+ONEDRIVE_EVIDENCIAS_PATH=/ruta/evidencias
+
+AZURE_EPP_SYNC_SECRET=secreto-compartido
+```
 
 ## Ejecución
-
-Instalar las dependencias:
-
-```bash
-npm install
-```
 
 Iniciar el servidor:
 
@@ -465,152 +309,127 @@ Iniciar el servidor:
 npm start
 ```
 
+Por defecto queda disponible en `http://localhost:3000`.
+
 Ejecutar la migración configurada:
 
 ```bash
 npm run migrate
 ```
 
----
+Antes de ejecutar migraciones, comprueba que `DATABASE_URL` corresponda al entorno correcto.
 
-## Optimización de imágenes
+## Documentación con JSDoc
 
-El proyecto incluye `imageOptimizer.js` para procesar las imágenes desde el navegador antes de enviarlas.
+JSDoc está instalado como dependencia de desarrollo. Los bloques `/** ... */` de las funciones relevantes pueden convertirse en documentación HTML.
 
-Su función principal es:
+Backend:
 
-- Validar imágenes.
-- Redimensionarlas cuando sea necesario.
-- Reducir su peso.
-- Prepararlas para su envío al backend.
+```bash
+npx jsdoc -r src/backend -d docs/backend
+```
 
----
+Frontend:
+
+```bash
+npx jsdoc -r src/views/js -d docs/frontend
+```
+
+Toda la documentación JavaScript:
+
+```bash
+npx jsdoc -r src/backend src/views/js -d docs
+```
+
+Abrir el resultado:
+
+- Windows: `start docs/index.html`
+- Linux: `xdg-open docs/index.html`
+- macOS: `open docs/index.html`
+
+La carpeta `docs/` es un artefacto generado y puede reconstruirse en cualquier momento.
 
 ## Optimización de PDF
 
-Los informes finales pueden ser optimizados mediante Ghostscript.
+Verificar Ghostscript:
 
-Para verificar su instalación:
-
-### Windows
+```bash
+# Linux
+gs --version
+```
 
 ```powershell
+# Windows
 gswin64c --version
 where.exe gswin64c
 ```
 
-### Linux
-
-```bash
-gs --version
-```
-
-Ghostscript debe estar disponible desde el entorno donde se ejecuta Node.js.
-
----
+Si Ghostscript no está en el `PATH`, configura `GHOSTSCRIPT_PATH`.
 
 ## Seguridad
 
-El proyecto utiliza diferentes mecanismos para proteger la información y mantener la consistencia de los datos:
+- Las credenciales se cargan mediante variables de entorno.
+- Las consultas PostgreSQL utilizan parámetros.
+- Los datos se validan en frontend y backend.
+- Las aprobaciones utilizan tokens individuales.
+- La sincronización de cierres EPP exige un secreto Bearer.
+- Las operaciones críticas utilizan transacciones.
 
-- Variables de entorno para credenciales.
-- Consultas PostgreSQL parametrizadas.
-- Validaciones frontend.
-- Validaciones backend.
-- Tokens individuales para aprobaciones.
-- Transacciones de base de datos en operaciones críticas.
-
-Las credenciales, secretos y cadenas de conexión no deben incluirse en el repositorio.
-
----
+No publiques archivos `.env`, secretos de Microsoft Graph ni cadenas de conexión.
 
 ## Solución de problemas
 
-### Error de conexión PostgreSQL
+### PostgreSQL no conecta
 
-Verificar:
+Verifica `DATABASE_URL`, las credenciales, la disponibilidad del servidor y la configuración SSL.
 
-- `DATABASE_URL`.
-- Credenciales.
-- Disponibilidad del servidor.
-- Configuración SSL cuando corresponda.
+### Microsoft Graph u OneDrive falla
 
-### Error de OneDrive
+Verifica las credenciales `MS_*`, `ONEDRIVE_USER_ID`, las rutas configuradas y los permisos de la aplicación.
 
-Verificar:
+### El Excel está bloqueado
 
-- Credenciales de Microsoft Graph.
-- `ONEDRIVE_USER_ID`.
-- Configuración de las rutas.
-- Permisos de la aplicación.
+Cierra el libro en Excel o OneDrive y vuelve a intentar cuando el recurso deje de estar bloqueado.
 
-### Ghostscript no encontrado
+### Las fórmulas SST no se actualizan
 
-Comprobar que Ghostscript se encuentre instalado y disponible en el `PATH` del sistema.
+Abre el archivo con una aplicación compatible con recálculo. El servicio elimina valores anteriores y configura el libro para recalcular al abrirse.
 
-En Windows:
+### Ghostscript no está disponible
 
-```powershell
-where.exe gswin64c
-```
+Instálalo, configura `GHOSTSCRIPT_PATH` o desactiva la optimización mediante `PDF_OPTIMIZE=false`.
 
-### Error de aprobación
+### Un enlace de aprobación falla
 
-Verificar:
-
-- Que el token exista.
-- Estado de la inspección.
-- Que la aprobación no haya sido registrada anteriormente.
-- Conexión con PostgreSQL.
-
-### Error generando PDF
-
-Verificar:
-
-- Disponibilidad de evidencias.
-- Acceso a OneDrive.
-- Instalación de Ghostscript.
-- Logs del servidor.
-
----
+Comprueba que el token exista, corresponda con la inspección esperada y no haya sido utilizado previamente.
 
 ## Mantenimiento
 
-Al modificar el proyecto se recomienda:
-
-1. Identificar si el cambio corresponde a SST, EPP o un componente compartido.
-2. Evitar modificar SST cuando se desarrollen funcionalidades exclusivas de EPP.
-3. Verificar las dependencias entre frontend, controladores y modelos.
-4. Probar ambos módulos cuando se modifique código compartido.
-5. Verificar las aprobaciones y generación de PDF después de cambios relacionados con inspecciones.
-
----
+1. Identifica si el cambio corresponde a SST, EPP o código compartido.
+2. Verifica las validaciones en frontend y backend.
+3. Prueba las aprobaciones cuando cambien controladores, modelos, PDF o correo.
+4. Prueba ambos módulos cuando se modifiquen servicios compartidos.
+5. Comprueba el Excel después de cambiar modelos, XML, columnas o fórmulas.
+6. Regenera JSDoc cuando cambien funciones documentadas.
 
 ## Estado actual
 
-Actualmente el proyecto dispone de:
-
-- Inspecciones SST.
-- Inspecciones EPP.
-- Múltiples trabajadores por inspección EPP.
-- Evaluación EPP por condición y uso.
-- Planes de acción.
-- Fecha límite de planes de acción.
-- Evidencias fotográficas.
-- Aprobaciones.
-- Vista previa de informes.
-- Generación de PDF SST.
-- Generación de PDF EPP.
-- Optimización de imágenes.
-- Optimización de PDF con Ghostscript.
-- Integración con OneDrive.
-- Envío de correo mediante Microsoft Graph.
-- Estadísticas independientes para SST y EPP.
-
----
+- Formularios independientes para SST y EPP.
+- Catálogo configurable de EPP.
+- Evidencias múltiples en SST y por trabajador en EPP.
+- Validaciones específicas por módulo.
+- Aprobaciones mediante tokens.
+- PDF y correo al completar las aprobaciones.
+- Optimización de imágenes y PDF.
+- Integración con PostgreSQL, Microsoft Graph y OneDrive.
+- Dashboards SST y EPP.
+- Seguimientos Excel independientes.
+- Sincronización de cierres EPP desde Excel hacia PostgreSQL.
+- Documentación de funciones mediante JSDoc.
 
 ## Versión
 
-**Versión:** 1.0.0  
-**Última actualización:** Agosto 2026  
-**Repositorio:** `DuvanBonilla/sstInspeccion`
+- Aplicación: `1.0.0`.
+- Rama documentada: `main`.
+- Referencia revisada: commit `4263941` (`feature: JSDoc`).
+- Última actualización del README: septiembre de 2026.

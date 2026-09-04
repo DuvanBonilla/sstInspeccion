@@ -51,9 +51,20 @@
     sortOrder: "asc",
   };
 
-  // =====================================================
-  // FILTROS
-  // =====================================================
+  /**
+   * Obtiene los filtros activos del dashboard de inspecciones EPP.
+   *
+   * Lee el rango de fechas, sede, estado y término de búsqueda ingresados
+   * en el formulario, normalizando los valores antes de utilizarlos.
+   *
+   * @returns {{
+   *   fechaDesde: string,
+   *   fechaHasta: string,
+   *   sedeOperacion: string,
+   *   estado: string,
+   *   q: string
+   * }} Filtros seleccionados por el usuario.
+   */
 
   function leerFiltros() {
     const fd = new FormData(form);
@@ -107,9 +118,15 @@
     });
   }
 
-  // =====================================================
-  // KPIS
-  // =====================================================
+  /**
+   * Actualiza los indicadores principales del dashboard EPP.
+   *
+   * Presenta las cantidades totales, pendientes, aprobadas, enviadas,
+   * registradas durante el mes y la distribución de inspecciones por sede.
+   *
+   * @param {Object} resumen - Resumen estadístico obtenido desde el backend.
+   * @returns {void}
+   */
 
   function setKpis(resumen) {
     kpis.total.textContent = resumen.total || 0;
@@ -311,9 +328,16 @@
     tablaMeta.textContent = `${state.total} inspecciones encontradas`;
   }
 
-  // =====================================================
-  // CARGAR RESUMEN EPP
-  // =====================================================
+  /**
+   * Renderiza las inspecciones EPP en la tabla del dashboard.
+   *
+   * Construye una fila por inspección con su información general, estado,
+   * cantidad de trabajadores y acciones disponibles para recuperar enlaces
+   * de aprobación o consultar el informe.
+   *
+   * @param {Array<Object>} items - Inspecciones EPP que deben mostrarse.
+   * @returns {void}
+   */
 
   async function cargarResumen(filtros) {
     const query = crearQuery(filtros);
@@ -330,9 +354,18 @@
     setKpis(data);
   }
 
-  // =====================================================
-  // CARGAR TABLA EPP
-  // =====================================================
+  /**
+   * Consulta las inspecciones EPP y actualiza la tabla del dashboard.
+   *
+   * Incorpora los filtros, la página actual y el ordenamiento seleccionado.
+   * Después de obtener la respuesta, actualiza el estado de paginación y
+   * renderiza las inspecciones recibidas.
+   *
+   * @async
+   * @param {Object} filtros - Filtros activos del dashboard.
+   * @returns {Promise<void>}
+   * @throws {Error} Si las inspecciones no pueden obtenerse desde el backend.
+   */
 
   async function cargarTabla(filtros) {
     const query = crearQuery({
@@ -364,9 +397,15 @@
     updatePaginacion();
   }
 
-  // =====================================================
-  // CARGAR TODO
-  // =====================================================
+  /**
+   * Actualiza simultáneamente el resumen y la tabla de inspecciones EPP.
+   *
+   * Obtiene los filtros actuales y ejecuta en paralelo las consultas
+   * necesarias para reconstruir el contenido principal del dashboard.
+   *
+   * @async
+   * @returns {Promise<void>}
+   */
 
   async function cargarTodo() {
     try {
@@ -484,11 +523,16 @@
       verPdf(btnPdf);
     }
   });
-
-  // =====================================================
-  // RECUPERAR LINKS
-  // =====================================================
-
+  /**
+   * Recupera los enlaces de aprobación de una inspección EPP pendiente.
+   *
+   * Obtiene el identificador desde el botón seleccionado, consulta los enlaces
+   * en el backend y los presenta mediante el modal de recuperación.
+   *
+   * @async
+   * @param {HTMLButtonElement} btnRecuperar - Botón asociado con la inspección.
+   * @returns {Promise<void>}
+   */
   async function recuperarLinks(btnRecuperar) {
     const inspeccionId = btnRecuperar.dataset.inspeccionId;
 
@@ -519,9 +563,16 @@
     }
   }
 
-  // =====================================================
-  // VER PDF
-  // =====================================================
+  /**
+   * Abre la vista previa del informe de una inspección EPP.
+   *
+   * Recupera el token de previsualización desde el backend y construye el
+   * endpoint utilizado para abrir el informe en una nueva pestaña.
+   *
+   * @async
+   * @param {HTMLButtonElement} btnPdf - Botón asociado con la inspección.
+   * @returns {Promise<void>}
+   */
 
   async function verPdf(btnPdf) {
     const inspeccionId = btnPdf.dataset.inspeccionId;
@@ -587,9 +638,16 @@
     },
   });
 
-  /* =========================================================
-   ACTUALIZAR EXCEL EPP EN ONEDRIVE
-========================================================= */
+  /**
+   * Solicita la actualización manual del seguimiento EPP en OneDrive.
+   *
+   * Bloquea temporalmente el botón durante la solicitud y comunica al usuario
+   * si la actualización del archivo Excel finalizó correctamente o presentó
+   * un error.
+   *
+   * @async
+   * @returns {Promise<void>}
+   */
 
   const btnExportarExcelEpp = document.getElementById("btn-exportar-excel-epp");
 

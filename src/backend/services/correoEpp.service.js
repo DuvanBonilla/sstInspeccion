@@ -1,3 +1,30 @@
+/**
+ * Construye el contenido HTML del correo de una inspección EPP aprobada.
+ *
+ * Genera una plantilla con la información general de la inspección, el resumen
+ * de trabajadores y novedades, los responsables de aprobación y el acceso al
+ * informe almacenado en OneDrive.
+ *
+ * El botón de acceso a OneDrive solamente se incorpora cuando existe una URL
+ * disponible. Cuando no se recibe el nombre de algún aprobador, se muestra
+ * el texto `Aprobado`.
+ *
+ * @param {Object} datos Información utilizada para construir el correo.
+ * @param {string} datos.inspeccionId Identificador único de la inspección.
+ * @param {number} [datos.numInspeccion] Número consecutivo de la inspección.
+ * @param {string} datos.fecha Fecha de realización.
+ * @param {string} datos.sedeOperacion Sede operacional.
+ * @param {string} datos.areaTrabajo Área inspeccionada.
+ * @param {string} datos.responsableInspeccion Responsable de la inspección.
+ * @param {number} [datos.totalTrabajadores=0] Trabajadores evaluados.
+ * @param {number} [datos.trabajadoresConNovedad=0] Trabajadores con novedades.
+ * @param {number} [datos.trabajadoresSinNovedad=0] Trabajadores sin novedades.
+ * @param {number} [datos.totalNovedades=0] Cantidad total de novedades.
+ * @param {Object} [datos.aprobaciones={}] Responsables que aprobaron.
+ * @param {string|null} [datos.webUrl=null] URL del informe en OneDrive.
+ * @returns {string} Plantilla HTML completa del correo EPP.
+ */
+
 function construirHtmlCorreoEpp({
   inspeccionId,
   numInspeccion,
@@ -891,6 +918,18 @@ ${botonOneDrive}
 </html>
 `;
 }
+
+/**
+ * Determina el correo destinatario de una inspección EPP según la sede.
+ *
+ * Para Santa Marta y Urabá utiliza los correos institucionales definidos.
+ * Para las demás sedes utiliza el correo manual recibido o la variable de
+ * entorno `GRAPH_EMAIL_TO_TEST`.
+ *
+ * @param {string} sedeOperacion Sede donde se realizó la inspección.
+ * @param {string|null} correoManual Correo alternativo proporcionado manualmente.
+ * @returns {string|undefined} Dirección de correo que recibirá el informe EPP.
+ */
 
 function resolverCorreoDestinoEpp(sedeOperacion, correoManual) {
   const sede = (sedeOperacion || "").toLowerCase().trim();

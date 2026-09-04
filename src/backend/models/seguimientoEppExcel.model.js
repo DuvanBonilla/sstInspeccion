@@ -1,5 +1,22 @@
 const { pool } = require("../db/pool");
 
+/**
+ * Construye los filtros SQL utilizados por el seguimiento EPP.
+ *
+ * Limita siempre los resultados a inspecciones EPP y permite aplicar filtros
+ * por fecha, sede, estado y búsqueda general. Los valores se parametrizan para
+ * ser utilizados de forma segura en las consultas.
+ *
+ * @param {Object} [filtros={}] Criterios aplicados al seguimiento.
+ * @param {string} [filtros.fechaDesde] Fecha inicial.
+ * @param {string} [filtros.fechaHasta] Fecha final.
+ * @param {string} [filtros.sedeOperacion] Sede operacional.
+ * @param {string} [filtros.estado] Estado de la inspección.
+ * @param {string} [filtros.q] Texto de búsqueda general.
+ * @returns {{where: string, valores: Array<*>}} Condiciones SQL y valores
+ * parametrizados.
+ */
+
 function construirFiltrosExcelEpp(filtros = {}) {
   const condiciones = [`i.tipo_inspeccion = 'EPP'`];
   const valores = [];
@@ -82,6 +99,19 @@ function construirFiltrosExcelEpp(filtros = {}) {
     valores,
   };
 }
+
+/**
+ * Consulta el resumen general de las inspecciones EPP.
+ *
+ * Para cada inspección obtiene sus responsables, aprobaciones, cantidad de
+ * trabajadores, elementos evaluados y novedades detectadas.
+ *
+ * @async
+ * @param {Object} [filtros={}] Criterios aplicados a la consulta.
+ * @returns {Promise<Array<Object>>} Inspecciones EPP con sus totales y datos
+ * generales.
+ * @throws {Error} Si falla la consulta a la base de datos.
+ */
 
 async function obtenerInspecciones(filtros = {}) {
   const { where, valores } = construirFiltrosExcelEpp(filtros);
@@ -169,6 +199,19 @@ async function obtenerInspecciones(filtros = {}) {
 
   return result.rows;
 }
+
+/**
+ * Consulta el seguimiento EPP agrupado por trabajador.
+ *
+ * Calcula la cantidad de elementos evaluados y novedades de cada trabajador.
+ * También clasifica el resultado como `SIN EVALUACIÓN`, `CON NOVEDAD` o
+ * `SIN NOVEDAD`, e incluye el detalle consolidado de los hallazgos.
+ *
+ * @async
+ * @param {Object} [filtros={}] Criterios aplicados a la consulta.
+ * @returns {Promise<Array<Object>>} Seguimiento individual de los trabajadores.
+ * @throws {Error} Si falla la consulta a la base de datos.
+ */
 
 async function obtenerSeguimientoEpp(filtros = {}) {
   const { where, valores } = construirFiltrosExcelEpp(filtros);
@@ -294,6 +337,20 @@ async function obtenerSeguimientoEpp(filtros = {}) {
 
   return result.rows;
 }
+
+/**
+ * Consulta los planes de acción generados por novedades EPP.
+ *
+ * Recupera únicamente evaluaciones con calificaciones `R` o `M` que tengan
+ * un plan de acción registrado. Incluye los datos del trabajador, elemento,
+ * fecha límite, estado y, cuando existe, información de cierre.
+ *
+ * @async
+ * @param {Object} [filtros={}] Criterios aplicados a la consulta.
+ * @returns {Promise<Array<Object>>} Planes de acción ordenados por fecha límite.
+ * @throws {Error} Si falla la consulta a la base de datos.
+ */
+
 async function obtenerPlanesAccion(filtros = {}) {
   const { where, valores } = construirFiltrosExcelEpp(filtros);
   const result = await pool.query(
@@ -353,6 +410,26 @@ async function obtenerPlanesAccion(filtros = {}) {
 
   return result.rows;
 }
+
+/**
+ * Marca como cumplidos los planes de acción cerrados desde el Excel EPP.
+ *
+ * Valida el identificador y responsable de cada cierre y actualiza solamente
+ * planes pertenecientes a inspecciones EPP enviadas. Registra el estado
+ * `CUMPLIDO`, la fecha y el responsable del cierre.
+ *
+ * Todas las actualizaciones se ejecutan dentro de una transacción. El resultado
+ * diferencia los planes actualizados, los que ya estaban cumplidos y los que
+ * no fueron encontrados.
+ *
+ * @async
+ * @param {Array<Object>} [cierres=[]] Cierres detectados en el Excel.
+ * @param {string|number} cierres[].detalleEppId Identificador del plan.
+ * @param {string} cierres[].responsableCierre Responsable del cierre.
+ * @returns {Promise<Object>} Cantidad solicitada y listas de planes
+ * actualizados, ya cumplidos y no encontrados.
+ * @throws {Error} Si algún cierre es inválido o falla la transacción.
+ */
 
 async function cerrarPlanesAccionDesdeExcel(cierres = []) {
   if (!Array.isArray(cierres) || cierres.length === 0) {

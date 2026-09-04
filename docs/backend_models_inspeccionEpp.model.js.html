@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: backend/models/inspeccionEpp.model.js</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+    <link type="text/css" rel="stylesheet" href="styles/sst-docs.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: backend/models/inspeccionEpp.model.js</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>/*
+  inspeccionEpp.model.js
+
+  Modelo principal para las inspecciones de Elementos de Protección Personal.
+
+  Responsabilidades:
+  - Normalizar y validar la información recibida desde el frontend EPP.
+  - Guardar la cabecera de la inspección en `inspecciones`.
+  - Guardar los trabajadores en `evaluaciones_epp`.
+  - Guardar las evaluaciones de cada trabajador en `detalle_evaluacion_epp`.
+  - Ejecutar todo el guardado dentro de una transacción.
+*/
+const { normalizarTexto } = require("../utils/texto.util");
+const { pool } = require("../db/pool");
+
+/* =========================================================
+   UTILIDADES
+========================================================= */
+
+/* =========================================================
+   VALIDACIÓN
+========================================================= */
+
+/* =========================================================
+   GUARDADO EN BASE DE DATOS
+========================================================= */
+
+/**
+ * Guarda una inspección EPP completa en la base de datos.
+ *
+ * Registra la información general en la tabla de inspecciones, almacena cada
+ * trabajador en la tabla de evaluaciones EPP y relaciona sus elementos
+ * evaluados mediante los registros de detalle.
+ *
+ * Cuando un elemento contiene un plan de acción, almacena su descripción,
+ * fecha límite y estado inicial `PENDIENTE`. Los elementos sin plan de acción
+ * conservan estos campos sin valor.
+ *
+ * Todas las operaciones se ejecutan dentro de una transacción. Si alguna
+ * consulta falla, revierte la totalidad del registro. La aprobación del
+ * inspector queda registrada automáticamente con el responsable que
+ * diligenció la inspección.
+ *
+ * @async
+ * @param {Object} data Inspección EPP que será almacenada.
+ * @param {Object} data.general Información general de la inspección.
+ * @param {string} data.general.inspeccionId Identificador de la inspección.
+ * @param {string} data.general.fecha Fecha de realización.
+ * @param {string} data.general.sedeOperacion Sede operacional.
+ * @param {string} data.general.areaTrabajo Área inspeccionada.
+ * @param {string} data.general.jefeResponsable Nombre del jefe responsable.
+ * @param {string} data.general.cargoJefe Cargo del jefe responsable.
+ * @param {string} data.general.responsableInspeccion Responsable de la inspección.
+ * @param {string} data.general.cargoResponsable Cargo del responsable.
+ * @param {Array&lt;Object>} data.trabajadores Trabajadores evaluados.
+ * @returns {Promise&lt;Object>} Identificador, número consecutivo y tokens de
+ * aprobación de la inspección registrada.
+ * @throws {Error} Si falla alguna operación ejecutada dentro de la transacción.
+ */
+
+
+async function guardarInspeccionEppEnDB(data) {
+  const general = data?.general || {};
+
+  const trabajadores = Array.isArray(data?.trabajadores)
+    ? data.trabajadores
+    : [];
+
+  const client = await pool.connect();
+
+  try {
+    await client.query("BEGIN");
+
+    /* -------------------------------------------------------
+       INSPECCIÓN
+    ------------------------------------------------------- */
+    const { rows } = await client.query(
+      `
+      INSERT INTO inspecciones (
+        inspeccion_id,
+        tipo_inspeccion,
+        fecha,
+        sede_operacion,
+        area_trabajo,
+        jefe_responsable,
+        cargo_jefe,
+        responsable_inspeccion,
+        cargo_responsable,
+        aprobacion_inspector_nombre,
+        aprobacion_inspector_cedula,
+        aprobacion_inspector_at
+      )
+      VALUES (
+        $1,
+        'EPP',
+        $2,
+        $3,
+        $4,
+        $5,
+        $6,
+        $7,
+        $8,
+        $9,
+        $10,
+        now()
+      )
+      RETURNING
+        inspecciones_id,
+        token_inspector,
+        token_jefe,
+        token_copasst
+      `,
+      [
+        general.inspeccionId || "", // $1
+        general.fecha || null, // $2
+        general.sedeOperacion || "", // $3
+        general.areaTrabajo || "", // $4
+        general.jefeResponsable || "", // $5
+        general.cargoJefe || "", // $6
+        general.responsableInspeccion || "", // $7
+        general.cargoResponsable || "", // $8
+        general.responsableInspeccion || "", // $9
+        "", // $10
+      ],
+    );
+
+    const inspeccion = rows[0];
+
+    const inspeccionPk = inspeccion.inspecciones_id;
+
+    /* -------------------------------------------------------
+       TRABAJADORES
+    ------------------------------------------------------- */
+
+    for (const [idx, trabajador] of trabajadores.entries()) {
+      const { rows: trabajadorRows } = await client.query(
+        `
+        INSERT INTO evaluaciones_epp (
+          inspecciones_id,
+          idx,
+          nombre,
+          codigo,
+          cargo,
+          observaciones,
+          evidencia_ruta,
+          evidencia_url,
+          evidencia_archivo,
+          evidencia_fecha
+        )
+        VALUES (
+          $1,$2,$3,$4,$5,$6,$7,$8,$9,$10
+        )
+        RETURNING id
+        `,
+        [
+          inspeccionPk, // $1
+          idx, // $2
+          trabajador.nombre || "", // $3
+          trabajador.codigo || "", // $4
+          trabajador.cargo || "", // $5
+          trabajador.observaciones || "", // $6
+          trabajador.evidenciaRuta || "", // $7
+          trabajador.evidenciaUrl || "", // $8
+          trabajador.evidenciaArchivo || "", // $9
+          trabajador.evidenciaFecha || null, // $10
+        ],
+      );
+
+      const trabajadorEppId = trabajadorRows[0].id;
+
+      /* -----------------------------------------------------
+         EVALUACIONES DEL TRABAJADOR
+      ----------------------------------------------------- */
+      console.log("[EPP] Trabajador recibido:", {
+        nombre: trabajador.nombre,
+
+        codigo: trabajador.codigo,
+
+        elementosEsArreglo: Array.isArray(trabajador.elementos),
+
+        totalElementos: Array.isArray(trabajador.elementos)
+          ? trabajador.elementos.length
+          : 0,
+
+        elementos: trabajador.elementos,
+      });
+
+      for (const elemento of trabajador.elementos || []) {
+        const planAccion =
+          typeof elemento.planAccion === "string"
+            ? elemento.planAccion.trim()
+            : "";
+
+        const tienePlanAccion = planAccion.length > 0;
+
+        await client.query(
+          `
+    INSERT INTO detalle_evaluacion_epp (
+      evaluacion_epp_id,
+      elemento_epp_id,
+      condicion,
+      uso,
+      plan_accion,
+      fecha_plan_accion,
+      estado_plan
+    )
+    VALUES (
+      $1,
+      $2,
+      $3,
+      $4,
+      $5,
+      $6,
+      $7
+    )
+    `,
+          [
+            trabajadorEppId,
+
+            elemento.elementoEppId,
+
+            elemento.condicion || "",
+
+            elemento.uso || "",
+
+            tienePlanAccion ? planAccion : null,
+
+            tienePlanAccion ? elemento.fechaPlanAccion || null : null,
+
+            tienePlanAccion ? "PENDIENTE" : null,
+          ],
+        );
+      }
+    }
+
+    /* -------------------------------------------------------
+       FINALIZAR TRANSACCIÓN
+    ------------------------------------------------------- */
+
+    await client.query("COMMIT");
+
+    return {
+      inspeccionId: general.inspeccionId || "",
+
+      numInspeccion: Number(inspeccion.inspecciones_id),
+
+      tokens: {
+        inspector: inspeccion.token_inspector,
+
+        jefe: inspeccion.token_jefe,
+
+        copasst: inspeccion.token_copasst,
+      },
+    };
+  } catch (error) {
+    await client.query("ROLLBACK");
+
+    console.error("❌ ERROR GUARDANDO INSPECCIÓN EPP:", {
+      mensaje: error.message,
+      inspeccionId: general.inspeccionId,
+    });
+
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
+/* =========================================================
+   EXPORTACIONES
+========================================================= */
+
+module.exports = {
+  guardarInspeccionEppEnDB,
+};
+</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Modules</h3><ul><li><a href="module-app.html">app</a></li></ul><h3>Global</h3><ul><li><a href="global.html#IMAGE_OPTIMIZER_VERSION">IMAGE_OPTIMIZER_VERSION</a></li><li><a href="global.html#KB">KB</a></li><li><a href="global.html#PDF_OPTIMIZER_CONFIG">PDF_OPTIMIZER_CONFIG</a></li><li><a href="global.html#PDF_OPTIMIZER_VERSION">PDF_OPTIMIZER_VERSION</a></li><li><a href="global.html#PROFILES">PROFILES</a></li><li><a href="global.html#activarRecalculoAutomatico">activarRecalculoAutomatico</a></li><li><a href="global.html#actualizarBotiquines">actualizarBotiquines</a></li><li><a href="global.html#actualizarDimensionHojaXml">actualizarDimensionHojaXml</a></li><li><a href="global.html#actualizarEquiposTecnologicos">actualizarEquiposTecnologicos</a></li><li><a href="global.html#actualizarExcelSeguimientoEpp">actualizarExcelSeguimientoEpp</a></li><li><a href="global.html#actualizarExcelSeguimientoEppEnOneDrive">actualizarExcelSeguimientoEppEnOneDrive</a></li><li><a href="global.html#actualizarExcelSeguimientoSst">actualizarExcelSeguimientoSst</a></li><li><a href="global.html#actualizarExcelSeguimientoSstEnMemoria">actualizarExcelSeguimientoSstEnMemoria</a></li><li><a href="global.html#actualizarExcelSeguimientoSstEnOneDrive">actualizarExcelSeguimientoSstEnOneDrive</a></li><li><a href="global.html#actualizarExtintores">actualizarExtintores</a></li><li><a href="global.html#actualizarFilasHojaXml">actualizarFilasHojaXml</a></li><li><a href="global.html#actualizarFormulasExistentes">actualizarFormulasExistentes</a></li><li><a href="global.html#actualizarGeneral">actualizarGeneral</a></li><li><a href="global.html#actualizarPaso">actualizarPaso</a></li><li><a href="global.html#actualizarPreviewArchivo">actualizarPreviewArchivo</a></li><li><a href="global.html#actualizarRangoTablaXml">actualizarRangoTablaXml</a></li><li><a href="global.html#actualizarResumen">actualizarResumen</a></li><li><a href="global.html#actualizarSenalizaciones">actualizarSenalizaciones</a></li><li><a href="global.html#analizarImagen">analizarImagen</a></li><li><a href="global.html#analizarPdf">analizarPdf</a></li><li><a href="global.html#autorizarAzureEpp">autorizarAzureEpp</a></li><li><a href="global.html#buscarPorToken">buscarPorToken</a></li><li><a href="global.html#calcularDiasRestantes">calcularDiasRestantes</a></li><li><a href="global.html#calcularDimensiones">calcularDimensiones</a></li><li><a href="global.html#calcularResumenEpp">calcularResumenEpp</a></li><li><a href="global.html#cargarCatalogoEpp">cargarCatalogoEpp</a></li><li><a href="global.html#cargarExcelSst">cargarExcelSst</a></li><li><a href="global.html#cargarImagen">cargarImagen</a></li><li><a href="global.html#cerrarPlanesAccionDesdeExcel">cerrarPlanesAccionDesdeExcel</a></li><li><a href="global.html#clasificarPlanesPorInspeccion">clasificarPlanesPorInspeccion</a></li><li><a href="global.html#configurarModalExito">configurarModalExito</a></li><li><a href="global.html#construirAprobaciones">construirAprobaciones</a></li><li><a href="global.html#construirArchivoOptimizado">construirArchivoOptimizado</a></li><li><a href="global.html#construirCeldaXml">construirCeldaXml</a></li><li><a href="global.html#construirEvidenciasDesdeOneDrive">construirEvidenciasDesdeOneDrive</a></li><li><a href="global.html#construirEvidenciasEppDesdeOneDrive">construirEvidenciasEppDesdeOneDrive</a></li><li><a href="global.html#construirFilaBotiquin">construirFilaBotiquin</a></li><li><a href="global.html#construirFilaEquipoTecnologico">construirFilaEquipoTecnologico</a></li><li><a href="global.html#construirFilaResumen">construirFilaResumen</a></li><li><a href="global.html#construirFiltrosExcelEpp">construirFiltrosExcelEpp</a></li><li><a href="global.html#construirFiltrosInspecciones">construirFiltrosInspecciones</a></li><li><a href="global.html#construirFormDataEpp">construirFormDataEpp</a></li><li><a href="global.html#construirHojaGeneralEpp">construirHojaGeneralEpp</a></li><li><a href="global.html#construirHojaInspecciones">construirHojaInspecciones</a></li><li><a href="global.html#construirHojaPlanesAccion">construirHojaPlanesAccion</a></li><li><a href="global.html#construirHojaResumenEpp">construirHojaResumenEpp</a></li><li><a href="global.html#construirHojaSeguimientoEpp">construirHojaSeguimientoEpp</a></li><li><a href="global.html#construirHtmlCorreo">construirHtmlCorreo</a></li><li><a href="global.html#construirHtmlCorreoEpp">construirHtmlCorreoEpp</a></li><li><a href="global.html#construirInspeccionEpp">construirInspeccionEpp</a></li><li><a href="global.html#construirLinksAprobacionEpp">construirLinksAprobacionEpp</a></li><li><a href="global.html#construirNombreArchivo">construirNombreArchivo</a></li><li><a href="global.html#construirResumenTrabajadores">construirResumenTrabajadores</a></li><li><a href="global.html#convertirCanvasABlob">convertirCanvasABlob</a></li><li><a href="global.html#convertirFechaAExcel">convertirFechaAExcel</a></li><li><a href="global.html#copiarLink">copiarLink</a></li><li><a href="global.html#corregirFormulasPuntuales">corregirFormulasPuntuales</a></li><li><a href="global.html#crearArchivosTemporales">crearArchivosTemporales</a></li><li><a href="global.html#crearBloqueEvidencias">crearBloqueEvidencias</a></li><li><a href="global.html#crearCanvas">crearCanvas</a></li><li><a href="global.html#crearPdfInspeccionEpp">crearPdfInspeccionEpp</a></li><li><a href="global.html#crearPdfInspeccionExtintor">crearPdfInspeccionExtintor</a></li><li><a href="global.html#crearWorkbook">crearWorkbook</a></li><li><a href="global.html#createBotiquinesManager">createBotiquinesManager</a></li><li><a href="global.html#createCamillasManager">createCamillasManager</a></li><li><a href="global.html#createEquiposTecnologicosManager">createEquiposTecnologicosManager</a></li><li><a href="global.html#createExtintoresManager">createExtintoresManager</a></li><li><a href="global.html#createSenalizacionesManager">createSenalizacionesManager</a></li><li><a href="global.html#createTrabajadoresEppManager">createTrabajadoresEppManager</a></li><li><a href="global.html#descargarArchivoOneDrive">descargarArchivoOneDrive</a></li><li><a href="global.html#descargarEvidenciaOneDrive">descargarEvidenciaOneDrive</a></li><li><a href="global.html#diagnosticarTablaExtintores">diagnosticarTablaExtintores</a></li><li><a href="global.html#dibujarImagen">dibujarImagen</a></li><li><a href="global.html#ejecutarGhostscript">ejecutarGhostscript</a></li><li><a href="global.html#eliminarCadenaCalculo">eliminarCadenaCalculo</a></li><li><a href="global.html#enviarCorreoPorGraph">enviarCorreoPorGraph</a></li><li><a href="global.html#enviarExtintorOneDrive">enviarExtintorOneDrive</a></li><li><a href="global.html#enviarInspeccionEpp">enviarInspeccionEpp</a></li><li><a href="global.html#enviarPdfPruebaCorreo">enviarPdfPruebaCorreo</a></li><li><a href="global.html#esCampoOpcional">esCampoOpcional</a></li><li><a href="global.html#extraerEvidenciasPorIndex">extraerEvidenciasPorIndex</a></li><li><a href="global.html#extraerFechaExif">extraerFechaExif</a></li><li><a href="global.html#fetchConRetry">fetchConRetry</a></li><li><a href="global.html#finalizarInspeccion">finalizarInspeccion</a></li><li><a href="global.html#formatearFechaMs">formatearFechaMs</a></li><li><a href="global.html#fs">fs</a></li><li><a href="global.html#generarBuffer">generarBuffer</a></li><li><a href="global.html#generarExcelSeguimientoEpp">generarExcelSeguimientoEpp</a></li><li><a href="global.html#generarInspeccionId">generarInspeccionId</a></li><li><a href="global.html#generarPdfEppAprobacion">generarPdfEppAprobacion</a></li><li><a href="global.html#generarPdfPrueba">generarPdfPrueba</a></li><li><a href="global.html#generarPdfSstAprobacion">generarPdfSstAprobacion</a></li><li><a href="global.html#getAccessToken">getAccessToken</a></li><li><a href="global.html#getEvidenceFolderPath">getEvidenceFolderPath</a></li><li><a href="global.html#getRequiredEnv">getRequiredEnv</a></li><li><a href="global.html#ghostscriptExecutable">ghostscriptExecutable</a></li><li><a href="global.html#guardarAprobacion">guardarAprobacion</a></li><li><a href="global.html#guardarInspeccionEnDB">guardarInspeccionEnDB</a></li><li><a href="global.html#guardarInspeccionEppEnDB">guardarInspeccionEppEnDB</a></li><li><a href="global.html#guardarPdfTemporal">guardarPdfTemporal</a></li><li><a href="global.html#inicializarEnvioEpp">inicializarEnvioEpp</a></li><li><a href="global.html#leerArchivosEvidencia">leerArchivosEvidencia</a></li><li><a href="global.html#leerCierresDesdeExcelEpp">leerCierresDesdeExcelEpp</a></li><li><a href="global.html#leerFiltros">leerFiltros</a></li><li><a href="global.html#leerPayload">leerPayload</a></li><li><a href="global.html#leerPdfOptimizado">leerPdfOptimizado</a></li><li><a href="global.html#leerRespuesta">leerRespuesta</a></li><li><a href="global.html#liberarImagen">liberarImagen</a></li><li><a href="global.html#limpiarTemporales">limpiarTemporales</a></li><li><a href="global.html#limpiarValoresCalculados">limpiarValoresCalculados</a></li><li><a href="global.html#listarCatalogoEpp">listarCatalogoEpp</a></li><li><a href="global.html#listarEppPredeterminados">listarEppPredeterminados</a></li><li><a href="global.html#listarInspecciones">listarInspecciones</a></li><li><a href="global.html#listarInspeccionesConFiltros">listarInspeccionesConFiltros</a></li><li><a href="global.html#listarInspeccionesEpp">listarInspeccionesEpp</a></li><li><a href="global.html#listarInspeccionesEppConFiltros">listarInspeccionesEppConFiltros</a></li><li><a href="global.html#mapearCamillaAExcel">mapearCamillaAExcel</a></li><li><a href="global.html#mapearExtintorAExcel">mapearExtintorAExcel</a></li><li><a href="global.html#mapearSenalizacionAExcel">mapearSenalizacionAExcel</a></li><li><a href="global.html#mapearTipoExtintor">mapearTipoExtintor</a></li><li><a href="global.html#marcarInspeccionEnviada">marcarInspeccionEnviada</a></li><li><a href="global.html#maximumInputSize">maximumInputSize</a></li><li><a href="global.html#mostrarModal">mostrarModal</a></li><li><a href="global.html#navegarAPaso">navegarAPaso</a></li><li><a href="global.html#normalizarBotiquin">normalizarBotiquin</a></li><li><a href="global.html#normalizarBotiquinItem">normalizarBotiquinItem</a></li><li><a href="global.html#normalizarBotiquines">normalizarBotiquines</a></li><li><a href="global.html#normalizarCamilla">normalizarCamilla</a></li><li><a href="global.html#normalizarCamillas">normalizarCamillas</a></li><li><a href="global.html#normalizarEquipoTecnologico">normalizarEquipoTecnologico</a></li><li><a href="global.html#normalizarEquiposTecnologicos">normalizarEquiposTecnologicos</a></li><li><a href="global.html#normalizarExtintor">normalizarExtintor</a></li><li><a href="global.html#normalizarExtintores">normalizarExtintores</a></li><li><a href="global.html#normalizarSenalizacion">normalizarSenalizacion</a></li><li><a href="global.html#normalizarSenalizaciones">normalizarSenalizaciones</a></li><li><a href="global.html#obtenerArchivos">obtenerArchivos</a></li><li><a href="global.html#obtenerBotiquinItemsSstAprobados">obtenerBotiquinItemsSstAprobados</a></li><li><a href="global.html#obtenerCamillasSstAprobadas">obtenerCamillasSstAprobadas</a></li><li><a href="global.html#obtenerCatalogoEppActivo">obtenerCatalogoEppActivo</a></li><li><a href="global.html#obtenerContextoAprobacion">obtenerContextoAprobacion</a></li><li><a href="global.html#obtenerDiasRestantes">obtenerDiasRestantes</a></li><li><a href="global.html#obtenerEppPredeterminados">obtenerEppPredeterminados</a></li><li><a href="global.html#obtenerEquiposTecnologicosSstAprobados">obtenerEquiposTecnologicosSstAprobados</a></li><li><a href="global.html#obtenerEstrategiaCompresion">obtenerEstrategiaCompresion</a></li><li><a href="global.html#obtenerExtensionOriginal">obtenerExtensionOriginal</a></li><li><a href="global.html#obtenerExtintoresSstAprobados">obtenerExtintoresSstAprobados</a></li><li><a href="global.html#obtenerFilasBotiquinesSstAprobados">obtenerFilasBotiquinesSstAprobados</a></li><li><a href="global.html#obtenerFilasCamillasSstAprobadas">obtenerFilasCamillasSstAprobadas</a></li><li><a href="global.html#obtenerFilasEquiposTecnologicosSstAprobados">obtenerFilasEquiposTecnologicosSstAprobados</a></li><li><a href="global.html#obtenerFilasExtintoresSstAprobados">obtenerFilasExtintoresSstAprobados</a></li><li><a href="global.html#obtenerFilasResumenSstAprobadas">obtenerFilasResumenSstAprobadas</a></li><li><a href="global.html#obtenerFilasSenalizacionesSstAprobadas">obtenerFilasSenalizacionesSstAprobadas</a></li><li><a href="global.html#obtenerInspeccionCompleta">obtenerInspeccionCompleta</a></li><li><a href="global.html#obtenerInspecciones">obtenerInspecciones</a></li><li><a href="global.html#obtenerLinks">obtenerLinks</a></li><li><a href="global.html#obtenerLinksInspeccion">obtenerLinksInspeccion</a></li><li><a href="global.html#obtenerOCrearHoja">obtenerOCrearHoja</a></li><li><a href="global.html#obtenerPerfil">obtenerPerfil</a></li><li><a href="global.html#obtenerPlanesAccion">obtenerPlanesAccion</a></li><li><a href="global.html#obtenerResumen">obtenerResumen</a></li><li><a href="global.html#obtenerResumenAprobacion">obtenerResumenAprobacion</a></li><li><a href="global.html#obtenerResumenEpp">obtenerResumenEpp</a></li><li><a href="global.html#obtenerResumenInspeccionesSstAprobadas">obtenerResumenInspeccionesSstAprobadas</a></li><li><a href="global.html#obtenerRutaExcelEpp">obtenerRutaExcelEpp</a></li><li><a href="global.html#obtenerRutaExcelSst">obtenerRutaExcelSst</a></li><li><a href="global.html#obtenerSeguimientoEpp">obtenerSeguimientoEpp</a></li><li><a href="global.html#obtenerSenalizacionesSstAprobadas">obtenerSenalizacionesSstAprobadas</a></li><li><a href="global.html#obtenerXml">obtenerXml</a></li><li><a href="global.html#optimizarImagen">optimizarImagen</a></li><li><a href="global.html#optimizarPdf">optimizarPdf</a></li><li><a href="global.html#previsualizarAprobacion">previsualizarAprobacion</a></li><li><a href="global.html#query">query</a></li><li><a href="global.html#reemplazarFormulaCelda">reemplazarFormulaCelda</a></li><li><a href="global.html#reemplazarXml">reemplazarXml</a></li><li><a href="global.html#registrarAprobacion">registrarAprobacion</a></li><li><a href="global.html#registrarEstadisticas">registrarEstadisticas</a></li><li><a href="global.html#registrarOriginalConservado">registrarOriginalConservado</a></li><li><a href="global.html#resolverCarpetaDestinoPdf">resolverCarpetaDestinoPdf</a></li><li><a href="global.html#resolverCorreoDestino">resolverCorreoDestino</a></li><li><a href="global.html#resolverCorreoDestinoEpp">resolverCorreoDestinoEpp</a></li><li><a href="global.html#resolverFechaEvidencia">resolverFechaEvidencia</a></li><li><a href="global.html#seleccionarFormatoSalida">seleccionarFormatoSalida</a></li><li><a href="global.html#sincronizarCierresDesdeExcelEpp">sincronizarCierresDesdeExcelEpp</a></li><li><a href="global.html#sincronizarCierresExcelEpp">sincronizarCierresExcelEpp</a></li><li><a href="global.html#subirArchivoOneDrive">subirArchivoOneDrive</a></li><li><a href="global.html#subirEvidenciasMultiples">subirEvidenciasMultiples</a></li><li><a href="global.html#subirPdfAOneDrive">subirPdfAOneDrive</a></li><li><a href="global.html#timeoutMs">timeoutMs</a></li><li><a href="global.html#uploadEvidenceToOneDrive">uploadEvidenceToOneDrive</a></li><li><a href="global.html#validarArchivo">validarArchivo</a></li><li><a href="global.html#validarBotiquines">validarBotiquines</a></li><li><a href="global.html#validarCamillas">validarCamillas</a></li><li><a href="global.html#validarEquiposTecnologicos">validarEquiposTecnologicos</a></li><li><a href="global.html#validarEvidenciaTrabajador">validarEvidenciaTrabajador</a></li><li><a href="global.html#validarExtintores">validarExtintores</a></li><li><a href="global.html#validarInformacionGeneral">validarInformacionGeneral</a></li><li><a href="global.html#validarInspeccion">validarInspeccion</a></li><li><a href="global.html#validarInspeccionEpp">validarInspeccionEpp</a></li><li><a href="global.html#validarPdf">validarPdf</a></li><li><a href="global.html#validarResultado">validarResultado</a></li><li><a href="global.html#validarSenalizaciones">validarSenalizaciones</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.5</a>
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>

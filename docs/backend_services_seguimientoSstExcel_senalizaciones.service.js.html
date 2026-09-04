@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: backend/services/seguimientoSstExcel/senalizaciones.service.js</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+    <link type="text/css" rel="stylesheet" href="styles/sst-docs.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: backend/services/seguimientoSstExcel/senalizaciones.service.js</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>const {
+  obtenerSenalizacionesSstAprobadas,
+} = require("../../models/seguimientoSstExcel.model");
+
+const {
+  obtenerXml,
+  reemplazarXml,
+
+  actualizarFilasHojaXml,
+  actualizarRangoTablaXml,
+} = require("../../utils/excelXml.util");
+
+const RUTA_HOJA_SENALIZACIONES =
+  "xl/worksheets/sheet4.xml";
+
+const RUTA_TABLA_SENALIZACIONES =
+  "xl/tables/table3.xml";
+
+const ULTIMA_COLUMNA_SENALIZACIONES =
+  "P";
+
+  /**
+ * Transforma una señalización en una fila de la hoja de seguimiento SST.
+ *
+ * Combina la información general de la inspección con el tipo, ubicación,
+ * cantidad, estado, aseo, observaciones y evidencia de la señalización.
+ *
+ * @param {Object} inspeccion - Información general de la inspección SST.
+ * @param {Object} senalizacion - Señalización que debe incorporarse al seguimiento.
+ * @returns {Object&lt;string, string|number|Date>}
+ * Fila preparada para escribirse en las columnas `A` hasta `P`.
+ */
+
+function mapearSenalizacionAExcel(
+  inspeccion,
+  senalizacion,
+) {
+  return {
+    A: inspeccion.inspeccion_id || "",
+
+    B: inspeccion.inspecciones_id || "",
+
+    C: inspeccion.fecha || "",
+
+    D: inspeccion.sede_operacion || "",
+
+    E: inspeccion.area_trabajo || "",
+
+    F: inspeccion.jefe_responsable || "",
+
+    G: inspeccion.cargo_jefe || "",
+
+    H: inspeccion.responsable_inspeccion || "",
+
+    I: inspeccion.cargo_responsable || "",
+
+    J: senalizacion.tipo || "",
+
+    K: senalizacion.ubicacion || "",
+
+    L: senalizacion.cantidad || "",
+
+    M: senalizacion.estado || "",
+
+    N: senalizacion.aseo || "",
+
+    O: senalizacion.observaciones || "",
+
+    P: senalizacion.evidencia_archivo || "",
+  };
+}
+
+/**
+ * Obtiene las señalizaciones de inspecciones SST aprobadas y las prepara para Excel.
+ *
+ * Consulta los registros mediante el modelo de seguimiento y transforma
+ * cada resultado en una fila compatible con la hoja `Señalizacion`.
+ *
+ * @async
+ * @returns {Promise&lt;Array&lt;Object>>}
+ * Filas de señalizaciones preparadas para el Excel.
+ */
+
+async function obtenerFilasSenalizacionesSstAprobadas() {
+  const registros =
+    await obtenerSenalizacionesSstAprobadas();
+
+  return registros.map((registro) =>
+    mapearSenalizacionAExcel(
+      registro,
+      registro,
+    ),
+  );
+}
+
+/**
+ * Actualiza la hoja y la tabla de señalizaciones del seguimiento SST.
+ *
+ * Obtiene las señalizaciones aprobadas, reemplaza las filas del XML de la
+ * hoja, ajusta el rango de la tabla estructurada y guarda ambos contenidos
+ * dentro del archivo Excel cargado en memoria.
+ *
+ * @async
+ * @param {@param {AdmZip} zip} zip - Archivo Excel abierto como contenedor ZIP.
+ * @returns {Promise&lt;{
+ *   totalSenalizaciones: number,
+ *   rango: string,
+ *   inspecciones: string[]
+ * }>} Resultado de la actualización, rango de la tabla e inspecciones incluidas.
+ * @throws {Error} Si no se proporciona el archivo Excel cargado en memoria.
+ */
+
+async function actualizarSenalizaciones(zip) {
+  if (!zip) {
+    throw new Error(
+      "Se requiere el archivo Excel cargado en memoria",
+    );
+  }
+
+  const filasSenalizaciones =
+    await obtenerFilasSenalizacionesSstAprobadas();
+
+  const hojaXml = obtenerXml(
+    zip,
+    RUTA_HOJA_SENALIZACIONES,
+  );
+
+  const tablaXml = obtenerXml(
+    zip,
+    RUTA_TABLA_SENALIZACIONES,
+  );
+
+  const hojaActualizada =
+    actualizarFilasHojaXml({
+      hojaXml,
+
+      filas: filasSenalizaciones,
+
+      ultimaColumna:
+        ULTIMA_COLUMNA_SENALIZACIONES,
+
+      nombreHoja:
+        "Señalizacion",
+
+      columnasFecha:
+        ["C"],
+
+      columnasNumericas:
+        ["B", "L"],
+    });
+
+  const tablaActualizada =
+    actualizarRangoTablaXml({
+      tablaXml,
+
+      ultimaColumna:
+        ULTIMA_COLUMNA_SENALIZACIONES,
+
+      cantidadFilas:
+        filasSenalizaciones.length,
+    });
+
+  reemplazarXml(
+    zip,
+    RUTA_HOJA_SENALIZACIONES,
+    hojaActualizada,
+  );
+
+  reemplazarXml(
+    zip,
+    RUTA_TABLA_SENALIZACIONES,
+    tablaActualizada.xml,
+  );
+
+  return {
+    totalSenalizaciones:
+      filasSenalizaciones.length,
+
+    rango:
+      tablaActualizada.rango,
+
+    inspecciones:
+      filasSenalizaciones.map(
+        (fila) => fila.A,
+      ),
+  };
+}
+
+module.exports = {
+  mapearSenalizacionAExcel,
+
+  obtenerFilasSenalizacionesSstAprobadas,
+
+  actualizarSenalizaciones,
+};</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Modules</h3><ul><li><a href="module-app.html">app</a></li></ul><h3>Global</h3><ul><li><a href="global.html#IMAGE_OPTIMIZER_VERSION">IMAGE_OPTIMIZER_VERSION</a></li><li><a href="global.html#KB">KB</a></li><li><a href="global.html#PDF_OPTIMIZER_CONFIG">PDF_OPTIMIZER_CONFIG</a></li><li><a href="global.html#PDF_OPTIMIZER_VERSION">PDF_OPTIMIZER_VERSION</a></li><li><a href="global.html#PROFILES">PROFILES</a></li><li><a href="global.html#activarRecalculoAutomatico">activarRecalculoAutomatico</a></li><li><a href="global.html#actualizarBotiquines">actualizarBotiquines</a></li><li><a href="global.html#actualizarDimensionHojaXml">actualizarDimensionHojaXml</a></li><li><a href="global.html#actualizarEquiposTecnologicos">actualizarEquiposTecnologicos</a></li><li><a href="global.html#actualizarExcelSeguimientoEpp">actualizarExcelSeguimientoEpp</a></li><li><a href="global.html#actualizarExcelSeguimientoEppEnOneDrive">actualizarExcelSeguimientoEppEnOneDrive</a></li><li><a href="global.html#actualizarExcelSeguimientoSst">actualizarExcelSeguimientoSst</a></li><li><a href="global.html#actualizarExcelSeguimientoSstEnMemoria">actualizarExcelSeguimientoSstEnMemoria</a></li><li><a href="global.html#actualizarExcelSeguimientoSstEnOneDrive">actualizarExcelSeguimientoSstEnOneDrive</a></li><li><a href="global.html#actualizarExtintores">actualizarExtintores</a></li><li><a href="global.html#actualizarFilasHojaXml">actualizarFilasHojaXml</a></li><li><a href="global.html#actualizarFormulasExistentes">actualizarFormulasExistentes</a></li><li><a href="global.html#actualizarGeneral">actualizarGeneral</a></li><li><a href="global.html#actualizarPaso">actualizarPaso</a></li><li><a href="global.html#actualizarPreviewArchivo">actualizarPreviewArchivo</a></li><li><a href="global.html#actualizarRangoTablaXml">actualizarRangoTablaXml</a></li><li><a href="global.html#actualizarResumen">actualizarResumen</a></li><li><a href="global.html#actualizarSenalizaciones">actualizarSenalizaciones</a></li><li><a href="global.html#analizarImagen">analizarImagen</a></li><li><a href="global.html#analizarPdf">analizarPdf</a></li><li><a href="global.html#autorizarAzureEpp">autorizarAzureEpp</a></li><li><a href="global.html#buscarPorToken">buscarPorToken</a></li><li><a href="global.html#calcularDiasRestantes">calcularDiasRestantes</a></li><li><a href="global.html#calcularDimensiones">calcularDimensiones</a></li><li><a href="global.html#calcularResumenEpp">calcularResumenEpp</a></li><li><a href="global.html#cargarCatalogoEpp">cargarCatalogoEpp</a></li><li><a href="global.html#cargarExcelSst">cargarExcelSst</a></li><li><a href="global.html#cargarImagen">cargarImagen</a></li><li><a href="global.html#cerrarPlanesAccionDesdeExcel">cerrarPlanesAccionDesdeExcel</a></li><li><a href="global.html#clasificarPlanesPorInspeccion">clasificarPlanesPorInspeccion</a></li><li><a href="global.html#configurarModalExito">configurarModalExito</a></li><li><a href="global.html#construirAprobaciones">construirAprobaciones</a></li><li><a href="global.html#construirArchivoOptimizado">construirArchivoOptimizado</a></li><li><a href="global.html#construirCeldaXml">construirCeldaXml</a></li><li><a href="global.html#construirEvidenciasDesdeOneDrive">construirEvidenciasDesdeOneDrive</a></li><li><a href="global.html#construirEvidenciasEppDesdeOneDrive">construirEvidenciasEppDesdeOneDrive</a></li><li><a href="global.html#construirFilaBotiquin">construirFilaBotiquin</a></li><li><a href="global.html#construirFilaEquipoTecnologico">construirFilaEquipoTecnologico</a></li><li><a href="global.html#construirFilaResumen">construirFilaResumen</a></li><li><a href="global.html#construirFiltrosExcelEpp">construirFiltrosExcelEpp</a></li><li><a href="global.html#construirFiltrosInspecciones">construirFiltrosInspecciones</a></li><li><a href="global.html#construirFormDataEpp">construirFormDataEpp</a></li><li><a href="global.html#construirHojaGeneralEpp">construirHojaGeneralEpp</a></li><li><a href="global.html#construirHojaInspecciones">construirHojaInspecciones</a></li><li><a href="global.html#construirHojaPlanesAccion">construirHojaPlanesAccion</a></li><li><a href="global.html#construirHojaResumenEpp">construirHojaResumenEpp</a></li><li><a href="global.html#construirHojaSeguimientoEpp">construirHojaSeguimientoEpp</a></li><li><a href="global.html#construirHtmlCorreo">construirHtmlCorreo</a></li><li><a href="global.html#construirHtmlCorreoEpp">construirHtmlCorreoEpp</a></li><li><a href="global.html#construirInspeccionEpp">construirInspeccionEpp</a></li><li><a href="global.html#construirLinksAprobacionEpp">construirLinksAprobacionEpp</a></li><li><a href="global.html#construirNombreArchivo">construirNombreArchivo</a></li><li><a href="global.html#construirResumenTrabajadores">construirResumenTrabajadores</a></li><li><a href="global.html#convertirCanvasABlob">convertirCanvasABlob</a></li><li><a href="global.html#convertirFechaAExcel">convertirFechaAExcel</a></li><li><a href="global.html#copiarLink">copiarLink</a></li><li><a href="global.html#corregirFormulasPuntuales">corregirFormulasPuntuales</a></li><li><a href="global.html#crearArchivosTemporales">crearArchivosTemporales</a></li><li><a href="global.html#crearBloqueEvidencias">crearBloqueEvidencias</a></li><li><a href="global.html#crearCanvas">crearCanvas</a></li><li><a href="global.html#crearPdfInspeccionEpp">crearPdfInspeccionEpp</a></li><li><a href="global.html#crearPdfInspeccionExtintor">crearPdfInspeccionExtintor</a></li><li><a href="global.html#crearWorkbook">crearWorkbook</a></li><li><a href="global.html#createBotiquinesManager">createBotiquinesManager</a></li><li><a href="global.html#createCamillasManager">createCamillasManager</a></li><li><a href="global.html#createEquiposTecnologicosManager">createEquiposTecnologicosManager</a></li><li><a href="global.html#createExtintoresManager">createExtintoresManager</a></li><li><a href="global.html#createSenalizacionesManager">createSenalizacionesManager</a></li><li><a href="global.html#createTrabajadoresEppManager">createTrabajadoresEppManager</a></li><li><a href="global.html#descargarArchivoOneDrive">descargarArchivoOneDrive</a></li><li><a href="global.html#descargarEvidenciaOneDrive">descargarEvidenciaOneDrive</a></li><li><a href="global.html#diagnosticarTablaExtintores">diagnosticarTablaExtintores</a></li><li><a href="global.html#dibujarImagen">dibujarImagen</a></li><li><a href="global.html#ejecutarGhostscript">ejecutarGhostscript</a></li><li><a href="global.html#eliminarCadenaCalculo">eliminarCadenaCalculo</a></li><li><a href="global.html#enviarCorreoPorGraph">enviarCorreoPorGraph</a></li><li><a href="global.html#enviarExtintorOneDrive">enviarExtintorOneDrive</a></li><li><a href="global.html#enviarInspeccionEpp">enviarInspeccionEpp</a></li><li><a href="global.html#enviarPdfPruebaCorreo">enviarPdfPruebaCorreo</a></li><li><a href="global.html#esCampoOpcional">esCampoOpcional</a></li><li><a href="global.html#extraerEvidenciasPorIndex">extraerEvidenciasPorIndex</a></li><li><a href="global.html#extraerFechaExif">extraerFechaExif</a></li><li><a href="global.html#fetchConRetry">fetchConRetry</a></li><li><a href="global.html#finalizarInspeccion">finalizarInspeccion</a></li><li><a href="global.html#formatearFechaMs">formatearFechaMs</a></li><li><a href="global.html#fs">fs</a></li><li><a href="global.html#generarBuffer">generarBuffer</a></li><li><a href="global.html#generarExcelSeguimientoEpp">generarExcelSeguimientoEpp</a></li><li><a href="global.html#generarInspeccionId">generarInspeccionId</a></li><li><a href="global.html#generarPdfEppAprobacion">generarPdfEppAprobacion</a></li><li><a href="global.html#generarPdfPrueba">generarPdfPrueba</a></li><li><a href="global.html#generarPdfSstAprobacion">generarPdfSstAprobacion</a></li><li><a href="global.html#getAccessToken">getAccessToken</a></li><li><a href="global.html#getEvidenceFolderPath">getEvidenceFolderPath</a></li><li><a href="global.html#getRequiredEnv">getRequiredEnv</a></li><li><a href="global.html#ghostscriptExecutable">ghostscriptExecutable</a></li><li><a href="global.html#guardarAprobacion">guardarAprobacion</a></li><li><a href="global.html#guardarInspeccionEnDB">guardarInspeccionEnDB</a></li><li><a href="global.html#guardarInspeccionEppEnDB">guardarInspeccionEppEnDB</a></li><li><a href="global.html#guardarPdfTemporal">guardarPdfTemporal</a></li><li><a href="global.html#inicializarEnvioEpp">inicializarEnvioEpp</a></li><li><a href="global.html#leerArchivosEvidencia">leerArchivosEvidencia</a></li><li><a href="global.html#leerCierresDesdeExcelEpp">leerCierresDesdeExcelEpp</a></li><li><a href="global.html#leerFiltros">leerFiltros</a></li><li><a href="global.html#leerPayload">leerPayload</a></li><li><a href="global.html#leerPdfOptimizado">leerPdfOptimizado</a></li><li><a href="global.html#leerRespuesta">leerRespuesta</a></li><li><a href="global.html#liberarImagen">liberarImagen</a></li><li><a href="global.html#limpiarTemporales">limpiarTemporales</a></li><li><a href="global.html#limpiarValoresCalculados">limpiarValoresCalculados</a></li><li><a href="global.html#listarCatalogoEpp">listarCatalogoEpp</a></li><li><a href="global.html#listarEppPredeterminados">listarEppPredeterminados</a></li><li><a href="global.html#listarInspecciones">listarInspecciones</a></li><li><a href="global.html#listarInspeccionesConFiltros">listarInspeccionesConFiltros</a></li><li><a href="global.html#listarInspeccionesEpp">listarInspeccionesEpp</a></li><li><a href="global.html#listarInspeccionesEppConFiltros">listarInspeccionesEppConFiltros</a></li><li><a href="global.html#mapearCamillaAExcel">mapearCamillaAExcel</a></li><li><a href="global.html#mapearExtintorAExcel">mapearExtintorAExcel</a></li><li><a href="global.html#mapearSenalizacionAExcel">mapearSenalizacionAExcel</a></li><li><a href="global.html#mapearTipoExtintor">mapearTipoExtintor</a></li><li><a href="global.html#marcarInspeccionEnviada">marcarInspeccionEnviada</a></li><li><a href="global.html#maximumInputSize">maximumInputSize</a></li><li><a href="global.html#mostrarModal">mostrarModal</a></li><li><a href="global.html#navegarAPaso">navegarAPaso</a></li><li><a href="global.html#normalizarBotiquin">normalizarBotiquin</a></li><li><a href="global.html#normalizarBotiquinItem">normalizarBotiquinItem</a></li><li><a href="global.html#normalizarBotiquines">normalizarBotiquines</a></li><li><a href="global.html#normalizarCamilla">normalizarCamilla</a></li><li><a href="global.html#normalizarCamillas">normalizarCamillas</a></li><li><a href="global.html#normalizarEquipoTecnologico">normalizarEquipoTecnologico</a></li><li><a href="global.html#normalizarEquiposTecnologicos">normalizarEquiposTecnologicos</a></li><li><a href="global.html#normalizarExtintor">normalizarExtintor</a></li><li><a href="global.html#normalizarExtintores">normalizarExtintores</a></li><li><a href="global.html#normalizarSenalizacion">normalizarSenalizacion</a></li><li><a href="global.html#normalizarSenalizaciones">normalizarSenalizaciones</a></li><li><a href="global.html#obtenerArchivos">obtenerArchivos</a></li><li><a href="global.html#obtenerBotiquinItemsSstAprobados">obtenerBotiquinItemsSstAprobados</a></li><li><a href="global.html#obtenerCamillasSstAprobadas">obtenerCamillasSstAprobadas</a></li><li><a href="global.html#obtenerCatalogoEppActivo">obtenerCatalogoEppActivo</a></li><li><a href="global.html#obtenerContextoAprobacion">obtenerContextoAprobacion</a></li><li><a href="global.html#obtenerDiasRestantes">obtenerDiasRestantes</a></li><li><a href="global.html#obtenerEppPredeterminados">obtenerEppPredeterminados</a></li><li><a href="global.html#obtenerEquiposTecnologicosSstAprobados">obtenerEquiposTecnologicosSstAprobados</a></li><li><a href="global.html#obtenerEstrategiaCompresion">obtenerEstrategiaCompresion</a></li><li><a href="global.html#obtenerExtensionOriginal">obtenerExtensionOriginal</a></li><li><a href="global.html#obtenerExtintoresSstAprobados">obtenerExtintoresSstAprobados</a></li><li><a href="global.html#obtenerFilasBotiquinesSstAprobados">obtenerFilasBotiquinesSstAprobados</a></li><li><a href="global.html#obtenerFilasCamillasSstAprobadas">obtenerFilasCamillasSstAprobadas</a></li><li><a href="global.html#obtenerFilasEquiposTecnologicosSstAprobados">obtenerFilasEquiposTecnologicosSstAprobados</a></li><li><a href="global.html#obtenerFilasExtintoresSstAprobados">obtenerFilasExtintoresSstAprobados</a></li><li><a href="global.html#obtenerFilasResumenSstAprobadas">obtenerFilasResumenSstAprobadas</a></li><li><a href="global.html#obtenerFilasSenalizacionesSstAprobadas">obtenerFilasSenalizacionesSstAprobadas</a></li><li><a href="global.html#obtenerInspeccionCompleta">obtenerInspeccionCompleta</a></li><li><a href="global.html#obtenerInspecciones">obtenerInspecciones</a></li><li><a href="global.html#obtenerLinks">obtenerLinks</a></li><li><a href="global.html#obtenerLinksInspeccion">obtenerLinksInspeccion</a></li><li><a href="global.html#obtenerOCrearHoja">obtenerOCrearHoja</a></li><li><a href="global.html#obtenerPerfil">obtenerPerfil</a></li><li><a href="global.html#obtenerPlanesAccion">obtenerPlanesAccion</a></li><li><a href="global.html#obtenerResumen">obtenerResumen</a></li><li><a href="global.html#obtenerResumenAprobacion">obtenerResumenAprobacion</a></li><li><a href="global.html#obtenerResumenEpp">obtenerResumenEpp</a></li><li><a href="global.html#obtenerResumenInspeccionesSstAprobadas">obtenerResumenInspeccionesSstAprobadas</a></li><li><a href="global.html#obtenerRutaExcelEpp">obtenerRutaExcelEpp</a></li><li><a href="global.html#obtenerRutaExcelSst">obtenerRutaExcelSst</a></li><li><a href="global.html#obtenerSeguimientoEpp">obtenerSeguimientoEpp</a></li><li><a href="global.html#obtenerSenalizacionesSstAprobadas">obtenerSenalizacionesSstAprobadas</a></li><li><a href="global.html#obtenerXml">obtenerXml</a></li><li><a href="global.html#optimizarImagen">optimizarImagen</a></li><li><a href="global.html#optimizarPdf">optimizarPdf</a></li><li><a href="global.html#previsualizarAprobacion">previsualizarAprobacion</a></li><li><a href="global.html#query">query</a></li><li><a href="global.html#reemplazarFormulaCelda">reemplazarFormulaCelda</a></li><li><a href="global.html#reemplazarXml">reemplazarXml</a></li><li><a href="global.html#registrarAprobacion">registrarAprobacion</a></li><li><a href="global.html#registrarEstadisticas">registrarEstadisticas</a></li><li><a href="global.html#registrarOriginalConservado">registrarOriginalConservado</a></li><li><a href="global.html#resolverCarpetaDestinoPdf">resolverCarpetaDestinoPdf</a></li><li><a href="global.html#resolverCorreoDestino">resolverCorreoDestino</a></li><li><a href="global.html#resolverCorreoDestinoEpp">resolverCorreoDestinoEpp</a></li><li><a href="global.html#resolverFechaEvidencia">resolverFechaEvidencia</a></li><li><a href="global.html#seleccionarFormatoSalida">seleccionarFormatoSalida</a></li><li><a href="global.html#sincronizarCierresDesdeExcelEpp">sincronizarCierresDesdeExcelEpp</a></li><li><a href="global.html#sincronizarCierresExcelEpp">sincronizarCierresExcelEpp</a></li><li><a href="global.html#subirArchivoOneDrive">subirArchivoOneDrive</a></li><li><a href="global.html#subirEvidenciasMultiples">subirEvidenciasMultiples</a></li><li><a href="global.html#subirPdfAOneDrive">subirPdfAOneDrive</a></li><li><a href="global.html#timeoutMs">timeoutMs</a></li><li><a href="global.html#uploadEvidenceToOneDrive">uploadEvidenceToOneDrive</a></li><li><a href="global.html#validarArchivo">validarArchivo</a></li><li><a href="global.html#validarBotiquines">validarBotiquines</a></li><li><a href="global.html#validarCamillas">validarCamillas</a></li><li><a href="global.html#validarEquiposTecnologicos">validarEquiposTecnologicos</a></li><li><a href="global.html#validarEvidenciaTrabajador">validarEvidenciaTrabajador</a></li><li><a href="global.html#validarExtintores">validarExtintores</a></li><li><a href="global.html#validarInformacionGeneral">validarInformacionGeneral</a></li><li><a href="global.html#validarInspeccion">validarInspeccion</a></li><li><a href="global.html#validarInspeccionEpp">validarInspeccionEpp</a></li><li><a href="global.html#validarPdf">validarPdf</a></li><li><a href="global.html#validarResultado">validarResultado</a></li><li><a href="global.html#validarSenalizaciones">validarSenalizaciones</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.5</a>
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>

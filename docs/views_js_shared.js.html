@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: views/js/shared.js</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+    <link type="text/css" rel="stylesheet" href="styles/sst-docs.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: views/js/shared.js</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>export const estados = ["B", "R", "M", "NC", "NA"];
+export const afectacionServicio = ["SI", "NO"];
+
+export const condiciones = [
+  ["acceso", "Acceso"],
+  ["visibilidad", "Visibilidad"],
+  ["senalizacion", "Señalización"],
+  ["paredAltura", "Pared altura"],
+  ["piso", "Piso"],
+  ["limpieza", "Limpieza"],
+  ["rotulo", "Rótulo"],
+  ["cilindro", "Cilindro"],
+  ["manometro", "Manómetro"],
+  ["presion", "Presión"],
+  ["pin", "Pin"],
+  ["manguera", "Manguera"],
+  ["boquilla", "Boquilla"],
+  ["corneta", "Corneta"],
+  ["pintura", "Pintura"],
+  ["manija", "Manija"],
+  ["sello", "Sello"],
+  ["llaveSpanner", "Llave Spanner"],
+  ["otros", "Otros"]
+];
+
+export const condicionesCamilla = [
+  ["senalizacion", "Señalización"],
+  ["acceso", "Acceso"],
+  ["estadoSoporte", "Estado del soporte"],
+  ["instalacionPared", "Instalación a pared"],
+  ["correasSeguridad", "Correas de seguridad"],
+  ["limpieza", "Limpieza"],
+  ["inmovilizador", "Inmovilizador"]
+];
+
+export const tipoOptionsHtml = [
+  ["Solkaflam", "Solkaflam"],
+  ["CO2", "CO2"],
+  ["Multiproposito", "Multipropósito"],
+  ["Agua", "Agua"]
+].map(([value, label]) => `&lt;option value="${value}">${label}&lt;/option>`).join("");
+
+// [clave, etiqueta, cantidadIdeal, tieneVencimiento]
+export const itemsBotiquin = [
+  ["morral",                 "Morral (Limpio, señalizado, acceso)",                          1,  false],
+  ["estructuraFija",         "Estructura fija (Limpio, señalizado, acceso, llaves)",          1,  false],
+  ["gasaEsteril4",           "Gasa estéril por 4 unidades.",                                 8,  true],
+  ["esparadrapoTela2",       "Esparadrapo en tela de 2 cm.",                                 1,  true],
+  ["micropore2",             "Micropore de 2 cm.",                                            1,  true],
+  ["bajalenguas",            "Bajalenguas en madera.",                                        10, false],
+  ["guantesDesechables",     "Guantes desechables de nitrilo o vinilo x par - En bolsa.",    5,  true],
+  ["vendaRigida4",           "Venda en tela rígida 4 cm x 5 cm.",                            1,  true],
+  ["vendaRigida5",           "Venda en tela rígida 5 cm x 5 cm.",                            1,  true],
+  ["jabonQuirurgico",        "Jabón quirúrgico PH neutro.",                                  1,  true],
+  ["solucionSalina",         "Solución salina 100 cc.",                                      2,  true],
+  ["termometroDigital",      "Termómetro digital.",                                          1,  false],
+  ["alcohol100",             "Alcohol antiseptico por 100 ml.",                              1,  true],
+  ["vendasAdhesivas",        "Vendas adhesivas (Curas) - En bolsa.",                         15, true],
+  ["vendaTriangular",        "Venda triangular desechable.",                                  1,  false],
+  ["linterna",               "Linterna.",                                                     1,  false],
+  ["tijerasTrauma",          "Tijeras cortatodo de trauma",                                   1,  false],
+  ["apositosOculares",       "Apósitos oculares - En bolsa.",                                8,  true],
+  ["silbato",                "Silbato - En bolsa.",                                           1,  false],
+  ["monogafa",               "Monogafa de seguridad.",                                        1,  false],
+  ["libretaLapicero",        "Libreta y bolígrafo.",                                          1,  false],
+  ["manualPrimerosAuxilios", "Manual de primeros auxilios.",                                  1,  false],
+  ["inmovilizadores",        "Inmovilizadores.",                                              1,  false],
+  ["tapabocas",              "Tapabocas - En bolsa.",                                         10, true],
+  ["bolsaRoja",              "Bolsa roja.",                                                   5,  false],
+  ["bolsaVerde",             "Bolsa verde.",                                                  5,  false],
+  ["algodon",                "Algodón mediano.",                                              1,  true],
+  ["candela",                "Candela.",                                                      1,  false]
+];
+
+export const equiposTecnologicos = [
+  ["sensorHumo", "Sensor de humo"],
+  ["sensorMovimiento", "Sensor de movimiento"],
+  ["camarasSeguridad", "Cámaras de seguridad"],
+  ["alarmaEmergencia", "Alarma de emergencia"]
+];
+
+const CAMPOS_OPCIONALES = new Set([
+  "observaciones",
+  "camillaObservaciones",
+  "senalizacionObservaciones",
+  "observacionGeneral"
+]);
+
+/**
+ * Determina si un campo debe excluirse de las validaciones obligatorias.
+ *
+ * Considera opcionales los campos configurados explícitamente, los relacionados
+ * con observaciones y aquellos marcados mediante `data-optional="true"`.
+ *
+ * @param {HTMLElement} el - Campo del formulario que debe evaluarse.
+ * @returns {boolean} `true` si el campo es opcional; de lo contrario, `false`.
+ */
+
+export function esCampoOpcional(el) {
+  const nombre = (el.name || "").toLowerCase();
+  return (
+    CAMPOS_OPCIONALES.has(el.name) ||
+    nombre.includes("observacion") ||
+    el.dataset?.optional === "true"
+  );
+}
+
+/*
+  Bloque de evidencias múltiples — reemplaza el input único de foto por
+  N slots (2 por defecto: el primero obligatorio, el resto opcional) más
+  un botón para agregar más fotos. Usado por los 5 managers de tarjetas.
+*/
+function crearSlotEvidenciaHtml(rolePrefix, requerido) {
+  return `
+    &lt;div class="evidencia-slot" data-role="${rolePrefix}-slot">
+      &lt;button type="button" class="remove-evidence-btn" data-action="remove-${rolePrefix}-slot" title="Quitar esta foto">&amp;times;&lt;/button>
+      &lt;input type="file" accept="image/*" data-role="${rolePrefix}-input" ${requerido ? "" : 'data-optional="true"'} />
+      &lt;span class="muted" data-role="${rolePrefix}-nombre">Sin imagen seleccionada.&lt;/span>
+      &lt;img class="evidence-preview" data-role="${rolePrefix}-preview" alt="Vista previa de evidencia" />
+    &lt;/div>
+  `;
+}
+
+/**
+ * Genera la estructura HTML de un bloque de evidencias múltiples.
+ *
+ * Crea una cantidad inicial de espacios para fotografías, dejando el primero
+ * como obligatorio y los restantes como opcionales. También incorpora el
+ * botón utilizado para agregar nuevas evidencias.
+ *
+ * @param {string} rolePrefix - Prefijo utilizado para identificar los elementos del bloque.
+ * @param {number} [minSlots=2] - Cantidad inicial de espacios para evidencias.
+ * @returns {string} Estructura HTML del bloque de evidencias.
+ */
+
+export function crearBloqueEvidencias(rolePrefix, minSlots = 2) {
+  const slots = Array.from({ length: minSlots }, (_, i) => crearSlotEvidenciaHtml(rolePrefix, i === 0)).join("");
+  return `
+    &lt;div class="evidencias-wrap" data-role="${rolePrefix}-wrap">
+      &lt;div class="evidencias-grid" data-role="${rolePrefix}-slots">${slots}&lt;/div>
+      &lt;button type="button" class="add-btn add-evidence-btn" data-action="add-${rolePrefix}-slot">+ Agregar otra foto&lt;/button>
+    &lt;/div>
+  `;
+}
+
+// Marca el primer slot visible como obligatorio y el resto como opcional (tras agregar/quitar slots).
+function actualizarRequeridosEvidencia(slotsContainer, rolePrefix) {
+  slotsContainer.querySelectorAll(`[data-role="${rolePrefix}-input"]`).forEach((input, i) => {
+    if (i === 0) delete input.dataset.optional;
+    else input.dataset.optional = "true";
+  });
+}
+
+export function inicializarBloqueEvidencias(card, rolePrefix) {
+  const wrap = card.querySelector(`[data-role="${rolePrefix}-wrap"]`);
+  if (!wrap) return;
+  const slotsContainer = wrap.querySelector(`[data-role="${rolePrefix}-slots"]`);
+  const addBtn = wrap.querySelector(`[data-action="add-${rolePrefix}-slot"]`);
+
+  function wireSlot(slot) {
+    const input = slot.querySelector(`[data-role="${rolePrefix}-input"]`);
+    const nombre = slot.querySelector(`[data-role="${rolePrefix}-nombre"]`);
+    const preview = slot.querySelector(`[data-role="${rolePrefix}-preview"]`);
+    const removeBtn = slot.querySelector(`[data-action="remove-${rolePrefix}-slot"]`);
+
+    input.addEventListener("change", () => actualizarPreviewArchivo(input, nombre, preview));
+
+    removeBtn.addEventListener("click", () => {
+      if (slotsContainer.children.length > 1) {
+        slot.remove();
+      } else {
+        input.value = "";
+        actualizarPreviewArchivo(input, nombre, preview);
+      }
+      actualizarRequeridosEvidencia(slotsContainer, rolePrefix);
+    });
+  }
+
+  slotsContainer.querySelectorAll(`[data-role="${rolePrefix}-slot"]`).forEach(wireSlot);
+
+  addBtn?.addEventListener("click", () => {
+    const contenedor = document.createElement("div");
+    contenedor.innerHTML = crearSlotEvidenciaHtml(rolePrefix, false).trim();
+    const nuevoSlot = contenedor.firstElementChild;
+    slotsContainer.appendChild(nuevoSlot);
+    wireSlot(nuevoSlot);
+    actualizarRequeridosEvidencia(slotsContainer, rolePrefix);
+  });
+}
+
+/**
+ * Obtiene los archivos seleccionados en un bloque de evidencias.
+ *
+ * Recorre los campos correspondientes al prefijo indicado, descarta los
+ * espacios vacíos y conserva el orden en el que aparecen las fotografías.
+ *
+ * @param {HTMLElement} card - Tarjeta que contiene las evidencias.
+ * @param {string} rolePrefix - Prefijo que identifica el bloque.
+ * @returns {File[]} Archivos seleccionados y ordenados.
+ */
+
+export function leerArchivosEvidencia(card, rolePrefix) {
+  return Array.from(card.querySelectorAll(`[data-role="${rolePrefix}-input"]`))
+    .map((input) => input.files[0])
+    .filter(Boolean);
+}
+
+export function crearOpciones() {
+  return [`&lt;option value="">Seleccione&lt;/option>`]
+    .concat(estados.map((estado) => `&lt;option value="${estado}">${estado}&lt;/option>`))
+    .join("");
+}
+
+export function crearOpcionesAfectacion() {
+  return [`&lt;option value="">Seleccione&lt;/option>`]
+    .concat(afectacionServicio.map((valor) => `&lt;option value="${valor}">${valor}&lt;/option>`))
+    .join("");
+}
+
+/**
+ * Actualiza la vista previa de una evidencia fotográfica.
+ *
+ * Muestra el nombre y contenido visual del archivo seleccionado. Cuando el
+ * campo está vacío, restablece el texto y oculta la imagen de previsualización.
+ *
+ * @param {HTMLInputElement} input - Campo utilizado para seleccionar el archivo.
+ * @param {HTMLElement} nombreEl - Elemento donde se muestra el nombre del archivo.
+ * @param {HTMLImageElement} previewEl - Imagen utilizada para la vista previa.
+ * @returns {void}
+ */
+
+export function actualizarPreviewArchivo(input, nombreEl, previewEl) {
+  const archivo = input?.files?.[0];
+
+  if (!archivo) {
+    nombreEl.textContent = "Sin imagen seleccionada.";
+    previewEl.style.display = "none";
+    previewEl.removeAttribute("src");
+    return;
+  }
+
+  nombreEl.textContent = archivo.name;
+
+  const reader = new FileReader();
+  reader.onload = () => {
+    previewEl.src = reader.result;
+    previewEl.style.display = "block";
+  };
+  reader.readAsDataURL(archivo);
+}
+
+export function activarSoloNumeros() {
+  document.addEventListener("input", (event) => {
+    const target = event.target;
+    if (!(target instanceof HTMLInputElement)) return;
+    if (!target.matches('input[inputmode="numeric"]')) return;
+
+    const limpio = target.value.replace(/\D+/g, "");
+    if (target.value !== limpio) {
+      target.value = limpio;
+    }
+  });
+}
+
+export function abrirSelectorFecha() {
+  const fecha = document.getElementById("fecha");
+
+  if (typeof fecha?.showPicker === "function") {
+    fecha.showPicker();
+  } else {
+    fecha?.focus();
+  }
+}
+
+export function asignarFechaHoy() {
+  const fecha = document.getElementById("fecha");
+  if (fecha &amp;&amp; !fecha.value) {
+    fecha.value = "";
+  }
+}
+
+/**
+ * Procesa una respuesta HTTP recibida desde el servidor.
+ *
+ * Lee el contenido como texto y, cuando corresponde a JSON, intenta
+ * convertirlo en un objeto. Si la respuesta está vacía, contiene un JSON
+ * inválido o corresponde a texto plano, genera una estructura de errores.
+ *
+ * @async
+ * @param {Response} respuesta - Respuesta HTTP que debe procesarse.
+ * @returns {Promise&lt;Object>} Contenido JSON procesado o estructura con los errores encontrados.
+ */
+
+export async function leerRespuesta(respuesta) {
+  const contentType = respuesta.headers.get("content-type") || "";
+  const texto = await respuesta.text();
+
+  if (!texto) {
+    return { errores: ["El servidor no devolvió contenido"] };
+  }
+
+  if (contentType.includes("application/json")) {
+    try {
+      return JSON.parse(texto);
+    } catch {
+      return { errores: ["Respuesta JSON inválida del servidor"] };
+    }
+  }
+
+  return { errores: [texto] };
+}
+</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Modules</h3><ul><li><a href="module-app.html">app</a></li></ul><h3>Global</h3><ul><li><a href="global.html#IMAGE_OPTIMIZER_VERSION">IMAGE_OPTIMIZER_VERSION</a></li><li><a href="global.html#KB">KB</a></li><li><a href="global.html#PDF_OPTIMIZER_CONFIG">PDF_OPTIMIZER_CONFIG</a></li><li><a href="global.html#PDF_OPTIMIZER_VERSION">PDF_OPTIMIZER_VERSION</a></li><li><a href="global.html#PROFILES">PROFILES</a></li><li><a href="global.html#activarRecalculoAutomatico">activarRecalculoAutomatico</a></li><li><a href="global.html#actualizarBotiquines">actualizarBotiquines</a></li><li><a href="global.html#actualizarDimensionHojaXml">actualizarDimensionHojaXml</a></li><li><a href="global.html#actualizarEquiposTecnologicos">actualizarEquiposTecnologicos</a></li><li><a href="global.html#actualizarExcelSeguimientoEpp">actualizarExcelSeguimientoEpp</a></li><li><a href="global.html#actualizarExcelSeguimientoEppEnOneDrive">actualizarExcelSeguimientoEppEnOneDrive</a></li><li><a href="global.html#actualizarExcelSeguimientoSst">actualizarExcelSeguimientoSst</a></li><li><a href="global.html#actualizarExcelSeguimientoSstEnMemoria">actualizarExcelSeguimientoSstEnMemoria</a></li><li><a href="global.html#actualizarExcelSeguimientoSstEnOneDrive">actualizarExcelSeguimientoSstEnOneDrive</a></li><li><a href="global.html#actualizarExtintores">actualizarExtintores</a></li><li><a href="global.html#actualizarFilasHojaXml">actualizarFilasHojaXml</a></li><li><a href="global.html#actualizarFormulasExistentes">actualizarFormulasExistentes</a></li><li><a href="global.html#actualizarGeneral">actualizarGeneral</a></li><li><a href="global.html#actualizarPaso">actualizarPaso</a></li><li><a href="global.html#actualizarPreviewArchivo">actualizarPreviewArchivo</a></li><li><a href="global.html#actualizarRangoTablaXml">actualizarRangoTablaXml</a></li><li><a href="global.html#actualizarResumen">actualizarResumen</a></li><li><a href="global.html#actualizarSenalizaciones">actualizarSenalizaciones</a></li><li><a href="global.html#analizarImagen">analizarImagen</a></li><li><a href="global.html#analizarPdf">analizarPdf</a></li><li><a href="global.html#autorizarAzureEpp">autorizarAzureEpp</a></li><li><a href="global.html#buscarPorToken">buscarPorToken</a></li><li><a href="global.html#calcularDiasRestantes">calcularDiasRestantes</a></li><li><a href="global.html#calcularDimensiones">calcularDimensiones</a></li><li><a href="global.html#calcularResumenEpp">calcularResumenEpp</a></li><li><a href="global.html#cargarCatalogoEpp">cargarCatalogoEpp</a></li><li><a href="global.html#cargarExcelSst">cargarExcelSst</a></li><li><a href="global.html#cargarImagen">cargarImagen</a></li><li><a href="global.html#cerrarPlanesAccionDesdeExcel">cerrarPlanesAccionDesdeExcel</a></li><li><a href="global.html#clasificarPlanesPorInspeccion">clasificarPlanesPorInspeccion</a></li><li><a href="global.html#configurarModalExito">configurarModalExito</a></li><li><a href="global.html#construirAprobaciones">construirAprobaciones</a></li><li><a href="global.html#construirArchivoOptimizado">construirArchivoOptimizado</a></li><li><a href="global.html#construirCeldaXml">construirCeldaXml</a></li><li><a href="global.html#construirEvidenciasDesdeOneDrive">construirEvidenciasDesdeOneDrive</a></li><li><a href="global.html#construirEvidenciasEppDesdeOneDrive">construirEvidenciasEppDesdeOneDrive</a></li><li><a href="global.html#construirFilaBotiquin">construirFilaBotiquin</a></li><li><a href="global.html#construirFilaEquipoTecnologico">construirFilaEquipoTecnologico</a></li><li><a href="global.html#construirFilaResumen">construirFilaResumen</a></li><li><a href="global.html#construirFiltrosExcelEpp">construirFiltrosExcelEpp</a></li><li><a href="global.html#construirFiltrosInspecciones">construirFiltrosInspecciones</a></li><li><a href="global.html#construirFormDataEpp">construirFormDataEpp</a></li><li><a href="global.html#construirHojaGeneralEpp">construirHojaGeneralEpp</a></li><li><a href="global.html#construirHojaInspecciones">construirHojaInspecciones</a></li><li><a href="global.html#construirHojaPlanesAccion">construirHojaPlanesAccion</a></li><li><a href="global.html#construirHojaResumenEpp">construirHojaResumenEpp</a></li><li><a href="global.html#construirHojaSeguimientoEpp">construirHojaSeguimientoEpp</a></li><li><a href="global.html#construirHtmlCorreo">construirHtmlCorreo</a></li><li><a href="global.html#construirHtmlCorreoEpp">construirHtmlCorreoEpp</a></li><li><a href="global.html#construirInspeccionEpp">construirInspeccionEpp</a></li><li><a href="global.html#construirLinksAprobacionEpp">construirLinksAprobacionEpp</a></li><li><a href="global.html#construirNombreArchivo">construirNombreArchivo</a></li><li><a href="global.html#construirResumenTrabajadores">construirResumenTrabajadores</a></li><li><a href="global.html#convertirCanvasABlob">convertirCanvasABlob</a></li><li><a href="global.html#convertirFechaAExcel">convertirFechaAExcel</a></li><li><a href="global.html#copiarLink">copiarLink</a></li><li><a href="global.html#corregirFormulasPuntuales">corregirFormulasPuntuales</a></li><li><a href="global.html#crearArchivosTemporales">crearArchivosTemporales</a></li><li><a href="global.html#crearBloqueEvidencias">crearBloqueEvidencias</a></li><li><a href="global.html#crearCanvas">crearCanvas</a></li><li><a href="global.html#crearPdfInspeccionEpp">crearPdfInspeccionEpp</a></li><li><a href="global.html#crearPdfInspeccionExtintor">crearPdfInspeccionExtintor</a></li><li><a href="global.html#crearWorkbook">crearWorkbook</a></li><li><a href="global.html#createBotiquinesManager">createBotiquinesManager</a></li><li><a href="global.html#createCamillasManager">createCamillasManager</a></li><li><a href="global.html#createEquiposTecnologicosManager">createEquiposTecnologicosManager</a></li><li><a href="global.html#createExtintoresManager">createExtintoresManager</a></li><li><a href="global.html#createSenalizacionesManager">createSenalizacionesManager</a></li><li><a href="global.html#createTrabajadoresEppManager">createTrabajadoresEppManager</a></li><li><a href="global.html#descargarArchivoOneDrive">descargarArchivoOneDrive</a></li><li><a href="global.html#descargarEvidenciaOneDrive">descargarEvidenciaOneDrive</a></li><li><a href="global.html#diagnosticarTablaExtintores">diagnosticarTablaExtintores</a></li><li><a href="global.html#dibujarImagen">dibujarImagen</a></li><li><a href="global.html#ejecutarGhostscript">ejecutarGhostscript</a></li><li><a href="global.html#eliminarCadenaCalculo">eliminarCadenaCalculo</a></li><li><a href="global.html#enviarCorreoPorGraph">enviarCorreoPorGraph</a></li><li><a href="global.html#enviarExtintorOneDrive">enviarExtintorOneDrive</a></li><li><a href="global.html#enviarInspeccionEpp">enviarInspeccionEpp</a></li><li><a href="global.html#enviarPdfPruebaCorreo">enviarPdfPruebaCorreo</a></li><li><a href="global.html#esCampoOpcional">esCampoOpcional</a></li><li><a href="global.html#extraerEvidenciasPorIndex">extraerEvidenciasPorIndex</a></li><li><a href="global.html#extraerFechaExif">extraerFechaExif</a></li><li><a href="global.html#fetchConRetry">fetchConRetry</a></li><li><a href="global.html#finalizarInspeccion">finalizarInspeccion</a></li><li><a href="global.html#formatearFechaMs">formatearFechaMs</a></li><li><a href="global.html#fs">fs</a></li><li><a href="global.html#generarBuffer">generarBuffer</a></li><li><a href="global.html#generarExcelSeguimientoEpp">generarExcelSeguimientoEpp</a></li><li><a href="global.html#generarInspeccionId">generarInspeccionId</a></li><li><a href="global.html#generarPdfEppAprobacion">generarPdfEppAprobacion</a></li><li><a href="global.html#generarPdfPrueba">generarPdfPrueba</a></li><li><a href="global.html#generarPdfSstAprobacion">generarPdfSstAprobacion</a></li><li><a href="global.html#getAccessToken">getAccessToken</a></li><li><a href="global.html#getEvidenceFolderPath">getEvidenceFolderPath</a></li><li><a href="global.html#getRequiredEnv">getRequiredEnv</a></li><li><a href="global.html#ghostscriptExecutable">ghostscriptExecutable</a></li><li><a href="global.html#guardarAprobacion">guardarAprobacion</a></li><li><a href="global.html#guardarInspeccionEnDB">guardarInspeccionEnDB</a></li><li><a href="global.html#guardarInspeccionEppEnDB">guardarInspeccionEppEnDB</a></li><li><a href="global.html#guardarPdfTemporal">guardarPdfTemporal</a></li><li><a href="global.html#inicializarEnvioEpp">inicializarEnvioEpp</a></li><li><a href="global.html#leerArchivosEvidencia">leerArchivosEvidencia</a></li><li><a href="global.html#leerCierresDesdeExcelEpp">leerCierresDesdeExcelEpp</a></li><li><a href="global.html#leerFiltros">leerFiltros</a></li><li><a href="global.html#leerPayload">leerPayload</a></li><li><a href="global.html#leerPdfOptimizado">leerPdfOptimizado</a></li><li><a href="global.html#leerRespuesta">leerRespuesta</a></li><li><a href="global.html#liberarImagen">liberarImagen</a></li><li><a href="global.html#limpiarTemporales">limpiarTemporales</a></li><li><a href="global.html#limpiarValoresCalculados">limpiarValoresCalculados</a></li><li><a href="global.html#listarCatalogoEpp">listarCatalogoEpp</a></li><li><a href="global.html#listarEppPredeterminados">listarEppPredeterminados</a></li><li><a href="global.html#listarInspecciones">listarInspecciones</a></li><li><a href="global.html#listarInspeccionesConFiltros">listarInspeccionesConFiltros</a></li><li><a href="global.html#listarInspeccionesEpp">listarInspeccionesEpp</a></li><li><a href="global.html#listarInspeccionesEppConFiltros">listarInspeccionesEppConFiltros</a></li><li><a href="global.html#mapearCamillaAExcel">mapearCamillaAExcel</a></li><li><a href="global.html#mapearExtintorAExcel">mapearExtintorAExcel</a></li><li><a href="global.html#mapearSenalizacionAExcel">mapearSenalizacionAExcel</a></li><li><a href="global.html#mapearTipoExtintor">mapearTipoExtintor</a></li><li><a href="global.html#marcarInspeccionEnviada">marcarInspeccionEnviada</a></li><li><a href="global.html#maximumInputSize">maximumInputSize</a></li><li><a href="global.html#mostrarModal">mostrarModal</a></li><li><a href="global.html#navegarAPaso">navegarAPaso</a></li><li><a href="global.html#normalizarBotiquin">normalizarBotiquin</a></li><li><a href="global.html#normalizarBotiquinItem">normalizarBotiquinItem</a></li><li><a href="global.html#normalizarBotiquines">normalizarBotiquines</a></li><li><a href="global.html#normalizarCamilla">normalizarCamilla</a></li><li><a href="global.html#normalizarCamillas">normalizarCamillas</a></li><li><a href="global.html#normalizarEquipoTecnologico">normalizarEquipoTecnologico</a></li><li><a href="global.html#normalizarEquiposTecnologicos">normalizarEquiposTecnologicos</a></li><li><a href="global.html#normalizarExtintor">normalizarExtintor</a></li><li><a href="global.html#normalizarExtintores">normalizarExtintores</a></li><li><a href="global.html#normalizarSenalizacion">normalizarSenalizacion</a></li><li><a href="global.html#normalizarSenalizaciones">normalizarSenalizaciones</a></li><li><a href="global.html#obtenerArchivos">obtenerArchivos</a></li><li><a href="global.html#obtenerBotiquinItemsSstAprobados">obtenerBotiquinItemsSstAprobados</a></li><li><a href="global.html#obtenerCamillasSstAprobadas">obtenerCamillasSstAprobadas</a></li><li><a href="global.html#obtenerCatalogoEppActivo">obtenerCatalogoEppActivo</a></li><li><a href="global.html#obtenerContextoAprobacion">obtenerContextoAprobacion</a></li><li><a href="global.html#obtenerDiasRestantes">obtenerDiasRestantes</a></li><li><a href="global.html#obtenerEppPredeterminados">obtenerEppPredeterminados</a></li><li><a href="global.html#obtenerEquiposTecnologicosSstAprobados">obtenerEquiposTecnologicosSstAprobados</a></li><li><a href="global.html#obtenerEstrategiaCompresion">obtenerEstrategiaCompresion</a></li><li><a href="global.html#obtenerExtensionOriginal">obtenerExtensionOriginal</a></li><li><a href="global.html#obtenerExtintoresSstAprobados">obtenerExtintoresSstAprobados</a></li><li><a href="global.html#obtenerFilasBotiquinesSstAprobados">obtenerFilasBotiquinesSstAprobados</a></li><li><a href="global.html#obtenerFilasCamillasSstAprobadas">obtenerFilasCamillasSstAprobadas</a></li><li><a href="global.html#obtenerFilasEquiposTecnologicosSstAprobados">obtenerFilasEquiposTecnologicosSstAprobados</a></li><li><a href="global.html#obtenerFilasExtintoresSstAprobados">obtenerFilasExtintoresSstAprobados</a></li><li><a href="global.html#obtenerFilasResumenSstAprobadas">obtenerFilasResumenSstAprobadas</a></li><li><a href="global.html#obtenerFilasSenalizacionesSstAprobadas">obtenerFilasSenalizacionesSstAprobadas</a></li><li><a href="global.html#obtenerInspeccionCompleta">obtenerInspeccionCompleta</a></li><li><a href="global.html#obtenerInspecciones">obtenerInspecciones</a></li><li><a href="global.html#obtenerLinks">obtenerLinks</a></li><li><a href="global.html#obtenerLinksInspeccion">obtenerLinksInspeccion</a></li><li><a href="global.html#obtenerOCrearHoja">obtenerOCrearHoja</a></li><li><a href="global.html#obtenerPerfil">obtenerPerfil</a></li><li><a href="global.html#obtenerPlanesAccion">obtenerPlanesAccion</a></li><li><a href="global.html#obtenerResumen">obtenerResumen</a></li><li><a href="global.html#obtenerResumenAprobacion">obtenerResumenAprobacion</a></li><li><a href="global.html#obtenerResumenEpp">obtenerResumenEpp</a></li><li><a href="global.html#obtenerResumenInspeccionesSstAprobadas">obtenerResumenInspeccionesSstAprobadas</a></li><li><a href="global.html#obtenerRutaExcelEpp">obtenerRutaExcelEpp</a></li><li><a href="global.html#obtenerRutaExcelSst">obtenerRutaExcelSst</a></li><li><a href="global.html#obtenerSeguimientoEpp">obtenerSeguimientoEpp</a></li><li><a href="global.html#obtenerSenalizacionesSstAprobadas">obtenerSenalizacionesSstAprobadas</a></li><li><a href="global.html#obtenerXml">obtenerXml</a></li><li><a href="global.html#optimizarImagen">optimizarImagen</a></li><li><a href="global.html#optimizarPdf">optimizarPdf</a></li><li><a href="global.html#previsualizarAprobacion">previsualizarAprobacion</a></li><li><a href="global.html#query">query</a></li><li><a href="global.html#reemplazarFormulaCelda">reemplazarFormulaCelda</a></li><li><a href="global.html#reemplazarXml">reemplazarXml</a></li><li><a href="global.html#registrarAprobacion">registrarAprobacion</a></li><li><a href="global.html#registrarEstadisticas">registrarEstadisticas</a></li><li><a href="global.html#registrarOriginalConservado">registrarOriginalConservado</a></li><li><a href="global.html#resolverCarpetaDestinoPdf">resolverCarpetaDestinoPdf</a></li><li><a href="global.html#resolverCorreoDestino">resolverCorreoDestino</a></li><li><a href="global.html#resolverCorreoDestinoEpp">resolverCorreoDestinoEpp</a></li><li><a href="global.html#resolverFechaEvidencia">resolverFechaEvidencia</a></li><li><a href="global.html#seleccionarFormatoSalida">seleccionarFormatoSalida</a></li><li><a href="global.html#sincronizarCierresDesdeExcelEpp">sincronizarCierresDesdeExcelEpp</a></li><li><a href="global.html#sincronizarCierresExcelEpp">sincronizarCierresExcelEpp</a></li><li><a href="global.html#subirArchivoOneDrive">subirArchivoOneDrive</a></li><li><a href="global.html#subirEvidenciasMultiples">subirEvidenciasMultiples</a></li><li><a href="global.html#subirPdfAOneDrive">subirPdfAOneDrive</a></li><li><a href="global.html#timeoutMs">timeoutMs</a></li><li><a href="global.html#uploadEvidenceToOneDrive">uploadEvidenceToOneDrive</a></li><li><a href="global.html#validarArchivo">validarArchivo</a></li><li><a href="global.html#validarBotiquines">validarBotiquines</a></li><li><a href="global.html#validarCamillas">validarCamillas</a></li><li><a href="global.html#validarEquiposTecnologicos">validarEquiposTecnologicos</a></li><li><a href="global.html#validarEvidenciaTrabajador">validarEvidenciaTrabajador</a></li><li><a href="global.html#validarExtintores">validarExtintores</a></li><li><a href="global.html#validarInformacionGeneral">validarInformacionGeneral</a></li><li><a href="global.html#validarInspeccion">validarInspeccion</a></li><li><a href="global.html#validarInspeccionEpp">validarInspeccionEpp</a></li><li><a href="global.html#validarPdf">validarPdf</a></li><li><a href="global.html#validarResultado">validarResultado</a></li><li><a href="global.html#validarSenalizaciones">validarSenalizaciones</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.5</a>
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>

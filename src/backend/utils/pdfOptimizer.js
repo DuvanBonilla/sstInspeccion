@@ -918,10 +918,9 @@ async function limpiarTemporales(tempFiles = {}) {
  * el PDF original será devuelto.
  *
  * @param {Buffer} pdfBuffer
- * @param {{
- *      profile?:string,
- *      fileName?:string
- * }} options
+ * @param {Object} [options={}] - Opciones de optimización del PDF.
+ * @param {string} [options.profile] - Perfil de compresión que se utilizará.
+ * @param {string} [options.fileName] - Nombre del archivo PDF procesado.
  *
  * @returns {Promise<Buffer>}
  * ============================================================

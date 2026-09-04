@@ -63,6 +63,24 @@ const { calcularResumenEpp } = require("../services/resumenEpp.service");
 
 const { optimizarPdf } = require("../utils/pdfOptimizer");
 
+/**
+ * Obtiene la información necesaria para mostrar una aprobación.
+ *
+ * Identifica el rol asociado al token, recupera la inspección completa y
+ * construye un resumen diferente según corresponda a una inspección SST o EPP.
+ *
+ * Corresponde al endpoint GET /api/aprobaciones/:token.
+ *
+ * @async
+ * @param {Object} req Solicitud HTTP de Express.
+ * @param {Object} req.params Parámetros recibidos en la URL.
+ * @param {string} req.params.token Token único de aprobación.
+ * @param {Object} res Respuesta HTTP de Express.
+ * @returns {Promise<Object>} Respuesta con el rol, estado de aprobación,
+ * información general y conteos de la inspección; 404 si el token o la
+ * inspección no existen; o 500 si ocurre un error.
+ */
+
 async function obtenerResumenAprobacion(req, res) {
   try {
     const contexto = await obtenerContextoAprobacion(req.params.token);
@@ -173,6 +191,21 @@ async function obtenerResumenAprobacion(req, res) {
   }
 }
 
+/**
+ * Construye la información de los responsables que aprobaron la inspección.
+ *
+ * Normaliza los nombres almacenados para el inspector, jefe responsable y
+ * representante de COPASST. Cuando una aprobación no existe, asigna una
+ * cadena vacía.
+ *
+ * @param {Object} row Registro de la inspección obtenido desde la base de datos.
+ * @returns {{
+ *   inspector: {nombre: string},
+ *   jefe: {nombre: string},
+ *   copasst: {nombre: string}
+ * }} Información normalizada de las aprobaciones.
+ */
+
 function construirAprobaciones(row) {
   return {
     inspector: {
@@ -186,6 +219,27 @@ function construirAprobaciones(row) {
     },
   };
 }
+
+/**
+ * Genera la vista previa en PDF de una inspección.
+ *
+ * Valida el token de aprobación, recupera la inspección completa y genera el
+ * documento correspondiente según el tipo de inspección. Para las inspecciones
+ * EPP también recupera las evidencias de cada trabajador desde OneDrive.
+ *
+ * El PDF se devuelve directamente al navegador sin almacenarlo como informe
+ * final.
+ *
+ * Corresponde al endpoint GET /api/aprobaciones/:token/preview.
+ *
+ * @async
+ * @param {Object} req Solicitud HTTP de Express.
+ * @param {Object} req.params Parámetros recibidos en la URL.
+ * @param {string} req.params.token Token único de aprobación.
+ * @param {Object} res Respuesta HTTP de Express.
+ * @returns {Promise<Object>} Respuesta con el PDF para visualización; 404 si
+ * el token o la inspección no existen; o 500 si falla la generación.
+ */
 
 async function previsualizarAprobacion(req, res) {
   try {
@@ -297,6 +351,27 @@ async function previsualizarAprobacion(req, res) {
   }
 }
 
+/**
+ * Registra la aprobación asociada a un token.
+ *
+ * Valida el nombre del aprobador y delega el registro de la aprobación. Cuando
+ * se completan todas las aprobaciones requeridas, inicia en segundo plano el
+ * proceso de finalización de la inspección.
+ *
+ * Corresponde al endpoint POST /api/aprobaciones/:token.
+ *
+ * @async
+ * @param {Object} req Solicitud HTTP de Express.
+ * @param {Object} req.params Parámetros recibidos en la URL.
+ * @param {string} req.params.token Token único de aprobación.
+ * @param {Object} req.body Información enviada por el aprobador.
+ * @param {string} req.body.nombre Nombre de la persona que aprueba.
+ * @param {Object} res Respuesta HTTP de Express.
+ * @returns {Promise<Object>} Respuesta con el resultado de la aprobación;
+ * 400 si falta el nombre, 404 si el token no existe, 409 si ya fue utilizado
+ * o 500 si ocurre un error.
+ */
+
 async function registrarAprobacion(req, res) {
   try {
     const { nombre } = req.body || {};
@@ -342,6 +417,25 @@ async function registrarAprobacion(req, res) {
     return res.status(500).json({ ok: false, errores: [mensaje] });
   }
 }
+
+/**
+ * Ejecuta el cierre definitivo de una inspección aprobada.
+ *
+ * Verifica que la inspección tenga todas las aprobaciones, genera el PDF final
+ * según sea SST o EPP, optimiza el documento, lo almacena en OneDrive y envía
+ * el correo correspondiente. Después marca la inspección como enviada y
+ * actualiza el archivo de seguimiento asociado a su tipo.
+ *
+ * La actualización del archivo Excel se gestiona de manera independiente:
+ * si falla, el cierre principal de la inspección permanece realizado.
+ *
+ * @async
+ * @param {string} inspeccionId Identificador único de la inspección.
+ * @returns {Promise<void>} La promesa finaliza cuando se completa el proceso
+ * principal de cierre y se intenta actualizar el seguimiento en Excel.
+ * @throws {Error} Si la inspección no existe, no tiene todas las aprobaciones
+ * o falla una etapa principal de generación, almacenamiento o envío.
+ */
 
 async function finalizarInspeccion(inspeccionId) {
   // =======================================================
@@ -567,32 +661,23 @@ async function finalizarInspeccion(inspeccionId) {
   // - correo procesado
   // =======================================================
 
-  await marcarInspeccionEnviada(
-    row.inspeccion_id,
-    webUrl,
-  );
+  await marcarInspeccionEnviada(row.inspeccion_id, webUrl);
 
   if (tipoInspeccion === "SST") {
     try {
-      const resultadoExcel =
-        await actualizarExcelSeguimientoSstEnOneDrive();
+      const resultadoExcel = await actualizarExcelSeguimientoSstEnOneDrive();
 
-      console.log(
-        "[aprobaciones] Excel SST actualizado:",
-        {
-          inspeccionId: row.inspeccion_id,
-          rutaExcel: resultadoExcel.rutaExcel,
-          extintores: resultadoExcel.extintores,
-          camillas: resultadoExcel.camillas,
-          senalizaciones:
-            resultadoExcel.senalizaciones,
-          equiposTecnologicos:
-            resultadoExcel.equiposTecnologicos,
-          botiquines: resultadoExcel.botiquines,
-          resumen: resultadoExcel.resumen,
-          general: resultadoExcel.general,
-        },
-      );
+      console.log("[aprobaciones] Excel SST actualizado:", {
+        inspeccionId: row.inspeccion_id,
+        rutaExcel: resultadoExcel.rutaExcel,
+        extintores: resultadoExcel.extintores,
+        camillas: resultadoExcel.camillas,
+        senalizaciones: resultadoExcel.senalizaciones,
+        equiposTecnologicos: resultadoExcel.equiposTecnologicos,
+        botiquines: resultadoExcel.botiquines,
+        resumen: resultadoExcel.resumen,
+        general: resultadoExcel.general,
+      });
     } catch (error) {
       console.error(
         `[aprobaciones] No se pudo actualizar el Excel SST para ${row.inspeccion_id}:`,
@@ -601,20 +686,14 @@ async function finalizarInspeccion(inspeccionId) {
     }
   } else if (tipoInspeccion === "EPP") {
     try {
-      const resultadoExcel =
-        await actualizarExcelSeguimientoEppEnOneDrive();
+      const resultadoExcel = await actualizarExcelSeguimientoEppEnOneDrive();
 
-      console.log(
-        "[aprobaciones] Excel EPP actualizado:",
-        {
-          inspeccionId: row.inspeccion_id,
-          rutaExcel: resultadoExcel.rutaExcel,
-          estadoInspecciones:
-            resultadoExcel.estadoInspecciones,
-          tamañoBytes:
-            resultadoExcel.tamañoBytes,
-        },
-      );
+      console.log("[aprobaciones] Excel EPP actualizado:", {
+        inspeccionId: row.inspeccion_id,
+        rutaExcel: resultadoExcel.rutaExcel,
+        estadoInspecciones: resultadoExcel.estadoInspecciones,
+        tamañoBytes: resultadoExcel.tamañoBytes,
+      });
     } catch (error) {
       console.error(
         `[aprobaciones] No se pudo actualizar el Excel EPP para ${row.inspeccion_id}:`,
@@ -629,4 +708,3 @@ module.exports = {
   previsualizarAprobacion,
   registrarAprobacion,
 };
-

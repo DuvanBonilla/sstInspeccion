@@ -23,6 +23,27 @@ const CAMPOS_CONDICION = [
   "otros"
 ];
 
+/**
+ * Normaliza la información de un extintor.
+ *
+ * Limpia sus campos de texto, admite los nombres alternativos utilizados
+ * para la evidencia y garantiza que exista un objeto de condiciones.
+ *
+ * @param {Object} extintor - Extintor recibido en el payload.
+ * @returns {{
+ *   numero: string,
+ *   ubicacion: string,
+ *   tipo: string,
+ *   capacidad: string,
+ *   mesRecarga: string,
+ *   anioRecarga: string,
+ *   observaciones: string,
+ *   evidenciaArchivo: string,
+ *   evidenciaRuta: string,
+ *   condiciones: Object
+ * }|null} Extintor normalizado, o `null` si el valor recibido no es un objeto.
+ */
+
 function normalizarExtintor(extintor) {
   if (!extintor || typeof extintor !== "object") return null;
 
@@ -39,8 +60,16 @@ function normalizarExtintor(extintor) {
     condiciones: extintor.condiciones || {}
   };
 }
+/**
+ * Obtiene y normaliza los extintores presentes en el payload.
+ *
+ * Admite tanto la colección `extintores` como el objeto individual `extintor`
+ * y devuelve siempre una lista uniforme, descartando valores inválidos.
+ *
+ * @param {Object} payload - Payload recibido para la inspección SST.
+ * @returns {Array<Object>} Extintores normalizados.
+ */
 
-// Normaliza un payload que puede contener un array de extintores o un único objeto de extintor.
 function normalizarExtintores(payload) {
   if (Array.isArray(payload?.extintores)) {
     return payload.extintores.map(normalizarExtintor).filter(Boolean);
@@ -50,7 +79,21 @@ function normalizarExtintores(payload) {
   return unico ? [unico] : [];
 }
 
-//
+/**
+ * Valida la información y las condiciones de los extintores.
+ *
+ * Comprueba los datos obligatorios de cada extintor y verifica que todas
+ * las condiciones configuradas tengan una calificación permitida:
+ * `B`, `R`, `M`, `NC` o `NA`.
+ *
+ * Los errores encontrados se agregan al arreglo recibido y las condiciones
+ * válidas se devuelven normalizadas en mayúsculas.
+ *
+ * @param {Array<Object>} extintores - Extintores previamente normalizados.
+ * @param {string[]} errores - Arreglo donde deben acumularse los errores.
+ * @returns {Array<Object>} Extintores con sus condiciones validadas y normalizadas.
+ */
+
 function validarExtintores(extintores, errores) {
   return extintores.map((extintor, index) => {
     if (!extintor.numero) errores.push(`Numero de extintor es obligatorio en extintor ${index + 1}`);

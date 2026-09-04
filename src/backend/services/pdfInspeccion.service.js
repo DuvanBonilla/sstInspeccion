@@ -346,6 +346,19 @@ async function extraerFechasArchivos(fileMapa, body, prefijo) {
   return fechas;
 }
 
+/**
+ * Organiza las evidencias recibidas según el índice del elemento inspeccionado.
+ *
+ * Identifica los archivos mediante la convención
+ * `{prefijo}-{indiceElemento}-{indiceFoto}`, los agrupa por elemento y ordena
+ * sus fotografías según la posición indicada en el nombre del campo.
+ *
+ * @param {Array<Object>} files Archivos recibidos mediante Multer.
+ * @param {string} [prefix="evidencia"] Prefijo utilizado en los campos.
+ * @returns {Map<number, Array<Object>>} Evidencias agrupadas por índice del
+ * elemento y ordenadas por número de fotografía.
+ */
+
 function extraerEvidenciasPorIndex(files, prefix = "evidencia") {
   const temp = new Map();
   const lista = Array.isArray(files) ? files : [];
@@ -1487,6 +1500,33 @@ function renderAprobaciones(doc, y, aprobaciones = null) {
   doc.restore();
 }
 
+/**
+ * Genera el informe PDF completo de una inspección SST.
+ *
+ * Construye las páginas correspondientes a extintores, camillas,
+ * señalizaciones, equipos tecnológicos y botiquines. Incluye información
+ * general, resultados, observaciones, evidencias, fechas y aprobaciones.
+ *
+ * Cuando un elemento contiene más evidencias de las que caben en su espacio
+ * principal, genera páginas adicionales para mostrarlas.
+ *
+ * @async
+ * @param {Object} data Información general y secciones de la inspección SST.
+ * @param {Map} [evidenciasPorIndex=new Map()] Evidencias de extintores.
+ * @param {Map} [evidenciasCamillaPorIndex=new Map()] Evidencias de camillas.
+ * @param {Map} [evidenciasSenalizacionPorIndex=new Map()] Evidencias de señalización.
+ * @param {Map} [evidenciasEquipoTecnologicoPorIndex=new Map()] Evidencias de equipos.
+ * @param {Map} [evidenciasBotiquinPorIndex=new Map()] Evidencias de botiquines.
+ * @param {Object} [body={}] Datos utilizados para determinar las fechas de
+ * las evidencias recibidas desde el formulario.
+ * @param {Object} [opts={}] Opciones adicionales para generar el documento.
+ * @param {Object|null} [opts.aprobaciones=null] Responsables que aprobaron.
+ * @param {Object|null} [opts.fechasPrecomputadas=null] Fechas previamente
+ * determinadas para las evidencias.
+ * @returns {Promise<Buffer>} Contenido binario del informe PDF generado.
+ * @throws {Error} Si ocurre un error durante la construcción del documento.
+ */
+
 async function crearPdfInspeccionExtintor(
   data,
   evidenciasPorIndex = new Map(),
@@ -1974,6 +2014,26 @@ function construirDatosGenerales(row) {
     cargoResponsable: row.cargo_responsable,
   };
 }
+
+/**
+ * Genera el PDF de una inspección SST dentro del flujo de aprobación.
+ *
+ * Descarga desde OneDrive las evidencias asociadas a las diferentes secciones,
+ * reconstruye la información general de la inspección y delega la creación
+ * del documento final al generador principal de PDF SST.
+ *
+ * @async
+ * @param {Object} completa Inspección SST completa recuperada de la base de datos.
+ * @param {Array<Object>} completa.extintores Extintores inspeccionados.
+ * @param {Array<Object>} completa.camillas Camillas inspeccionadas.
+ * @param {Array<Object>} completa.senalizaciones Señalizaciones inspeccionadas.
+ * @param {Array<Object>} completa.equiposTecnologicos Equipos inspeccionados.
+ * @param {Array<Object>} completa.botiquines Botiquines inspeccionados.
+ * @param {Object} row Registro general de la inspección.
+ * @param {Object} aprobaciones Información de los responsables que aprobaron.
+ * @returns {Promise<Buffer>} Contenido binario del PDF SST generado.
+ * @throws {Error} Si falla la descarga de evidencias o la generación del PDF.
+ */
 
 async function generarPdfSstAprobacion(completa, row, aprobaciones) {
   const [ext, cam, sen, eqp, bot] = await Promise.all([

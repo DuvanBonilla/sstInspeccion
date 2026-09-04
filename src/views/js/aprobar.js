@@ -28,11 +28,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const el = (id) => document.getElementById(id);
 
-
-  // =========================================================
-  // ESTADOS DE LA PÁGINA
-  // =========================================================
-
   const estados = {
     cargando: el("estado-cargando"),
     error: el("estado-error"),
@@ -40,7 +35,6 @@ document.addEventListener("DOMContentLoaded", () => {
     exito: el("estado-exito"),
     formulario: el("estado-formulario"),
   };
-
 
   function mostrarEstado(nombre) {
     Object.entries(estados).forEach(([key, elemento]) => {
@@ -56,11 +50,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
     });
   }
-
-
-  // =========================================================
-  // MANEJO DE ERRORES
-  // =========================================================
 
   function mostrarError(msg) {
 
@@ -85,10 +74,16 @@ document.addEventListener("DOMContentLoaded", () => {
 
   }
 
-
-  // =========================================================
-  // RENDERIZAR PANEL SST
-  // =========================================================
+/**
+ * Muestra el resumen correspondiente a una inspección SST.
+ *
+ * Activa el panel SST, oculta el panel EPP y presenta la cantidad de
+ * elementos inspeccionados en cada uno de los módulos disponibles.
+ *
+ * @param {Object} insp - Información de la inspección obtenida desde el backend.
+ * @param {Object} [insp.conteos] - Cantidades registradas por módulo.
+ * @returns {void}
+ */
 
   function renderizarPanelSst(insp) {
 
@@ -119,10 +114,16 @@ document.addEventListener("DOMContentLoaded", () => {
 
   }
 
-
-  // =========================================================
-  // RENDERIZAR PANEL EPP
-  // =========================================================
+/**
+ * Muestra el resumen correspondiente a una inspección EPP.
+ *
+ * Activa el panel EPP, oculta el panel SST y presenta las cantidades de
+ * trabajadores, evaluaciones, novedades y trabajadores con o sin novedades.
+ *
+ * @param {Object} insp - Información de la inspección obtenida desde el backend.
+ * @param {Object} [insp.conteos] - Totales calculados para la inspección EPP.
+ * @returns {void}
+ */
 
   function renderizarPanelEpp(insp) {
 
@@ -213,10 +214,16 @@ document.addEventListener("DOMContentLoaded", () => {
 
   }
 
-
-  // =========================================================
-  // CARGAR INSPECCIÓN
-  // =========================================================
+/**
+ * Carga la inspección asociada con el token presente en la URL.
+ *
+ * Consulta la información de la inspección en el backend, verifica si el
+ * token ya fue utilizado y presenta los datos generales junto con el panel
+ * correspondiente al tipo de inspección SST o EPP.
+ *
+ * @async
+ * @returns {Promise<void>}
+ */
 
   async function cargar() {
 
@@ -403,10 +410,16 @@ document.addEventListener("DOMContentLoaded", () => {
 
   }
 
-
-  // =========================================================
-  // REGISTRAR APROBACIÓN
-  // =========================================================
+/**
+ * Registra la aprobación de la inspección asociada con el token actual.
+ *
+ * Valida el nombre del aprobador y envía la confirmación al backend. Después
+ * de una respuesta satisfactoria, informa si todavía existen aprobaciones
+ * pendientes o si se completó la última aprobación requerida.
+ *
+ * @async
+ * @returns {Promise<void>}
+ */
 
   async function aprobar() {
 
@@ -540,10 +553,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
   }
 
-
-  // =========================================================
-  // VER INFORME
-  // =========================================================
+/**
+ * Abre en una nueva pestaña la vista previa del informe de la inspección.
+ *
+ * Utiliza el token actual para construir el endpoint de consulta del
+ * documento disponible para el aprobador.
+ *
+ * @returns {void}
+ */
 
   function verInforme() {
 
@@ -557,11 +574,6 @@ document.addEventListener("DOMContentLoaded", () => {
     );
 
   }
-
-
-  // =========================================================
-  // EVENTOS
-  // =========================================================
 
   const btnAprobar =
     el("btn-aprobar");
@@ -587,11 +599,6 @@ document.addEventListener("DOMContentLoaded", () => {
       );
 
     });
-
-
-  // =========================================================
-  // INICIAR
-  // =========================================================
 
   cargar();
 

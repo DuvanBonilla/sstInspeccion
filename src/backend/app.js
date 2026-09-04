@@ -1,3 +1,23 @@
+/**
+ * Punto de entrada y configuración principal del servidor web.
+ *
+ * Inicializa la aplicación Express, carga las variables de entorno, configura
+ * los middlewares para archivos estáticos, JSON, formularios y evidencias
+ * recibidas mediante Multer.
+ *
+ * También registra las rutas utilizadas por los módulos de inspecciones SST,
+ * inspecciones EPP, aprobaciones, estadísticas, generación de documentos,
+ * seguimiento en Excel y catálogos EPP.
+ *
+ * Finalmente, inicia el servidor HTTP en el puerto definido por la variable
+ * de entorno PORT o, en su ausencia, en el puerto 3000.
+ *
+ * @module app
+ * @requires express
+ * @requires multer
+ * @requires dotenv
+ */
+
 const path = require("node:path");
 require("dotenv").config();
 

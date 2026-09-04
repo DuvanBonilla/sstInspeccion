@@ -12,6 +12,26 @@ const {
   crearPdfInspeccionExtintor,
 } = require("../services/pdfInspeccion.service");
 
+/**
+ * Genera y devuelve un PDF de prueba de una inspección SST.
+ *
+ * Lee los datos del formulario, organiza las evidencias por sección, genera
+ * el documento y aplica la optimización configurada. El PDF resultante se
+ * devuelve al navegador como archivo descargable.
+ *
+ * Esta operación no almacena el documento en OneDrive ni envía correos.
+ *
+ * Corresponde al endpoint POST /pdf-prueba.
+ *
+ * @async
+ * @param {Object} req Solicitud HTTP de Express.
+ * @param {Object} req.body Datos enviados desde el formulario SST.
+ * @param {Array<Object>} req.files Evidencias recibidas mediante Multer.
+ * @param {Object} res Respuesta HTTP de Express.
+ * @returns {Promise<Object>} PDF optimizado como descarga o estado 500 si
+ * ocurre un error durante la generación.
+ */
+
 async function generarPdfPrueba(req, res) {
   try {
     const data = leerPayload(req);
@@ -62,6 +82,24 @@ async function generarPdfPrueba(req, res) {
     return res.status(500).json({ ok: false, errores: [mensaje] });
   }
 }
+
+/**
+ * Genera, almacena y envía por correo un PDF de prueba SST.
+ *
+ * Determina el destinatario según la sede, organiza las evidencias, genera y
+ * optimiza el informe, lo almacena en OneDrive y posteriormente envía un correo
+ * HTML con el PDF adjunto y el enlace al documento.
+ *
+ * Corresponde al endpoint POST /enviar-pdf-prueba-correo.
+ *
+ * @async
+ * @param {Object} req Solicitud HTTP de Express.
+ * @param {Object} req.body Datos del formulario y destinatario opcional.
+ * @param {Array<Object>} req.files Evidencias recibidas mediante Multer.
+ * @param {Object} res Respuesta HTTP de Express.
+ * @returns {Promise<Object>} Confirmación del envío; estado 400 cuando no se
+ * puede determinar el destinatario o estado 500 si falla el proceso.
+ */
 
 async function enviarPdfPruebaCorreo(req, res) {
   try {

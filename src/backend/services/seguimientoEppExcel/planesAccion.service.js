@@ -11,8 +11,63 @@ const {
 
 const { COLORES_EVALUACION } = require("./estilos.service");
 
+/**
+ * Construye la hoja de seguimiento de planes de acción EPP.
+ *
+ * Obtiene o crea la hoja `03 - Planes de Acción`, elimina la tabla y los
+ * registros anteriores, configura las columnas y agrega los planes recibidos
+ * desde la base de datos.
+ *
+ * Para cada plan incorpora fórmulas que calculan los días restantes, la
+ * situación actual y el estado de cumplimiento. Después crea la tabla
+ * estructurada utilizada por Power Automate y aplica formatos de fecha,
+ * colores de evaluación y reglas visuales según el estado del plan.
+ *
+ * @param {ExcelJS.Workbook} workbook
+ * Libro de Excel donde debe construirse la hoja.
+ * @param {Array<{
+ *   inspeccion_id: string,
+ *   fecha: string|Date,
+ *   sede_operacion: string,
+ *   area_trabajo: string,
+ *   codigo_trabajador: string,
+ *   nombre_trabajador: string,
+ *   cargo: string,
+ *   elemento_epp: string,
+ *   categoria: string,
+ *   condicion: string,
+ *   uso: string,
+ *   plan_accion: string,
+ *   fecha_plan_accion: string|Date|null,
+ *   detalle_epp_id: number|string,
+ *   responsable_cierre: string,
+ *   fecha_cierre: string|Date|null
+ * }>} planes - Planes de acción obtenidos desde la base de datos.
+ * @returns { @returns {ExcelJS.Worksheet}
+ * Hoja de planes de acción construida y formateada.
+ */
+
 function construirHojaPlanesAccion(workbook, planes) {
   const hoja = obtenerOCrearHoja(workbook, "03 - Planes de Acción");
+
+  /* =========================================================
+     LIMPIAR INFORMACIÓN ANTERIOR DEL EXCEL
+  ========================================================= */
+
+  const nombreTabla = "TablaPlanesAccionEpp";
+  const tablaExistente = hoja.getTable(nombreTabla);
+
+  // Primero se elimina la tabla estructurada anterior.
+  if (tablaExistente) {
+    hoja.removeTable(nombreTabla);
+  }
+
+  // Después se eliminan todas las filas, excepto el encabezado.
+  const filasAnteriores = Math.max(hoja.rowCount - 1, 0);
+
+  if (filasAnteriores > 0) {
+    hoja.spliceRows(2, filasAnteriores);
+  }
 
   configurarColumnas(hoja, [
     // =====================================================
@@ -242,7 +297,7 @@ function construirHojaPlanesAccion(workbook, planes) {
   }
 
   hoja.addTable({
-    name: "TablaPlanesAccionEpp",
+    name: nombreTabla,
     ref: "A1",
     headerRow: true,
     totalsRow: false,
@@ -322,7 +377,7 @@ function construirHojaPlanesAccion(workbook, planes) {
           },
         },
 
-                {
+        {
           type: "cellIs",
           operator: "equal",
           formulae: ['"VENCE HOY"'],
@@ -342,8 +397,6 @@ function construirHojaPlanesAccion(workbook, planes) {
             },
           },
         },
-
-        
 
         // ---------------------------------------------------
         // PRÓXIMO A VENCER

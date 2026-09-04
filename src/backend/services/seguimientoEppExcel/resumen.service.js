@@ -1,8 +1,12 @@
+
+
 const {
   obtenerOCrearHoja,
   configurarColumnas,
   aplicarFormatoFecha,
 } = require("../excel.service");
+
+
 
 function obtenerFechaLocal(fecha) {
   if (!fecha) {
@@ -18,6 +22,17 @@ function obtenerFechaLocal(fecha) {
   return new Date(valor.getFullYear(), valor.getMonth(), valor.getDate());
 }
 
+/**
+ * Calcula los días restantes para el vencimiento de un plan de acción.
+ *
+ * Normaliza la fecha de compromiso y la fecha actual para comparar únicamente
+ * sus componentes de calendario, sin tener en cuenta la hora.
+ *
+ * @param {string|Date|null} fechaCompromiso - Fecha límite del plan de acción.
+ * @returns {number|null} Días restantes hasta el vencimiento; un valor negativo
+ * cuando el plan está vencido, o `null` si la fecha no es válida.
+ */
+
 function calcularDiasRestantes(fechaCompromiso) {
   const fechaPlan = obtenerFechaLocal(fechaCompromiso);
 
@@ -31,6 +46,27 @@ function calcularDiasRestantes(fechaCompromiso) {
 
   return Math.round(diferenciaMilisegundos / (24 * 60 * 60 * 1000));
 }
+
+/**
+ * Agrupa y clasifica los planes de acción por inspección.
+ *
+ * Calcula para cada inspección la cantidad total de planes, los planes
+ * pendientes, cumplidos, vencidos y próximos a vencer. Se considera próximo
+ * a vencer un plan pendiente con entre cero y tres días restantes.
+ *
+ * @param {Array<{
+ *   inspeccion_id: string,
+ *   estado_plan: string,
+ *   fecha_plan_accion: string|Date|null
+ * }>} planes - Planes de acción que deben clasificarse.
+ * @returns {Map<string, {
+ *   totalPlanes: number,
+ *   planesPendientes: number,
+ *   planesCumplidos: number,
+ *   planesVencidos: number,
+ *   planesProximosVencer: number
+ * }>} Resumen de planes agrupado por identificador de inspección.
+ */
 
 function clasificarPlanesPorInspeccion(planes) {
   const planesPorInspeccion = new Map();
@@ -85,6 +121,27 @@ function clasificarPlanesPorInspeccion(planes) {
 
   return planesPorInspeccion;
 }
+
+/**
+ * Construye la hoja consolidada de indicadores del seguimiento EPP.
+ *
+ * Genera la hoja `_RESUMEN` con una fila por inspección, incluyendo sus
+ * datos generales, trabajadores evaluados, novedades EPP y clasificación
+ * de los planes de acción.
+ *
+ * La hoja se mantiene oculta y su información se utiliza como fuente
+ * consolidada para el seguimiento y procesamiento posterior del archivo.
+ *
+ * @param {ExcelJS.Workbook} workbook
+ * Libro de Excel donde debe construirse la hoja.
+ * @param {Array<Object>} inspecciones
+ * Inspecciones EPP obtenidas desde la base de datos.
+ * @param {Array<Object>} seguimiento
+ * Registros individuales de trabajadores incluidos en el seguimiento.
+ * @param {Array<Object>} planes
+ * Planes de acción asociados con las inspecciones.
+ * @returns {Object} Hoja construida, totales procesados y rango ocupado.Hoja construida, totales procesados y rango ocupado.
+ */
 
 function construirHojaResumenEpp(workbook, inspecciones, seguimiento, planes) {
   const hoja = obtenerOCrearHoja(workbook, "_RESUMEN");

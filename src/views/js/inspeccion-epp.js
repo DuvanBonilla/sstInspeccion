@@ -26,17 +26,11 @@ import {
   cargarCatalogoEpp,
 } from "./trabajadoresEpp.js";
 
-// =========================================================
-// ESTADO DEL FORMULARIO
-// =========================================================
 
 let pasoActual = 1;
 
 const TOTAL_PASOS = 3;
 
-// =========================================================
-// REFERENCIAS DEL DOM
-// =========================================================
 
 const fecha = document.getElementById("fecha");
 
@@ -64,10 +58,6 @@ const trabajadoresManager = createTrabajadoresEppManager({
   accionesElement: document.getElementById("acciones-trabajadores"),
 });
 
-// =========================================================
-// CAMPOS DE INFORMACIÓN GENERAL
-// =========================================================
-
 const camposInformacionGeneral = [
   "fecha",
   "sedeOperacion",
@@ -77,10 +67,6 @@ const camposInformacionGeneral = [
   "responsableInspeccion",
   "cargoResponsable",
 ];
-
-// =========================================================
-// INICIALIZACIÓN
-// =========================================================
 
 document.addEventListener("DOMContentLoaded", async () => {
   try {
@@ -109,10 +95,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 });
 
-// =========================================================
-// FECHA
-// =========================================================
-
 function inicializarFecha() {
   if (!fecha) {
     return;
@@ -140,9 +122,6 @@ function inicializarAccionesModalExito() {
     window.location.href = "/inspeccion-epp";
   });
 }
-// =========================================================
-// NAVEGACIÓN
-// =========================================================
 
 function inicializarNavegacion() {
   document.querySelectorAll("[data-step-target]").forEach((boton) => {
@@ -158,15 +137,21 @@ function inicializarNavegacion() {
   });
 }
 
+/**
+ * Controla la navegación entre las etapas del formulario de inspección EPP.
+ *
+ * Antes de avanzar, valida la información correspondiente al paso actual.
+ * Cuando se accede al resumen, actualiza la información general, el detalle
+ * de los trabajadores y las verificaciones previas al envío.
+ *
+ * @param {number} destino - Número del paso al que se desea navegar.
+ * @returns {void}
+ */
+
 function navegarAPaso(destino) {
   if (destino < 1 || destino > TOTAL_PASOS) {
     return;
   }
-
-  // -------------------------------------------------------
-  // Si avanzamos desde Información General,
-  // primero debemos validarla.
-  // -------------------------------------------------------
 
   if (pasoActual === 1 && destino > pasoActual) {
     const formularioValido = validarInformacionGeneral();
@@ -176,10 +161,6 @@ function navegarAPaso(destino) {
     }
   }
 
-  // -------------------------------------------------------
-  // Si avanzamos desde Inspección EPP,
-  // validar todos los trabajadores.
-  // -------------------------------------------------------
 
   if (pasoActual === 2 && destino > pasoActual) {
     const resultado = trabajadoresManager.validar();
@@ -188,10 +169,6 @@ function navegarAPaso(destino) {
       return;
     }
   }
-
-  // -------------------------------------------------------
-  // Al llegar al resumen construimos la información.
-  // -------------------------------------------------------
 
   if (destino === 3) {
     construirResumenGeneral();
@@ -208,24 +185,21 @@ function navegarAPaso(destino) {
   actualizarPaso();
 }
 
-// =========================================================
-// ACTUALIZAR PASO
-// =========================================================
+/**
+ * Actualiza visualmente el paso activo del formulario.
+ *
+ * Muestra el panel correspondiente, actualiza los indicadores de progreso
+ * y desplaza la página hacia la parte superior.
+ *
+ * @returns {void}
+ */
 
 function actualizarPaso() {
-  // -------------------------------------------------------
-  // Paneles
-  // -------------------------------------------------------
-
   document.querySelectorAll("[data-step-panel]").forEach((panel) => {
     const numeroPaso = Number(panel.dataset.stepPanel);
 
     panel.classList.toggle("hidden", numeroPaso !== pasoActual);
   });
-
-  // -------------------------------------------------------
-  // Indicadores superiores
-  // -------------------------------------------------------
 
   document.querySelectorAll("[data-step-indicator]").forEach((indicador) => {
     const numeroPaso = Number(indicador.dataset.stepIndicator);
@@ -241,9 +215,15 @@ function actualizarPaso() {
   });
 }
 
-// =========================================================
-// VALIDACIÓN INFORMACIÓN GENERAL
-// =========================================================
+/**
+ * Valida que los campos obligatorios de la información general estén completos.
+ *
+ * Marca visualmente los campos vacíos y posiciona el foco sobre el primer
+ * campo que no cumple la validación.
+ *
+ * @returns {boolean} `true` si todos los campos requeridos tienen información;
+ * de lo contrario, `false`.
+ */
 
 function validarInformacionGeneral() {
   let valido = true;
@@ -279,10 +259,6 @@ function validarInformacionGeneral() {
   return valido;
 }
 
-// =========================================================
-// ELIMINAR ERROR AL CORREGIR CAMPO
-// =========================================================
-
 camposInformacionGeneral.forEach((id) => {
   const campo = document.getElementById(id);
 
@@ -301,9 +277,6 @@ camposInformacionGeneral.forEach((id) => {
   campo.addEventListener("change", limpiarError);
 });
 
-// =========================================================
-// RESUMEN INFORMACIÓN GENERAL
-// =========================================================
 
 function construirResumenGeneral() {
   asignarTextoResumen("resumen-fecha", obtenerValor("fecha"));
@@ -327,9 +300,15 @@ function construirResumenGeneral() {
   );
 }
 
-// =========================================================
-// RESUMEN TRABAJADORES EPP
-// =========================================================
+/**
+ * Construye el resumen visual de los trabajadores incluidos en la inspección.
+ *
+ * Por cada trabajador muestra sus datos principales, la cantidad de elementos
+ * EPP evaluados, las novedades encontradas, el estado del plan de acción y la
+ * existencia de evidencia. También calcula los totales generales del resumen.
+ *
+ * @returns {void}
+ */
 
 function construirResumenTrabajadores() {
   const trabajadores = trabajadoresManager.leer();
@@ -504,10 +483,6 @@ function construirResumenTrabajadores() {
   asignarTextoResumen("resumen-total-novedades", totalNovedades);
 }
 
-// =========================================================
-// ESCAPAR TEXTO PARA HTML
-// =========================================================
-
 function escaparHtml(valor) {
   return String(valor ?? "")
     .replaceAll("&", "&amp;")
@@ -516,6 +491,15 @@ function escaparHtml(valor) {
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#039;");
 }
+
+/**
+ * Genera un identificador único para una inspección EPP.
+ *
+ * El identificador combina el prefijo de inspección, la fecha actual y una
+ * cadena aleatoria en mayúsculas.
+ *
+ * @returns {string} Identificador con formato `INSP-AAAAMMDD-XXXX`.
+ */
 
 function generarInspeccionId() {
   const hoy = new Date();
@@ -529,10 +513,18 @@ function generarInspeccionId() {
 
   return `INSP-${fecha}-${aleatorio}`;
 }
-
-// =========================================================
 // CONSTRUIR INSPECCIÓN EPP
 // =========================================================
+
+/**
+ * Construye el objeto principal de la inspección EPP.
+ *
+ * Recopila la información general registrada en el formulario y los datos
+ * de los trabajadores administrados por el gestor de trabajadores.
+ *
+ * @param {string|null} [inspeccionId=null] - Identificador asignado a la inspección.
+ * @returns {Object} Datos estructurados de la inspección EPP.
+ */
 
 function construirInspeccionEpp(inspeccionId = null) {
   const trabajadores = trabajadoresManager.leer();
@@ -564,9 +556,19 @@ function construirInspeccionEpp(inspeccionId = null) {
   };
 }
 
-// =========================================================
-// CONSTRUIR FORMDATA EPP
-// =========================================================
+/**
+ * Construye el contenido multipart utilizado para enviar la inspección EPP.
+ *
+ * Agrega la inspección serializada en el campo `payload` y adjunta las
+ * evidencias de cada trabajador utilizando nombres de campo asociados
+ * con su posición dentro de la inspección.
+ *
+ * También incorpora la fecha de modificación de cada archivo como respaldo
+ * para determinar la fecha de la evidencia.
+ *
+ * @param {string|null} [inspeccionId=null] - Identificador de la inspección.
+ * @returns {FormData} FormData con el payload y las evidencias de los trabajadores.
+ */
 
 function construirFormDataEpp(inspeccionId = null) {
   const inspeccion = construirInspeccionEpp(inspeccionId);
@@ -617,9 +619,16 @@ function construirFormDataEpp(inspeccionId = null) {
   return formData;
 }
 
-// =========================================================
-// ENVIAR INSPECCIÓN EPP
-// =========================================================
+/**
+ * Envía la inspección EPP y sus evidencias al backend.
+ *
+ * Genera un identificador para la operación, construye el FormData y realiza
+ * una solicitud POST al endpoint encargado de registrar la inspección.
+ *
+ * @async
+ * @returns {Promise<Object>} Respuesta procesada enviada por el backend.
+ * @throws {Error} Si el servidor rechaza la solicitud o no puede completarse el envío.
+ */
 
 async function enviarInspeccionEpp() {
   try {
@@ -650,12 +659,18 @@ async function enviarInspeccionEpp() {
   }
 }
 
-// =========================================================
-// INICIALIZAR ENVÍO EPP
-// =========================================================
-// =========================================================
-// CONSTRUIR LINKS DE APROBACIÓN EPP
-// =========================================================
+/**
+ * Construye los enlaces de aprobación de una inspección EPP.
+ *
+ * Utiliza el origen actual de la aplicación y los tokens entregados por el
+ * backend para generar los enlaces del jefe responsable y de COPASST.
+ *
+ * @param {Object|null} tokens - Tokens de aprobación generados por el backend.
+ * @param {string} [tokens.jefe] - Token asignado al jefe responsable.
+ * @param {string} [tokens.copasst] - Token asignado a COPASST.
+ * @returns {{jefe: string|null, copasst: string|null}|null}
+ * Enlaces de aprobación disponibles, o `null` si no se reciben tokens.
+ */
 
 function construirLinksAprobacionEpp(tokens) {
   if (!tokens) {
@@ -671,9 +686,16 @@ function construirLinksAprobacionEpp(tokens) {
   };
 }
 
-// =========================================================
-// INICIALIZAR ENVÍO EPP
-// =========================================================
+/**
+ * Inicializa el proceso de envío de la inspección EPP.
+ *
+ * Registra el evento del botón de envío, controla su estado durante la
+ * solicitud y muestra los modales correspondientes al resultado de la
+ * operación. Cuando el registro finaliza correctamente, construye los
+ * enlaces de aprobación recibidos desde el backend.
+ *
+ * @returns {void}
+ */
 
 function inicializarEnvioEpp() {
   const btnEnviar = document.getElementById("btn-enviar-inspeccion-epp");
@@ -742,10 +764,6 @@ function inicializarEnvioEpp() {
     }
   });
 }
-// =========================================================
-// VERIFICAR FORMDATA EPP
-// Temporal durante el desarrollo
-// =========================================================
 
 function verificarFormDataEpp() {
   const formData = construirFormDataEpp();
@@ -763,11 +781,6 @@ function verificarFormDataEpp() {
     }
   }
 }
-
-// =========================================================
-// VERIFICAR DATOS FINALES EPP
-// Temporal durante el desarrollo
-// =========================================================
 
 function verificarInspeccionEpp() {
   const inspeccion = construirInspeccionEpp();
@@ -802,10 +815,6 @@ function asignarTextoResumen(id, valor) {
 
   elemento.textContent = valor || "—";
 }
-
-// =========================================================
-// SALIR DEL FORMULARIO
-// =========================================================
 
 function inicializarSalida() {
   // Botón de salida de la esquina superior derecha

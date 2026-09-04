@@ -1,28 +1,32 @@
-/*
-  senalizaciones.js — Manager de tarjetas de señalización en el formulario (Paso 4).
+import {
+  crearBloqueEvidencias,
+  inicializarBloqueEvidencias,
+  leerArchivosEvidencia,
+} from "/js/shared.js";
 
-  Qué hace:
-  - Genera dinámicamente una tarjeta por cada señalización agregada, con campos:
-    tipo, ubicación, observaciones, imagen de evidencia y tabla con:
-    cantidad (numérico), estado (B/R/M/NC/NA) y aseo (B/R/M/NC/NA).
-  - Permite agregar varias señalizaciones y eliminar cualquiera (incluida la
-    única/primera tarjeta): la sección puede quedar vacía si la sede lo permite
-    (ver esSedeUrabana() en inspeccion-sst.js y validarInspeccion en el backend).
-  - Devuelve un array de objetos con todos los valores del DOM (leer()).
-
-  Cómo interactúa:
-  - Es instanciado por inspeccion-sst.js, que le pasa:
-      crearOpciones()           → genera los <option> B/R/M/NC/NA (de shared.js)
-      actualizarPreviewArchivo() → maneja la vista previa de imagen (de shared.js)
-  - Los datos de leer() son incluidos en el payload enviado al servidor.
-*/
-import { crearBloqueEvidencias, inicializarBloqueEvidencias, leerArchivosEvidencia } from "/js/shared.js";
+/**
+ * Crea el administrador de señalizaciones de la inspección SST.
+ *
+ * Gestiona la creación dinámica de tarjetas, la evaluación del estado y
+ * aseo, las evidencias fotográficas y la lectura de los datos registrados
+ * para cada señalización.
+ *
+ * @param {Object} dependencias - Configuración requerida por el administrador.
+ * @param {Function} dependencias.crearOpciones
+ * Función que genera las opciones disponibles para las calificaciones.
+ * @returns {{
+ *   agregar: Function,
+ *   leer: Function
+ * }} Operaciones públicas del administrador de señalizaciones.
+ */
 
 export function createSenalizacionesManager({ crearOpciones }) {
   let senalizacionCounter = 0;
 
   function renderCondicionSenalizacion(container) {
-    const body = container.querySelector("[data-role='tabla-condiciones-senalizacion']");
+    const body = container.querySelector(
+      "[data-role='tabla-condiciones-senalizacion']",
+    );
     body.innerHTML = `
       <tr>
         <td class="left">Cantidad</td>
@@ -95,33 +99,71 @@ export function createSenalizacionesManager({ crearOpciones }) {
     const container = document.getElementById("senalizaciones-container");
     const cards = container.querySelectorAll("[data-senalizacion-index]");
     cards.forEach((card) => {
-      card.querySelector('[data-action="remove-senalizacion"]')?.classList.toggle("hidden", cards.length <= 1);
+      card
+        .querySelector('[data-action="remove-senalizacion"]')
+        ?.classList.toggle("hidden", cards.length <= 1);
     });
   }
+
+  /**
+   * Agrega una nueva tarjeta de señalización al formulario.
+   *
+   * Genera un identificador interno, renderiza los campos de evaluación,
+   * inicializa el bloque de evidencias y configura la acción utilizada
+   * para eliminar la tarjeta.
+   *
+   * @returns {void}
+   */
 
   function agregar() {
     const container = document.getElementById("senalizaciones-container");
     const index = senalizacionCounter++;
     container.insertAdjacentHTML("beforeend", crearSenalizacionCard(index));
-    const card = container.querySelector(`[data-senalizacion-index="${index}"]`);
+    const card = container.querySelector(
+      `[data-senalizacion-index="${index}"]`,
+    );
     renderCondicionSenalizacion(card);
     inicializarBloqueEvidencias(card, "senalizacion-evidencia");
-    card.querySelector('[data-action="remove-senalizacion"]')?.addEventListener("click", () => {
-      card.remove();
-      actualizarBotonesEliminar();
-    });
+    card
+      .querySelector('[data-action="remove-senalizacion"]')
+      ?.addEventListener("click", () => {
+        card.remove();
+        actualizarBotonesEliminar();
+      });
     actualizarBotonesEliminar();
   }
 
+  /**
+   * Obtiene la información de todas las señalizaciones registradas.
+   *
+   * Lee el tipo, ubicación, cantidad, estado, aseo, observaciones y nombres
+   * de las evidencias asociadas con cada tarjeta.
+   *
+   * @returns {Array<{
+   *   tipo: string,
+   *   ubicacion: string,
+   *   cantidad: string,
+   *   estado: string,
+   *   aseo: string,
+   *   observaciones: string,
+   *   evidenciaArchivo: string
+   * }>} Señalizaciones registradas en la inspección.
+   */
+
   function leer() {
-    return Array.from(document.querySelectorAll("[data-senalizacion-index]")).map((card) => ({
+    return Array.from(
+      document.querySelectorAll("[data-senalizacion-index]"),
+    ).map((card) => ({
       tipo: card.querySelector('[name="senalizacionTipo"]').value,
       ubicacion: card.querySelector('[name="senalizacionUbicacion"]').value,
       cantidad: card.querySelector('[name="senalizacionCantidad"]').value,
       estado: card.querySelector('[name="senalizacionEstado"]').value,
       aseo: card.querySelector('[name="senalizacionAseo"]').value,
-      observaciones: card.querySelector('[name="senalizacionObservaciones"]').value,
-      evidenciaArchivo: leerArchivosEvidencia(card, "senalizacion-evidencia").map((f) => f.name).join(", ")
+      observaciones: card.querySelector('[name="senalizacionObservaciones"]')
+        .value,
+      evidenciaArchivo: leerArchivosEvidencia(card, "senalizacion-evidencia")
+        .map((f) => f.name)
+        .join(", "),
     }));
   }
 

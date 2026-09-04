@@ -34,6 +34,21 @@
     sortOrder: "asc",
   };
 
+  /**
+   * Obtiene los filtros activos del dashboard de inspecciones SST.
+   *
+   * Lee el rango de fechas, la sede, el estado y el término de búsqueda,
+   * normalizando los valores antes de utilizarlos en las consultas.
+   *
+   * @returns {{
+   *   fechaDesde: string,
+   *   fechaHasta: string,
+   *   sedeOperacion: string,
+   *   estado: string,
+   *   q: string
+   * }} Filtros seleccionados por el usuario.
+   */
+
   function leerFiltros() {
     const fd = new FormData(form);
 
@@ -67,6 +82,16 @@
     });
   }
 
+  /**
+   * Actualiza los indicadores principales del dashboard SST.
+   *
+   * Presenta las cantidades totales, pendientes, aprobadas, enviadas,
+   * registradas durante el mes y la distribución de inspecciones por sede.
+   *
+   * @param {Object} resumen - Resumen estadístico obtenido desde el backend.
+   * @returns {void}
+   */
+
   function setKpis(resumen) {
     kpis.total.textContent = resumen.total || 0;
     kpis.pendientes.textContent = resumen.pendientes || 0;
@@ -98,6 +123,17 @@
     </span>
   `;
   }
+
+  /**
+   * Renderiza las inspecciones SST en la tabla del dashboard.
+   *
+   * Por cada inspección presenta sus datos generales, estado, cantidad total
+   * de elementos inspeccionados y las acciones para recuperar los enlaces de
+   * aprobación o consultar el informe.
+   *
+   * @param {Array<Object>} items - Inspecciones SST que deben mostrarse.
+   * @returns {void}
+   */
 
   function renderTabla(items) {
     if (!Array.isArray(items) || items.length === 0) {
@@ -191,6 +227,18 @@
     tablaMeta.textContent = `${state.total} inspecciones encontradas`;
   }
 
+  /**
+   * Consulta y presenta el resumen estadístico de las inspecciones SST.
+   *
+   * Envía los filtros activos al endpoint de estadísticas y utiliza la
+   * respuesta para actualizar los indicadores del dashboard.
+   *
+   * @async
+   * @param {Object} filtros - Filtros aplicados a la consulta.
+   * @returns {Promise<void>}
+   * @throws {Error} Si el resumen no puede obtenerse desde el backend.
+   */
+
   async function cargarResumen(filtros) {
     const query = crearQuery(filtros);
 
@@ -204,6 +252,19 @@
 
     setKpis(data.resumen || {});
   }
+
+  /**
+   * Consulta las inspecciones SST y actualiza la tabla del dashboard.
+   *
+   * Incorpora los filtros, la página actual y el ordenamiento seleccionado.
+   * Después de recibir la respuesta, actualiza la tabla y el estado de
+   * paginación.
+   *
+   * @async
+   * @param {Object} filtros - Filtros activos del dashboard.
+   * @returns {Promise<void>}
+   * @throws {Error} Si las inspecciones no pueden obtenerse desde el backend.
+   */
 
   async function cargarTabla(filtros) {
     const query = crearQuery({
@@ -229,6 +290,16 @@
 
     updatePaginacion();
   }
+
+  /**
+   * Actualiza el resumen y la tabla principal de inspecciones SST.
+   *
+   * Obtiene los filtros activos y ejecuta simultáneamente las consultas del
+   * resumen estadístico y del listado paginado de inspecciones.
+   *
+   * @async
+   * @returns {Promise<void>}
+   */
 
   async function cargarTodo() {
     try {
@@ -317,6 +388,17 @@
     }
   });
 
+  /**
+   * Recupera los enlaces de aprobación de una inspección SST.
+   *
+   * Obtiene el identificador desde el botón seleccionado, consulta los enlaces
+   * en el backend y los presenta mediante el modal de recuperación.
+   *
+   * @async
+   * @param {HTMLButtonElement} btnRecuperar - Botón asociado con la inspección.
+   * @returns {Promise<void>}
+   */
+
   async function recuperarLinks(btnRecuperar) {
     const inspeccionId = btnRecuperar.dataset.inspeccionId;
 
@@ -340,6 +422,17 @@
       mostrarModal("error");
     }
   }
+
+  /**
+   * Abre la vista previa del informe de una inspección SST.
+   *
+   * Recupera el token de previsualización desde el backend y construye el
+   * endpoint utilizado para abrir el informe en una nueva pestaña.
+   *
+   * @async
+   * @param {HTMLButtonElement} btnPdf - Botón asociado con la inspección.
+   * @returns {Promise<void>}
+   */
 
   async function verPdf(btnPdf) {
     const inspeccionId = btnPdf.dataset.inspeccionId;
@@ -424,6 +517,16 @@
   );
 
   if (btnActualizarExcelSst) {
+    /**
+     * Solicita la actualización manual del seguimiento SST en OneDrive.
+     *
+     * Bloquea temporalmente el botón, ejecuta la actualización mediante el
+     * backend y comunica al usuario si el archivo Excel fue actualizado o si
+     * ocurrió un error durante el proceso.
+     *
+     * @async
+     * @returns {Promise<void>}
+     */
     btnActualizarExcelSst.addEventListener("click", async () => {
       const contenidoOriginal = btnActualizarExcelSst.innerHTML;
 
@@ -462,6 +565,6 @@
       }
     });
   }
-  
+
   cargarTodo();
 })();

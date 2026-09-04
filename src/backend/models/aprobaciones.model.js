@@ -27,8 +27,19 @@ const ROLES = {
   jefe: { tokenCol: "token_jefe", cedulaCol: "aprobacion_jefe_cedula", nombreCol: "aprobacion_jefe_nombre", atCol: "aprobacion_jefe_at", label: "Jefe de Área" },
   copasst: { tokenCol: "token_copasst", cedulaCol: "aprobacion_copasst_cedula", nombreCol: "aprobacion_copasst_nombre", atCol: "aprobacion_copasst_at", label: "COPASST" }
 };
+/**
+ * Busca una inspección y determina el rol asociado a un token.
+ *
+ * Compara el token recibido con los tokens del inspector, jefe responsable y
+ * COPASST almacenados en la inspección.
+ *
+ * @async
+ * @param {string} token Token único del enlace de aprobación.
+ * @returns {Promise<Object|null>} Registro de la inspección y rol propietario
+ * del token, o `null` cuando no existe ninguna coincidencia.
+ * @throws {Error} Si falla la consulta a la base de datos.
+ */
 
-// Busca la fila y el rol dueño de un token dado.
 async function buscarPorToken(token) {
   const { rows } = await query(
     `SELECT * FROM inspecciones WHERE token_inspector = $1 OR token_jefe = $1 OR token_copasst = $1 LIMIT 1`,
@@ -41,7 +52,21 @@ async function buscarPorToken(token) {
   return { row, rol };
 }
 
-// Contexto de aprobación para un token: qué rol es, si ya aprobó, y la fila completa.
+/**
+ * Obtiene el contexto completo de una aprobación.
+ *
+ * Identifica el rol relacionado con el token y determina si ese responsable
+ * ya aprobó la inspección. También recupera el nombre del aprobador y el
+ * registro completo de la inspección.
+ *
+ * @async
+ * @param {string} token Token único del enlace de aprobación.
+ * @returns {Promise<Object|null>} Contexto con el rol, nombre visible,
+ * estado de aprobación y registro de la inspección, o `null` si el token
+ * no existe.
+ * @throws {Error} Si falla la consulta a la base de datos.
+ */
+
 async function obtenerContextoAprobacion(token) {
   const encontrado = await buscarPorToken(token);
   if (!encontrado) return null;
@@ -58,9 +83,26 @@ async function obtenerContextoAprobacion(token) {
   };
 }
 
-// Registra la aprobación de un rol (nombre). Devuelve:
-//   { ok: false, motivo: "no_encontrado" | "ya_aprobado" }
-//   { ok: true, rol, inspeccionId, completas }
+/**
+ * Registra la aprobación correspondiente a un token.
+ *
+ * Identifica el rol propietario del token, comprueba que todavía no haya
+ * aprobado y almacena el nombre del aprobador junto con la fecha del registro.
+ *
+ * La actualización se realiza de forma atómica para impedir que dos solicitudes
+ * simultáneas utilicen el mismo enlace. Cuando las tres aprobaciones quedan
+ * completas, cambia el estado de la inspección a `aprobada`.
+ *
+ * @async
+ * @param {string} token Token único del enlace de aprobación.
+ * @param {Object} aprobacion Información suministrada por el aprobador.
+ * @param {string} aprobacion.nombre Nombre de la persona que aprueba.
+ * @returns {Promise<Object>} Resultado del registro. Si la aprobación es
+ * válida, devuelve el rol, identificador de la inspección y estado de las
+ * aprobaciones; de lo contrario, indica si el token no existe o ya fue usado.
+ * @throws {Error} Si falla alguna operación en la base de datos.
+ */
+
 async function guardarAprobacion(token, { nombre }) {
   const encontrado = await buscarPorToken(token);
   if (!encontrado) return { ok: false, motivo: "no_encontrado" };
@@ -95,7 +137,19 @@ async function guardarAprobacion(token, { nombre }) {
   return { ok: true, rol, inspeccionId: actualizado.inspeccion_id, completas };
 }
 
-// Marca la inspección como enviada (PDF archivado + correo enviado) tras las 3 aprobaciones.
+/**
+ * Marca una inspección como enviada y almacena la ubicación de su PDF.
+ *
+ * Se utiliza después de completar las aprobaciones, generar el informe final,
+ * almacenarlo y procesar el correo correspondiente.
+ *
+ * @async
+ * @param {string} inspeccionId Identificador único de la inspección.
+ * @param {string} pdfUrl URL del informe PDF almacenado.
+ * @returns {Promise<void>} Finaliza cuando la inspección ha sido actualizada.
+ * @throws {Error} Si falla la actualización en la base de datos.
+ */
+
 async function marcarInspeccionEnviada(inspeccionId, pdfUrl) {
   await query(`UPDATE inspecciones SET estado = 'enviada', pdf_url = $1 WHERE inspeccion_id = $2`, [pdfUrl, inspeccionId]);
 }

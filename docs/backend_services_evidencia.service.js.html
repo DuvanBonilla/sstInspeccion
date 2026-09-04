@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: backend/services/evidencia.service.js</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+    <link type="text/css" rel="stylesheet" href="styles/sst-docs.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: backend/services/evidencia.service.js</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>const { resolverFechaEvidencia } = require("../utils/fechaEvidencia");
+const {
+  getRequiredEnv,
+  getAccessToken,
+  subirArchivoOneDrive,
+  descargarArchivoOneDrive,
+} = require("./graph.service");
+
+const PDF_DESTINOS_POR_SEDE = new Map([
+  ["uraba", "Respuestas_PDF/URABÁ"],
+  ["santa marta", "Respuestas_PDF/STM"],
+]);
+
+// Limpia el nombre del archivo para que sea seguro usarlo en OneDrive.
+function limpiarNombreArchivo(valor) {
+  return String(valor || "").replace(/[^a-zA-Z0-9._-]/g, "_");
+}
+
+/**
+ * Obtiene la carpeta de OneDrive destinada a las evidencias.
+ *
+ * Utiliza `ONEDRIVE_EVIDENCIAS_PATH` cuando está configurada. De lo contrario,
+ * construye la ubicación a partir de la carpeta que contiene el archivo
+ * definido en `ONEDRIVE_EXCEL_PATH`.
+ *
+ * @returns {string} Ruta absoluta de la carpeta de evidencias en OneDrive.
+ * @throws {Error} Si no existe la configuración necesaria para construirla.
+ */
+
+function getEvidenceFolderPath() {
+  const configuredPath = process.env.ONEDRIVE_EVIDENCIAS_PATH;
+
+  if (configuredPath) {
+    return configuredPath.startsWith("/")
+      ? configuredPath
+      : `/${configuredPath}`;
+  }
+
+  const excelPath = getRequiredEnv("ONEDRIVE_EXCEL_PATH");
+  const normalizedExcelPath = excelPath.startsWith("/")
+    ? excelPath
+    : `/${excelPath}`;
+  const lastSlashIndex = normalizedExcelPath.lastIndexOf("/");
+  const parentPath =
+    lastSlashIndex > 0 ? normalizedExcelPath.slice(0, lastSlashIndex) : "";
+
+  return `${parentPath}/EVIDENCIAS`;
+}
+
+function normalizarSedeParaRuta(sedeOperacion) {
+  return String(sedeOperacion || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+}
+
+/**
+ * Determina la carpeta donde se almacenará el PDF según la sede.
+ *
+ * Las inspecciones de Urabá se dirigen a `Respuestas_PDF/URABÁ`, las de
+ * Santa Marta a `Respuestas_PDF/STM` y las demás a `Respuestas_PDF`.
+ *
+ * @param {string} sedeOperacion Sede operacional de la inspección.
+ * @returns {string} Carpeta de destino correspondiente.
+ */
+
+function resolverCarpetaDestinoPdf(sedeOperacion) {
+  const sede = normalizarSedeParaRuta(sedeOperacion);
+
+  for (const [clave, carpeta] of PDF_DESTINOS_POR_SEDE) {
+    if (sede.includes(clave)) return carpeta;
+  }
+
+  return "Respuestas_PDF";
+}
+
+/**
+ * Almacena el informe PDF de una inspección en OneDrive.
+ *
+ * Construye el nombre y la ruta del archivo a partir del identificador de la
+ * inspección y de su sede operacional. Después realiza la carga mediante
+ * Microsoft Graph.
+ *
+ * @async
+ * @param {Buffer} pdfBuffer Contenido binario del informe PDF.
+ * @param {string} inspeccionId Identificador único de la inspección.
+ * @param {string|null} [sedeOperacion=null] Sede utilizada para determinar
+ * la carpeta de destino.
+ * @returns {Promise&lt;string|null>} URL web del PDF almacenado, o `null` si
+ * Microsoft Graph no devuelve una URL.
+ * @throws {Error} Si falla la autenticación o la carga del archivo.
+ */
+
+async function subirPdfAOneDrive(
+  pdfBuffer,
+  inspeccionId,
+  sedeOperacion = null,
+) {
+  const token = await getAccessToken();
+  const userId = getRequiredEnv("ONEDRIVE_USER_ID");
+  const excelPath = process.env.ONEDRIVE_EXCEL_PATH || "";
+  const normalizado = excelPath.replace(/\\/g, "/").trim();
+  const conSlash = normalizado.startsWith("/")
+    ? normalizado
+    : `/${normalizado}`;
+  const carpetaPadre = conSlash.slice(0, conSlash.lastIndexOf("/"));
+  const nombreArchivo = `${inspeccionId || "inspeccion"}.pdf`;
+  const carpetaDestino = resolverCarpetaDestinoPdf(sedeOperacion);
+  const rutaPdf = `${carpetaPadre}/${carpetaDestino}/${nombreArchivo}`;
+
+  const url = `https://graph.microsoft.com/v1.0/users/${encodeURIComponent(userId)}/drive/root:${encodeURI(rutaPdf)}:/content`;
+
+  const resp = await fetch(url, {
+    method: "PUT",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/pdf",
+    },
+    body: pdfBuffer,
+  });
+
+  if (!resp.ok) {
+    const err = await resp.json().catch(() => ({}));
+    throw new Error(
+      `Error OneDrive/PDF: ${err?.error?.message || resp.status}`,
+    );
+  }
+
+  const item = await resp.json().catch(() => ({}));
+  return item?.webUrl || null;
+}
+
+// Extrae el código aleatorio del inspeccionId (ej: "INSP-20250630-K7X9" → "K7X9").
+function extraerCodigoInspeccion(inspeccionId) {
+  const partes = String(inspeccionId || "").split("-");
+  return limpiarNombreArchivo(partes[partes.length - 1] || "") || "SINCOD";
+}
+
+/**
+ * Almacena una evidencia individual en OneDrive.
+ *
+ * Construye un nombre utilizando el prefijo del tipo de evidencia, su posición,
+ * el código de la inspección y, cuando corresponde, el subíndice de la imagen.
+ *
+ * @async
+ * @param {Object} file Archivo recibido mediante Multer.
+ * @param {Buffer} file.buffer Contenido binario del archivo.
+ * @param {string} file.originalname Nombre original del archivo.
+ * @param {string} file.mimetype Tipo MIME del archivo.
+ * @param {string} prefijo Prefijo que identifica el tipo de evidencia.
+ * @param {number} indice Posición del elemento dentro de la inspección.
+ * @param {string} inspeccionId Identificador único de la inspección.
+ * @param {number|null} [subIndice=null] Posición adicional cuando el elemento
+ * contiene varias evidencias.
+ * @returns {Promise&lt;Object|string>} Ruta y URL de la evidencia almacenada, o
+ * una cadena vacía cuando no se recibe un archivo.
+ * @throws {Error} Si falla la carga de la evidencia.
+ */
+
+async function uploadEvidenceToOneDrive(
+  file,
+  prefijo,
+  indice,
+  inspeccionId,
+  subIndice = null,
+) {
+  if (!file) {
+    return "";
+  }
+
+  const evidenceFolderPath = getEvidenceFolderPath();
+  const extension = pathExtension(file.originalname);
+  const codigoInspeccion = extraerCodigoInspeccion(inspeccionId);
+
+  const fileName =
+    subIndice != null
+      ? `${prefijo}_${indice}_${subIndice}_${codigoInspeccion}${extension}`
+      : `${prefijo}_${indice}_${codigoInspeccion}${extension}`;
+
+  const evidencePath = `${evidenceFolderPath}/${fileName}`;
+
+  const driveItem = await subirArchivoOneDrive({
+    ruta: evidencePath,
+    buffer: file.buffer,
+    contentType: file.mimetype || "application/octet-stream",
+  });
+
+  return {
+    ruta: evidencePath,
+    webUrl: driveItem?.webUrl || "",
+  };
+}
+
+/**
+ * Descarga una evidencia previamente almacenada en OneDrive.
+ *
+ * @async
+ * @param {string} evidencePath Ruta de la evidencia dentro de OneDrive.
+ * @returns {Promise&lt;Buffer|null>} Contenido binario de la evidencia, o `null`
+ * cuando no se proporciona una ruta o no se obtiene el archivo.
+ * @throws {Error} Si falla la solicitud de descarga.
+ */
+
+async function descargarEvidenciaOneDrive(evidencePath) {
+  if (!evidencePath) {
+    return null;
+  }
+
+  return descargarArchivoOneDrive(evidencePath);
+}
+
+// Extrae la extensión del archivo y la limpia para usarla en el nombre del archivo en OneDrive.
+function pathExtension(fileName) {
+  const safeName = String(fileName || "");
+  const lastDotIndex = safeName.lastIndexOf(".");
+
+  if (lastDotIndex === -1) {
+    return "";
+  }
+
+  return limpiarNombreArchivo(safeName.slice(lastDotIndex));
+}
+
+function obtenerArchivosMultiples(files, prefix, index) {
+  const patron = new RegExp(`^${prefix}-${index}-(\\d+)$`);
+
+  return files
+    .map((file) => ({ file, match: patron.exec(file.fieldname || "") }))
+    .filter((x) => x.match)
+    .sort((a, b) => Number(a.match[1]) - Number(b.match[1]))
+    .map((x) => x.file);
+}
+
+/**
+ * Procesa y almacena las evidencias asociadas a un elemento SST.
+ *
+ * Localiza los archivos correspondientes al elemento, los carga en paralelo
+ * y agrupa sus rutas, URLs y nombres. También determina la fecha de la
+ * evidencia utilizando el primer archivo encontrado.
+ *
+ * @async
+ * @param {Array&lt;Object>} files Archivos recibidos mediante Multer.
+ * @param {string} prefix Prefijo utilizado en los nombres de campos del formulario.
+ * @param {string} tipoPrefijo Prefijo utilizado para nombrar los archivos.
+ * @param {number} index Posición del elemento dentro de su sección.
+ * @param {string} inspeccionId Identificador único de la inspección.
+ * @param {Object} body Datos adicionales recibidos desde el formulario.
+ * @returns {Promise&lt;Object>} Rutas, URLs y nombres agrupados, además de la
+ * fecha determinada para la evidencia.
+ * @throws {Error} Si falla la carga o el procesamiento de alguna evidencia.
+ */
+
+async function subirEvidenciasMultiples(
+  files,
+  prefix,
+  tipoPrefijo,
+  index,
+  inspeccionId,
+  body,
+) {
+  const archivos = obtenerArchivosMultiples(files, prefix, index);
+
+  if (archivos.length === 0) {
+    return {
+      ruta: "",
+      url: "",
+      nombre: "",
+      fecha: null,
+    };
+  }
+
+  const evidencias = await Promise.all(
+    archivos.map((file, subIdx) =>
+      uploadEvidenceToOneDrive(
+        file,
+        tipoPrefijo,
+        index + 1,
+        inspeccionId,
+        archivos.length > 1 ? subIdx + 1 : null,
+      ),
+    ),
+  );
+
+  const evidenciasValidas = evidencias.filter(
+    (evidencia) => evidencia &amp;&amp; evidencia.ruta,
+  );
+
+  const rutas = evidenciasValidas
+    .map((evidencia) => evidencia.ruta)
+    .filter(Boolean);
+
+  const urls = evidenciasValidas
+    .map((evidencia) => evidencia.webUrl || "")
+    .filter(Boolean);
+
+  const nombres = rutas.map((ruta) => ruta.split("/").pop() || "");
+
+  const lastmod = body?.[`${prefix}-${index}-0-lastmod`];
+
+  const fecha = await resolverFechaEvidencia(archivos[0], lastmod);
+
+  return {
+    ruta: rutas.join("\n"),
+    url: urls.join("\n"),
+    nombre: nombres.join("\n"),
+    fecha,
+  };
+}
+
+/**
+ * Reconstruye las evidencias de una colección de elementos SST.
+ *
+ * Descarga las evidencias almacenadas en cada elemento y las organiza por su
+ * índice original. Las fechas registradas se conservan en un mapa separado
+ * para utilizarlas durante la generación del PDF.
+ *
+ * @async
+ * @param {Array&lt;Object>} items Elementos SST con rutas de evidencias.
+ * @returns {Promise&lt;Object>} Mapas de evidencias y fechas organizados por índice.
+ * @throws {Error} Si falla la descarga de alguna evidencia.
+ */
+
+async function construirEvidenciasDesdeOneDrive(items) {
+  const evidenciasPorIndex = new Map();
+  const fechas = new Map();
+
+  await Promise.all(
+    (Array.isArray(items) ? items : []).map(async (item, idx) => {
+      const rutas = String(item?.evidenciaRuta || "")
+        .split("\n")
+        .map((r) => r.trim())
+        .filter(Boolean);
+
+      if (rutas.length === 0) return;
+
+      const buffers = await Promise.all(
+        rutas.map((ruta) => descargarEvidenciaOneDrive(ruta)),
+      );
+
+      const archivos = buffers.filter(Boolean).map((buffer) => ({ buffer }));
+
+      if (archivos.length > 0) {
+        evidenciasPorIndex.set(idx, archivos);
+      }
+
+      if (item?.evidenciaFecha) {
+        fechas.set(idx, item.evidenciaFecha);
+      }
+    }),
+  );
+
+  return { evidenciasPorIndex, fechas };
+}
+
+/**
+ * Reconstruye las evidencias de los trabajadores de una inspección EPP.
+ *
+ * Descarga la evidencia de cada trabajador y la almacena en un mapa utilizando
+ * su posición y, cuando está disponible, también su identificador.
+ *
+ * Los errores de descarga de un trabajador se registran sin interrumpir el
+ * procesamiento de los demás.
+ *
+ * @async
+ * @param {Array&lt;Object>} trabajadores Trabajadores con evidencias almacenadas.
+ * @returns {Promise&lt;Map>} Evidencias organizadas por índice e identificador
+ * del trabajador.
+ */
+
+async function construirEvidenciasEppDesdeOneDrive(trabajadores) {
+  const evidenciasPorTrabajador = new Map();
+
+  await Promise.all(
+    (Array.isArray(trabajadores) ? trabajadores : []).map(
+      async (trabajador, idx) => {
+        const ruta = String(trabajador?.evidenciaRuta || "").trim();
+
+        if (!ruta) {
+          return;
+        }
+
+        try {
+          const buffer = await descargarEvidenciaOneDrive(ruta);
+
+          if (!buffer) {
+            return;
+          }
+
+          const archivo = {
+            buffer,
+          };
+
+          // -------------------------------------------------
+          // Guardar por índice
+          // -------------------------------------------------
+
+          evidenciasPorTrabajador.set(idx, archivo);
+
+          // -------------------------------------------------
+          // También guardar por trabajadorId si existe
+          // -------------------------------------------------
+
+          if (
+            trabajador?.trabajadorId !== undefined &amp;&amp;
+            trabajador?.trabajadorId !== null
+          ) {
+            evidenciasPorTrabajador.set(trabajador.trabajadorId, archivo);
+          }
+        } catch (error) {
+          console.error(
+            `[EPP] Error descargando evidencia trabajador ${idx + 1}:`,
+            error.message,
+          );
+        }
+      },
+    ),
+  );
+
+  return evidenciasPorTrabajador;
+}
+
+module.exports = {
+  uploadEvidenceToOneDrive,
+  descargarEvidenciaOneDrive,
+  subirPdfAOneDrive,
+  subirEvidenciasMultiples,
+  construirEvidenciasDesdeOneDrive,
+  construirEvidenciasEppDesdeOneDrive,
+};
+</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Modules</h3><ul><li><a href="module-app.html">app</a></li></ul><h3>Global</h3><ul><li><a href="global.html#IMAGE_OPTIMIZER_VERSION">IMAGE_OPTIMIZER_VERSION</a></li><li><a href="global.html#KB">KB</a></li><li><a href="global.html#PDF_OPTIMIZER_CONFIG">PDF_OPTIMIZER_CONFIG</a></li><li><a href="global.html#PDF_OPTIMIZER_VERSION">PDF_OPTIMIZER_VERSION</a></li><li><a href="global.html#PROFILES">PROFILES</a></li><li><a href="global.html#activarRecalculoAutomatico">activarRecalculoAutomatico</a></li><li><a href="global.html#actualizarBotiquines">actualizarBotiquines</a></li><li><a href="global.html#actualizarDimensionHojaXml">actualizarDimensionHojaXml</a></li><li><a href="global.html#actualizarEquiposTecnologicos">actualizarEquiposTecnologicos</a></li><li><a href="global.html#actualizarExcelSeguimientoEpp">actualizarExcelSeguimientoEpp</a></li><li><a href="global.html#actualizarExcelSeguimientoEppEnOneDrive">actualizarExcelSeguimientoEppEnOneDrive</a></li><li><a href="global.html#actualizarExcelSeguimientoSst">actualizarExcelSeguimientoSst</a></li><li><a href="global.html#actualizarExcelSeguimientoSstEnMemoria">actualizarExcelSeguimientoSstEnMemoria</a></li><li><a href="global.html#actualizarExcelSeguimientoSstEnOneDrive">actualizarExcelSeguimientoSstEnOneDrive</a></li><li><a href="global.html#actualizarExtintores">actualizarExtintores</a></li><li><a href="global.html#actualizarFilasHojaXml">actualizarFilasHojaXml</a></li><li><a href="global.html#actualizarFormulasExistentes">actualizarFormulasExistentes</a></li><li><a href="global.html#actualizarGeneral">actualizarGeneral</a></li><li><a href="global.html#actualizarPaso">actualizarPaso</a></li><li><a href="global.html#actualizarPreviewArchivo">actualizarPreviewArchivo</a></li><li><a href="global.html#actualizarRangoTablaXml">actualizarRangoTablaXml</a></li><li><a href="global.html#actualizarResumen">actualizarResumen</a></li><li><a href="global.html#actualizarSenalizaciones">actualizarSenalizaciones</a></li><li><a href="global.html#analizarImagen">analizarImagen</a></li><li><a href="global.html#analizarPdf">analizarPdf</a></li><li><a href="global.html#autorizarAzureEpp">autorizarAzureEpp</a></li><li><a href="global.html#buscarPorToken">buscarPorToken</a></li><li><a href="global.html#calcularDiasRestantes">calcularDiasRestantes</a></li><li><a href="global.html#calcularDimensiones">calcularDimensiones</a></li><li><a href="global.html#calcularResumenEpp">calcularResumenEpp</a></li><li><a href="global.html#cargarCatalogoEpp">cargarCatalogoEpp</a></li><li><a href="global.html#cargarExcelSst">cargarExcelSst</a></li><li><a href="global.html#cargarImagen">cargarImagen</a></li><li><a href="global.html#cerrarPlanesAccionDesdeExcel">cerrarPlanesAccionDesdeExcel</a></li><li><a href="global.html#clasificarPlanesPorInspeccion">clasificarPlanesPorInspeccion</a></li><li><a href="global.html#configurarModalExito">configurarModalExito</a></li><li><a href="global.html#construirAprobaciones">construirAprobaciones</a></li><li><a href="global.html#construirArchivoOptimizado">construirArchivoOptimizado</a></li><li><a href="global.html#construirCeldaXml">construirCeldaXml</a></li><li><a href="global.html#construirEvidenciasDesdeOneDrive">construirEvidenciasDesdeOneDrive</a></li><li><a href="global.html#construirEvidenciasEppDesdeOneDrive">construirEvidenciasEppDesdeOneDrive</a></li><li><a href="global.html#construirFilaBotiquin">construirFilaBotiquin</a></li><li><a href="global.html#construirFilaEquipoTecnologico">construirFilaEquipoTecnologico</a></li><li><a href="global.html#construirFilaResumen">construirFilaResumen</a></li><li><a href="global.html#construirFiltrosExcelEpp">construirFiltrosExcelEpp</a></li><li><a href="global.html#construirFiltrosInspecciones">construirFiltrosInspecciones</a></li><li><a href="global.html#construirFormDataEpp">construirFormDataEpp</a></li><li><a href="global.html#construirHojaGeneralEpp">construirHojaGeneralEpp</a></li><li><a href="global.html#construirHojaInspecciones">construirHojaInspecciones</a></li><li><a href="global.html#construirHojaPlanesAccion">construirHojaPlanesAccion</a></li><li><a href="global.html#construirHojaResumenEpp">construirHojaResumenEpp</a></li><li><a href="global.html#construirHojaSeguimientoEpp">construirHojaSeguimientoEpp</a></li><li><a href="global.html#construirHtmlCorreo">construirHtmlCorreo</a></li><li><a href="global.html#construirHtmlCorreoEpp">construirHtmlCorreoEpp</a></li><li><a href="global.html#construirInspeccionEpp">construirInspeccionEpp</a></li><li><a href="global.html#construirLinksAprobacionEpp">construirLinksAprobacionEpp</a></li><li><a href="global.html#construirNombreArchivo">construirNombreArchivo</a></li><li><a href="global.html#construirResumenTrabajadores">construirResumenTrabajadores</a></li><li><a href="global.html#convertirCanvasABlob">convertirCanvasABlob</a></li><li><a href="global.html#convertirFechaAExcel">convertirFechaAExcel</a></li><li><a href="global.html#copiarLink">copiarLink</a></li><li><a href="global.html#corregirFormulasPuntuales">corregirFormulasPuntuales</a></li><li><a href="global.html#crearArchivosTemporales">crearArchivosTemporales</a></li><li><a href="global.html#crearBloqueEvidencias">crearBloqueEvidencias</a></li><li><a href="global.html#crearCanvas">crearCanvas</a></li><li><a href="global.html#crearPdfInspeccionEpp">crearPdfInspeccionEpp</a></li><li><a href="global.html#crearPdfInspeccionExtintor">crearPdfInspeccionExtintor</a></li><li><a href="global.html#crearWorkbook">crearWorkbook</a></li><li><a href="global.html#createBotiquinesManager">createBotiquinesManager</a></li><li><a href="global.html#createCamillasManager">createCamillasManager</a></li><li><a href="global.html#createEquiposTecnologicosManager">createEquiposTecnologicosManager</a></li><li><a href="global.html#createExtintoresManager">createExtintoresManager</a></li><li><a href="global.html#createSenalizacionesManager">createSenalizacionesManager</a></li><li><a href="global.html#createTrabajadoresEppManager">createTrabajadoresEppManager</a></li><li><a href="global.html#descargarArchivoOneDrive">descargarArchivoOneDrive</a></li><li><a href="global.html#descargarEvidenciaOneDrive">descargarEvidenciaOneDrive</a></li><li><a href="global.html#diagnosticarTablaExtintores">diagnosticarTablaExtintores</a></li><li><a href="global.html#dibujarImagen">dibujarImagen</a></li><li><a href="global.html#ejecutarGhostscript">ejecutarGhostscript</a></li><li><a href="global.html#eliminarCadenaCalculo">eliminarCadenaCalculo</a></li><li><a href="global.html#enviarCorreoPorGraph">enviarCorreoPorGraph</a></li><li><a href="global.html#enviarExtintorOneDrive">enviarExtintorOneDrive</a></li><li><a href="global.html#enviarInspeccionEpp">enviarInspeccionEpp</a></li><li><a href="global.html#enviarPdfPruebaCorreo">enviarPdfPruebaCorreo</a></li><li><a href="global.html#esCampoOpcional">esCampoOpcional</a></li><li><a href="global.html#extraerEvidenciasPorIndex">extraerEvidenciasPorIndex</a></li><li><a href="global.html#extraerFechaExif">extraerFechaExif</a></li><li><a href="global.html#fetchConRetry">fetchConRetry</a></li><li><a href="global.html#finalizarInspeccion">finalizarInspeccion</a></li><li><a href="global.html#formatearFechaMs">formatearFechaMs</a></li><li><a href="global.html#fs">fs</a></li><li><a href="global.html#generarBuffer">generarBuffer</a></li><li><a href="global.html#generarExcelSeguimientoEpp">generarExcelSeguimientoEpp</a></li><li><a href="global.html#generarInspeccionId">generarInspeccionId</a></li><li><a href="global.html#generarPdfEppAprobacion">generarPdfEppAprobacion</a></li><li><a href="global.html#generarPdfPrueba">generarPdfPrueba</a></li><li><a href="global.html#generarPdfSstAprobacion">generarPdfSstAprobacion</a></li><li><a href="global.html#getAccessToken">getAccessToken</a></li><li><a href="global.html#getEvidenceFolderPath">getEvidenceFolderPath</a></li><li><a href="global.html#getRequiredEnv">getRequiredEnv</a></li><li><a href="global.html#ghostscriptExecutable">ghostscriptExecutable</a></li><li><a href="global.html#guardarAprobacion">guardarAprobacion</a></li><li><a href="global.html#guardarInspeccionEnDB">guardarInspeccionEnDB</a></li><li><a href="global.html#guardarInspeccionEppEnDB">guardarInspeccionEppEnDB</a></li><li><a href="global.html#guardarPdfTemporal">guardarPdfTemporal</a></li><li><a href="global.html#inicializarEnvioEpp">inicializarEnvioEpp</a></li><li><a href="global.html#leerArchivosEvidencia">leerArchivosEvidencia</a></li><li><a href="global.html#leerCierresDesdeExcelEpp">leerCierresDesdeExcelEpp</a></li><li><a href="global.html#leerFiltros">leerFiltros</a></li><li><a href="global.html#leerPayload">leerPayload</a></li><li><a href="global.html#leerPdfOptimizado">leerPdfOptimizado</a></li><li><a href="global.html#leerRespuesta">leerRespuesta</a></li><li><a href="global.html#liberarImagen">liberarImagen</a></li><li><a href="global.html#limpiarTemporales">limpiarTemporales</a></li><li><a href="global.html#limpiarValoresCalculados">limpiarValoresCalculados</a></li><li><a href="global.html#listarCatalogoEpp">listarCatalogoEpp</a></li><li><a href="global.html#listarEppPredeterminados">listarEppPredeterminados</a></li><li><a href="global.html#listarInspecciones">listarInspecciones</a></li><li><a href="global.html#listarInspeccionesConFiltros">listarInspeccionesConFiltros</a></li><li><a href="global.html#listarInspeccionesEpp">listarInspeccionesEpp</a></li><li><a href="global.html#listarInspeccionesEppConFiltros">listarInspeccionesEppConFiltros</a></li><li><a href="global.html#mapearCamillaAExcel">mapearCamillaAExcel</a></li><li><a href="global.html#mapearExtintorAExcel">mapearExtintorAExcel</a></li><li><a href="global.html#mapearSenalizacionAExcel">mapearSenalizacionAExcel</a></li><li><a href="global.html#mapearTipoExtintor">mapearTipoExtintor</a></li><li><a href="global.html#marcarInspeccionEnviada">marcarInspeccionEnviada</a></li><li><a href="global.html#maximumInputSize">maximumInputSize</a></li><li><a href="global.html#mostrarModal">mostrarModal</a></li><li><a href="global.html#navegarAPaso">navegarAPaso</a></li><li><a href="global.html#normalizarBotiquin">normalizarBotiquin</a></li><li><a href="global.html#normalizarBotiquinItem">normalizarBotiquinItem</a></li><li><a href="global.html#normalizarBotiquines">normalizarBotiquines</a></li><li><a href="global.html#normalizarCamilla">normalizarCamilla</a></li><li><a href="global.html#normalizarCamillas">normalizarCamillas</a></li><li><a href="global.html#normalizarEquipoTecnologico">normalizarEquipoTecnologico</a></li><li><a href="global.html#normalizarEquiposTecnologicos">normalizarEquiposTecnologicos</a></li><li><a href="global.html#normalizarExtintor">normalizarExtintor</a></li><li><a href="global.html#normalizarExtintores">normalizarExtintores</a></li><li><a href="global.html#normalizarSenalizacion">normalizarSenalizacion</a></li><li><a href="global.html#normalizarSenalizaciones">normalizarSenalizaciones</a></li><li><a href="global.html#obtenerArchivos">obtenerArchivos</a></li><li><a href="global.html#obtenerBotiquinItemsSstAprobados">obtenerBotiquinItemsSstAprobados</a></li><li><a href="global.html#obtenerCamillasSstAprobadas">obtenerCamillasSstAprobadas</a></li><li><a href="global.html#obtenerCatalogoEppActivo">obtenerCatalogoEppActivo</a></li><li><a href="global.html#obtenerContextoAprobacion">obtenerContextoAprobacion</a></li><li><a href="global.html#obtenerDiasRestantes">obtenerDiasRestantes</a></li><li><a href="global.html#obtenerEppPredeterminados">obtenerEppPredeterminados</a></li><li><a href="global.html#obtenerEquiposTecnologicosSstAprobados">obtenerEquiposTecnologicosSstAprobados</a></li><li><a href="global.html#obtenerEstrategiaCompresion">obtenerEstrategiaCompresion</a></li><li><a href="global.html#obtenerExtensionOriginal">obtenerExtensionOriginal</a></li><li><a href="global.html#obtenerExtintoresSstAprobados">obtenerExtintoresSstAprobados</a></li><li><a href="global.html#obtenerFilasBotiquinesSstAprobados">obtenerFilasBotiquinesSstAprobados</a></li><li><a href="global.html#obtenerFilasCamillasSstAprobadas">obtenerFilasCamillasSstAprobadas</a></li><li><a href="global.html#obtenerFilasEquiposTecnologicosSstAprobados">obtenerFilasEquiposTecnologicosSstAprobados</a></li><li><a href="global.html#obtenerFilasExtintoresSstAprobados">obtenerFilasExtintoresSstAprobados</a></li><li><a href="global.html#obtenerFilasResumenSstAprobadas">obtenerFilasResumenSstAprobadas</a></li><li><a href="global.html#obtenerFilasSenalizacionesSstAprobadas">obtenerFilasSenalizacionesSstAprobadas</a></li><li><a href="global.html#obtenerInspeccionCompleta">obtenerInspeccionCompleta</a></li><li><a href="global.html#obtenerInspecciones">obtenerInspecciones</a></li><li><a href="global.html#obtenerLinks">obtenerLinks</a></li><li><a href="global.html#obtenerLinksInspeccion">obtenerLinksInspeccion</a></li><li><a href="global.html#obtenerOCrearHoja">obtenerOCrearHoja</a></li><li><a href="global.html#obtenerPerfil">obtenerPerfil</a></li><li><a href="global.html#obtenerPlanesAccion">obtenerPlanesAccion</a></li><li><a href="global.html#obtenerResumen">obtenerResumen</a></li><li><a href="global.html#obtenerResumenAprobacion">obtenerResumenAprobacion</a></li><li><a href="global.html#obtenerResumenEpp">obtenerResumenEpp</a></li><li><a href="global.html#obtenerResumenInspeccionesSstAprobadas">obtenerResumenInspeccionesSstAprobadas</a></li><li><a href="global.html#obtenerRutaExcelEpp">obtenerRutaExcelEpp</a></li><li><a href="global.html#obtenerRutaExcelSst">obtenerRutaExcelSst</a></li><li><a href="global.html#obtenerSeguimientoEpp">obtenerSeguimientoEpp</a></li><li><a href="global.html#obtenerSenalizacionesSstAprobadas">obtenerSenalizacionesSstAprobadas</a></li><li><a href="global.html#obtenerXml">obtenerXml</a></li><li><a href="global.html#optimizarImagen">optimizarImagen</a></li><li><a href="global.html#optimizarPdf">optimizarPdf</a></li><li><a href="global.html#previsualizarAprobacion">previsualizarAprobacion</a></li><li><a href="global.html#query">query</a></li><li><a href="global.html#reemplazarFormulaCelda">reemplazarFormulaCelda</a></li><li><a href="global.html#reemplazarXml">reemplazarXml</a></li><li><a href="global.html#registrarAprobacion">registrarAprobacion</a></li><li><a href="global.html#registrarEstadisticas">registrarEstadisticas</a></li><li><a href="global.html#registrarOriginalConservado">registrarOriginalConservado</a></li><li><a href="global.html#resolverCarpetaDestinoPdf">resolverCarpetaDestinoPdf</a></li><li><a href="global.html#resolverCorreoDestino">resolverCorreoDestino</a></li><li><a href="global.html#resolverCorreoDestinoEpp">resolverCorreoDestinoEpp</a></li><li><a href="global.html#resolverFechaEvidencia">resolverFechaEvidencia</a></li><li><a href="global.html#seleccionarFormatoSalida">seleccionarFormatoSalida</a></li><li><a href="global.html#sincronizarCierresDesdeExcelEpp">sincronizarCierresDesdeExcelEpp</a></li><li><a href="global.html#sincronizarCierresExcelEpp">sincronizarCierresExcelEpp</a></li><li><a href="global.html#subirArchivoOneDrive">subirArchivoOneDrive</a></li><li><a href="global.html#subirEvidenciasMultiples">subirEvidenciasMultiples</a></li><li><a href="global.html#subirPdfAOneDrive">subirPdfAOneDrive</a></li><li><a href="global.html#timeoutMs">timeoutMs</a></li><li><a href="global.html#uploadEvidenceToOneDrive">uploadEvidenceToOneDrive</a></li><li><a href="global.html#validarArchivo">validarArchivo</a></li><li><a href="global.html#validarBotiquines">validarBotiquines</a></li><li><a href="global.html#validarCamillas">validarCamillas</a></li><li><a href="global.html#validarEquiposTecnologicos">validarEquiposTecnologicos</a></li><li><a href="global.html#validarEvidenciaTrabajador">validarEvidenciaTrabajador</a></li><li><a href="global.html#validarExtintores">validarExtintores</a></li><li><a href="global.html#validarInformacionGeneral">validarInformacionGeneral</a></li><li><a href="global.html#validarInspeccion">validarInspeccion</a></li><li><a href="global.html#validarInspeccionEpp">validarInspeccionEpp</a></li><li><a href="global.html#validarPdf">validarPdf</a></li><li><a href="global.html#validarResultado">validarResultado</a></li><li><a href="global.html#validarSenalizaciones">validarSenalizaciones</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.5</a>
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>

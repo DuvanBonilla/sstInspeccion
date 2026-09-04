@@ -1,3 +1,25 @@
+
+/**
+ * Calcula el resumen general de una inspección EPP.
+ *
+ * Recorre los trabajadores y sus elementos evaluados para determinar el total
+ * de evaluaciones y novedades. Una evaluación se considera novedad cuando la
+ * condición o el uso del elemento tiene una calificación `M` o `R`.
+ *
+ * Un trabajador se clasifica con novedad cuando al menos uno de sus elementos
+ * cumple el criterio anterior.
+ *
+ * @param {Array<Object>} [trabajadores=[]] Trabajadores incluidos en la inspección.
+ * @param {Array<Object>} [trabajadores[].elementos] Elementos EPP evaluados.
+ * @returns {{
+ *   totalTrabajadores: number,
+ *   totalEvaluaciones: number,
+ *   totalNovedades: number,
+ *   trabajadoresConNovedad: number,
+ *   trabajadoresSinNovedad: number
+ * }} Resumen cuantitativo de la inspección EPP.
+ */
+
 function calcularResumenEpp(trabajadores = []) {
   const listaTrabajadores = Array.isArray(trabajadores)
     ? trabajadores

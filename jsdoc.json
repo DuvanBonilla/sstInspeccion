@@ -1,0 +1,24 @@
+{
+  "source": {
+    "include": [
+      "src/backend",
+      "src/views/js"
+    ],
+    "includePattern": ".+\\.js$",
+    "excludePattern": "(^|[/\\\\])node_modules([/\\\\]|$)"
+  },
+  "opts": {
+    "destination": "docs",
+    "encoding": "utf8",
+    "readme": "README.md",
+    "recurse": true,
+    "template": "node_modules/jsdoc/templates/default"
+  },
+  "templates": {
+    "default": {
+      "includeDate": false,
+      "outputSourceFiles": true,
+      "useLongnameInNav": true
+    }
+  }
+}

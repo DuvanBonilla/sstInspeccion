@@ -16,6 +16,17 @@ function limpiarNombreArchivo(valor) {
   return String(valor || "").replace(/[^a-zA-Z0-9._-]/g, "_");
 }
 
+/**
+ * Obtiene la carpeta de OneDrive destinada a las evidencias.
+ *
+ * Utiliza `ONEDRIVE_EVIDENCIAS_PATH` cuando está configurada. De lo contrario,
+ * construye la ubicación a partir de la carpeta que contiene el archivo
+ * definido en `ONEDRIVE_EXCEL_PATH`.
+ *
+ * @returns {string} Ruta absoluta de la carpeta de evidencias en OneDrive.
+ * @throws {Error} Si no existe la configuración necesaria para construirla.
+ */
+
 function getEvidenceFolderPath() {
   const configuredPath = process.env.ONEDRIVE_EVIDENCIAS_PATH;
 
@@ -44,6 +55,16 @@ function normalizarSedeParaRuta(sedeOperacion) {
     .trim();
 }
 
+/**
+ * Determina la carpeta donde se almacenará el PDF según la sede.
+ *
+ * Las inspecciones de Urabá se dirigen a `Respuestas_PDF/URABÁ`, las de
+ * Santa Marta a `Respuestas_PDF/STM` y las demás a `Respuestas_PDF`.
+ *
+ * @param {string} sedeOperacion Sede operacional de la inspección.
+ * @returns {string} Carpeta de destino correspondiente.
+ */
+
 function resolverCarpetaDestinoPdf(sedeOperacion) {
   const sede = normalizarSedeParaRuta(sedeOperacion);
 
@@ -53,6 +74,23 @@ function resolverCarpetaDestinoPdf(sedeOperacion) {
 
   return "Respuestas_PDF";
 }
+
+/**
+ * Almacena el informe PDF de una inspección en OneDrive.
+ *
+ * Construye el nombre y la ruta del archivo a partir del identificador de la
+ * inspección y de su sede operacional. Después realiza la carga mediante
+ * Microsoft Graph.
+ *
+ * @async
+ * @param {Buffer} pdfBuffer Contenido binario del informe PDF.
+ * @param {string} inspeccionId Identificador único de la inspección.
+ * @param {string|null} [sedeOperacion=null] Sede utilizada para determinar
+ * la carpeta de destino.
+ * @returns {Promise<string|null>} URL web del PDF almacenado, o `null` si
+ * Microsoft Graph no devuelve una URL.
+ * @throws {Error} Si falla la autenticación o la carga del archivo.
+ */
 
 async function subirPdfAOneDrive(
   pdfBuffer,
@@ -99,9 +137,27 @@ function extraerCodigoInspeccion(inspeccionId) {
   return limpiarNombreArchivo(partes[partes.length - 1] || "") || "SINCOD";
 }
 
-// Carga la evidencia del formulario a OneDrive y retorna la ruta creada.
-// Nombre del archivo: {PREFIJO}_{indice}_{codigoInspeccion}.ext (ej: EXT_1_K7X9.jpg).
-// Si se pasa subIndice (item con más de una foto), se agrega al nombre: {PREFIJO}_{indice}_{subIndice}_{codigoInspeccion}.ext.
+/**
+ * Almacena una evidencia individual en OneDrive.
+ *
+ * Construye un nombre utilizando el prefijo del tipo de evidencia, su posición,
+ * el código de la inspección y, cuando corresponde, el subíndice de la imagen.
+ *
+ * @async
+ * @param {Object} file Archivo recibido mediante Multer.
+ * @param {Buffer} file.buffer Contenido binario del archivo.
+ * @param {string} file.originalname Nombre original del archivo.
+ * @param {string} file.mimetype Tipo MIME del archivo.
+ * @param {string} prefijo Prefijo que identifica el tipo de evidencia.
+ * @param {number} indice Posición del elemento dentro de la inspección.
+ * @param {string} inspeccionId Identificador único de la inspección.
+ * @param {number|null} [subIndice=null] Posición adicional cuando el elemento
+ * contiene varias evidencias.
+ * @returns {Promise<Object|string>} Ruta y URL de la evidencia almacenada, o
+ * una cadena vacía cuando no se recibe un archivo.
+ * @throws {Error} Si falla la carga de la evidencia.
+ */
+
 async function uploadEvidenceToOneDrive(
   file,
   prefijo,
@@ -136,8 +192,16 @@ async function uploadEvidenceToOneDrive(
   };
 }
 
-// Descarga una evidencia ya subida a OneDrive por su ruta. Devuelve un Buffer o null si falla.
-// Se usa solo al regenerar el PDF final, una vez las 3 firmas están completas.
+/**
+ * Descarga una evidencia previamente almacenada en OneDrive.
+ *
+ * @async
+ * @param {string} evidencePath Ruta de la evidencia dentro de OneDrive.
+ * @returns {Promise<Buffer|null>} Contenido binario de la evidencia, o `null`
+ * cuando no se proporciona una ruta o no se obtiene el archivo.
+ * @throws {Error} Si falla la solicitud de descarga.
+ */
+
 async function descargarEvidenciaOneDrive(evidencePath) {
   if (!evidencePath) {
     return null;
@@ -167,6 +231,25 @@ function obtenerArchivosMultiples(files, prefix, index) {
     .sort((a, b) => Number(a.match[1]) - Number(b.match[1]))
     .map((x) => x.file);
 }
+
+/**
+ * Procesa y almacena las evidencias asociadas a un elemento SST.
+ *
+ * Localiza los archivos correspondientes al elemento, los carga en paralelo
+ * y agrupa sus rutas, URLs y nombres. También determina la fecha de la
+ * evidencia utilizando el primer archivo encontrado.
+ *
+ * @async
+ * @param {Array<Object>} files Archivos recibidos mediante Multer.
+ * @param {string} prefix Prefijo utilizado en los nombres de campos del formulario.
+ * @param {string} tipoPrefijo Prefijo utilizado para nombrar los archivos.
+ * @param {number} index Posición del elemento dentro de su sección.
+ * @param {string} inspeccionId Identificador único de la inspección.
+ * @param {Object} body Datos adicionales recibidos desde el formulario.
+ * @returns {Promise<Object>} Rutas, URLs y nombres agrupados, además de la
+ * fecha determinada para la evidencia.
+ * @throws {Error} Si falla la carga o el procesamiento de alguna evidencia.
+ */
 
 async function subirEvidenciasMultiples(
   files,
@@ -225,6 +308,19 @@ async function subirEvidenciasMultiples(
   };
 }
 
+/**
+ * Reconstruye las evidencias de una colección de elementos SST.
+ *
+ * Descarga las evidencias almacenadas en cada elemento y las organiza por su
+ * índice original. Las fechas registradas se conservan en un mapa separado
+ * para utilizarlas durante la generación del PDF.
+ *
+ * @async
+ * @param {Array<Object>} items Elementos SST con rutas de evidencias.
+ * @returns {Promise<Object>} Mapas de evidencias y fechas organizados por índice.
+ * @throws {Error} Si falla la descarga de alguna evidencia.
+ */
+
 async function construirEvidenciasDesdeOneDrive(items) {
   const evidenciasPorIndex = new Map();
   const fechas = new Map();
@@ -256,6 +352,21 @@ async function construirEvidenciasDesdeOneDrive(items) {
 
   return { evidenciasPorIndex, fechas };
 }
+
+/**
+ * Reconstruye las evidencias de los trabajadores de una inspección EPP.
+ *
+ * Descarga la evidencia de cada trabajador y la almacena en un mapa utilizando
+ * su posición y, cuando está disponible, también su identificador.
+ *
+ * Los errores de descarga de un trabajador se registran sin interrumpir el
+ * procesamiento de los demás.
+ *
+ * @async
+ * @param {Array<Object>} trabajadores Trabajadores con evidencias almacenadas.
+ * @returns {Promise<Map>} Evidencias organizadas por índice e identificador
+ * del trabajador.
+ */
 
 async function construirEvidenciasEppDesdeOneDrive(trabajadores) {
   const evidenciasPorTrabajador = new Map();

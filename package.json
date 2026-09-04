@@ -6,6 +6,7 @@
   "scripts": {
     "start": "node src/backend/app.js",
     "migrate": "node src/backend/db/migrate.js",
+    "docs": "jsdoc -c jsdoc.json && node docs-theme/apply-theme.js",
     "test": "echo \"No tests configured\""
   },
   "keywords": [],

@@ -783,6 +783,30 @@ function renderAprobaciones(doc, y, aprobaciones = null) {
   return y + boxH;
 }
 
+/**
+ * Genera el informe PDF completo de una inspección EPP.
+ *
+ * Construye la información general y las secciones de cada trabajador,
+ * incluyendo sus datos personales, evaluaciones de elementos de protección,
+ * planes de acción, observaciones y evidencia fotográfica.
+ *
+ * Controla la creación de páginas para evitar que la información principal
+ * de un trabajador quede dividida de forma incorrecta. Al final incorpora
+ * los responsables que aprobaron la inspección.
+ *
+ * @async
+ * @param {Object} data Información general y trabajadores de la inspección.
+ * @param {Object} [data.general] Información general de la inspección EPP.
+ * @param {Array<Object>} [data.trabajadores] Trabajadores evaluados.
+ * @param {Map} [evidenciasPorTrabajador=new Map()] Evidencias organizadas por
+ * índice o identificador del trabajador.
+ * @param {Object} [opts={}] Opciones adicionales de generación.
+ * @param {Object|null} [opts.aprobaciones=null] Información de los responsables
+ * que aprobaron la inspección.
+ * @returns {Promise<Buffer>} Contenido binario del informe PDF generado.
+ * @throws {Error} Si ocurre un error durante la construcción del documento.
+ */
+
 async function crearPdfInspeccionEpp(
   data,
   evidenciasPorTrabajador = new Map(),
@@ -922,6 +946,24 @@ async function crearPdfInspeccionEpp(
     doc.end();
   });
 }
+
+/**
+ * Genera el PDF EPP utilizado en el flujo de aprobación.
+ *
+ * Construye la información general a partir del registro de la inspección,
+ * incorpora los trabajadores recuperados de la base de datos y utiliza las
+ * evidencias descargadas previamente desde OneDrive.
+ *
+ * @async
+ * @param {Object} completa Inspección EPP completa.
+ * @param {Array<Object>} completa.trabajadores Trabajadores evaluados.
+ * @param {Object} row Registro general de la inspección.
+ * @param {Object} aprobaciones Información de los responsables que aprobaron.
+ * @param {Map} evidenciasPorTrabajador Evidencias organizadas por trabajador.
+ * @returns {Promise<Object>} Resultado con el PDF generado en `pdf` y la lista
+ * de trabajadores utilizada en `trabajadores`.
+ * @throws {Error} Si falla la generación del documento.
+ */
 
 async function generarPdfEppAprobacion(
   completa,

@@ -25,6 +25,40 @@ const { pool } = require("../db/pool");
    GUARDADO EN BASE DE DATOS
 ========================================================= */
 
+/**
+ * Guarda una inspección EPP completa en la base de datos.
+ *
+ * Registra la información general en la tabla de inspecciones, almacena cada
+ * trabajador en la tabla de evaluaciones EPP y relaciona sus elementos
+ * evaluados mediante los registros de detalle.
+ *
+ * Cuando un elemento contiene un plan de acción, almacena su descripción,
+ * fecha límite y estado inicial `PENDIENTE`. Los elementos sin plan de acción
+ * conservan estos campos sin valor.
+ *
+ * Todas las operaciones se ejecutan dentro de una transacción. Si alguna
+ * consulta falla, revierte la totalidad del registro. La aprobación del
+ * inspector queda registrada automáticamente con el responsable que
+ * diligenció la inspección.
+ *
+ * @async
+ * @param {Object} data Inspección EPP que será almacenada.
+ * @param {Object} data.general Información general de la inspección.
+ * @param {string} data.general.inspeccionId Identificador de la inspección.
+ * @param {string} data.general.fecha Fecha de realización.
+ * @param {string} data.general.sedeOperacion Sede operacional.
+ * @param {string} data.general.areaTrabajo Área inspeccionada.
+ * @param {string} data.general.jefeResponsable Nombre del jefe responsable.
+ * @param {string} data.general.cargoJefe Cargo del jefe responsable.
+ * @param {string} data.general.responsableInspeccion Responsable de la inspección.
+ * @param {string} data.general.cargoResponsable Cargo del responsable.
+ * @param {Array<Object>} data.trabajadores Trabajadores evaluados.
+ * @returns {Promise<Object>} Identificador, número consecutivo y tokens de
+ * aprobación de la inspección registrada.
+ * @throws {Error} Si falla alguna operación ejecutada dentro de la transacción.
+ */
+
+
 async function guardarInspeccionEppEnDB(data) {
   const general = data?.general || {};
 

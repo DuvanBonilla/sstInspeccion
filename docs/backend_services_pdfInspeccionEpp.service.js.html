@@ -1,0 +1,1061 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: backend/services/pdfInspeccionEpp.service.js</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+    <link type="text/css" rel="stylesheet" href="styles/sst-docs.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: backend/services/pdfInspeccionEpp.service.js</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>const path = require("node:path");
+const PDFDocument = require("pdfkit");
+
+const MARGEN = 25;
+const ANCHO = 545;
+const LIMITE_INFERIOR = 800;
+
+function texto(valor) {
+  if (valor === null || valor === undefined) {
+    return "";
+  }
+
+  return String(valor);
+}
+
+function formatearFecha(valor) {
+  if (!valor) {
+    return "";
+  }
+
+  if (valor instanceof Date) {
+    const dia = String(valor.getUTCDate()).padStart(2, "0");
+    const mes = String(valor.getUTCMonth() + 1).padStart(2, "0");
+    const anio = valor.getUTCFullYear();
+
+    return `${dia}/${mes}/${anio}`;
+  }
+
+  const fecha = String(valor).split("T")[0];
+
+  const partes = fecha.split("-");
+
+  if (partes.length === 3) {
+    const [anio, mes, dia] = partes;
+
+    return `${dia}/${mes}/${anio}`;
+  }
+
+  return String(valor);
+}
+
+function dibujarIdInspeccion(doc, general, y) {
+  const inspeccionId = general?.inspeccionId || "";
+
+  if (!inspeccionId) return;
+
+  const num =
+    general?.numInspeccion != null
+      ? `Inspección N.° ${general.numInspeccion}  ·  `
+      : "";
+
+  doc
+    .font("Helvetica")
+    .fontSize(7)
+    .fillColor("#9ca3af")
+    .text(`${num}${inspeccionId}`, MARGEN, y + 4, {
+      width: ANCHO,
+      align: "right",
+    })
+    .fillColor("black");
+}
+
+function dibujarImagenAjustada(
+  doc,
+  file,
+  x,
+  y,
+  width,
+  maxWidth,
+  maxHeight,
+  fontSize = 9,
+) {
+  try {
+    if (!file?.buffer?.length) {
+      throw new Error("Evidencia vacía");
+    }
+
+    const img = doc.openImage(file.buffer);
+
+    // La imagen nunca podrá superar estos límites.
+    // Mantiene siempre su proporción original.
+    const ratio = Math.min(maxWidth / img.width, maxHeight / img.height, 1);
+
+    const scaledW = img.width * ratio;
+    const scaledH = img.height * ratio;
+
+    // Centrar horizontalmente
+    const cx = x + (width - scaledW) / 2;
+
+    // Centrar verticalmente
+    const cy = y + (maxHeight - scaledH) / 2;
+
+    doc.image(file.buffer, cx, cy, {
+      width: scaledW,
+      height: scaledH,
+    });
+
+    return {
+      width: scaledW,
+      height: scaledH,
+    };
+  } catch (error) {
+    console.error("Error al renderizar evidencia:", error);
+
+    doc
+      .font("Helvetica")
+      .fontSize(fontSize)
+      .fillColor("#666666")
+      .text("No fue posible renderizar la evidencia.", x, y, {
+        width: width,
+        align: "center",
+      })
+      .fillColor("black");
+
+    return {
+      width: 0,
+      height: 20,
+    };
+  }
+}
+
+function renderEncabezado(doc) {
+  let y = MARGEN;
+
+  doc.rect(MARGEN, y, ANCHO, 70).stroke();
+
+  // Logo
+  doc.rect(MARGEN, y, 150, 70).stroke();
+
+  try {
+    doc.image(path.resolve(__dirname, "../../views/img/Cargo.png"), 27, y + 3, {
+      fit: [146, 64],
+      align: "center",
+      valign: "center",
+    });
+  } catch {
+    doc
+      .font("Helvetica-Bold")
+      .fontSize(12)
+      .text("CARGOBAN", 27, y + 28, {
+        width: 146,
+        align: "center",
+      });
+  }
+
+  // Título
+  doc.rect(175, y, 245, 70).stroke();
+
+  doc
+    .font("Helvetica-Bold")
+    .fontSize(14)
+    .text("INSPECCIÓN DE ELEMENTOS\nDE PROTECCIÓN PERSONAL", 175, y + 18, {
+      width: 245,
+      align: "center",
+      lineGap: 3,
+    });
+
+  // Información documental
+  doc.rect(420, y, 150, 23).stroke();
+  doc.rect(420, y + 23, 150, 23).stroke();
+  doc.rect(420, y + 46, 150, 24).stroke();
+
+  doc
+    .font("Helvetica")
+    .fontSize(9)
+    .text("CÓDIGO: ST-FST EPP", 425, y + 7)
+    .text("VERSIÓN: 01", 425, y + 30)
+    .text("FECHA DE VERSIÓN: 2026", 425, y + 53);
+
+  return y + 70;
+}
+
+function renderInformacionGeneral(doc, general, y) {
+  const mitad = ANCHO / 2;
+
+  doc.rect(MARGEN, y, mitad, 25).stroke();
+  doc.rect(MARGEN + mitad, y, mitad, 25).stroke();
+
+  doc
+    .font("Helvetica-Bold")
+    .fontSize(9)
+    .text("FECHA DE INSPECCIÓN:", 30, y + 8);
+
+  doc
+    .font("Helvetica")
+    .fontSize(9)
+    .text(texto(general.fecha), 155, y + 8);
+
+  doc
+    .font("Helvetica-Bold")
+    .fontSize(9)
+    .text("SEDE:", 302, y + 8);
+
+  doc
+    .font("Helvetica")
+    .fontSize(9)
+    .text(texto(general.sedeOperacion || general.sede), 335, y + 8, {
+      width: 225,
+    });
+
+  y += 25;
+
+  doc.rect(MARGEN, y, mitad, 25).stroke();
+  doc.rect(MARGEN + mitad, y, mitad, 25).stroke();
+
+  doc
+    .font("Helvetica-Bold")
+    .fontSize(9)
+    .text("ÁREA DE TRABAJO:", 30, y + 8);
+
+  doc
+    .font("Helvetica")
+    .fontSize(9)
+    .text(texto(general.areaTrabajo || general.area), 130, y + 8, {
+      width: 160,
+    });
+
+  doc
+    .font("Helvetica-Bold")
+    .fontSize(7.5)
+    .text("RESPONSABLE DE LA INSPECCIÓN:", 302, y + 8, {
+      width: 142,
+      height: 12,
+      lineBreak: false,
+    });
+
+  doc
+    .font("Helvetica")
+    .fontSize(8.5)
+    .text(texto(general.responsableInspeccion), 448, y + 8, {
+      width: 107,
+      height: 12,
+      lineBreak: false,
+      ellipsis: true,
+    });
+  y += 25;
+
+  doc.rect(MARGEN, y, ANCHO, 25).stroke();
+
+  doc
+    .font("Helvetica-Bold")
+    .fontSize(9)
+    .text("RESPONSABLE DEL ÁREA:", 30, y + 8);
+
+  const jefe = general.jefeResponsable || general.jefeArea || "";
+
+  const cargoJefe = general.cargoJefe || "";
+
+  doc
+    .font("Helvetica")
+    .fontSize(9)
+    .text(jefe + (cargoJefe ? ` — ${cargoJefe}` : ""), 165, y + 8, {
+      width: 395,
+    });
+
+  y += 25;
+
+  doc.rect(MARGEN, y, ANCHO, 25).stroke();
+
+  doc
+    .font("Helvetica-Bold")
+    .fontSize(9)
+    .text("INSPECTOR:", 30, y + 8);
+
+  const responsable = general.responsableInspeccion || "";
+
+  const cargoResponsable = general.cargoResponsable || "";
+
+  doc
+    .font("Helvetica")
+    .fontSize(9)
+    .text(
+      responsable + (cargoResponsable ? ` — ${cargoResponsable}` : ""),
+      95,
+      y + 8,
+      {
+        width: 465,
+      },
+    );
+
+  return y + 25;
+}
+
+function renderDatosTrabajador(doc, trabajador, numero, y) {
+  doc.rect(MARGEN, y, ANCHO, 25).stroke();
+
+  doc
+    .font("Helvetica-Bold")
+    .fontSize(10)
+    .text(`TRABAJADOR ${numero}`, MARGEN, y + 7, {
+      width: ANCHO,
+      align: "center",
+    });
+
+  y += 25;
+
+  const columnas = [250, 120, 175];
+
+  let x = MARGEN;
+
+  const headers = ["NOMBRE Y APELLIDO", "CÓDIGO", "LABOR / CARGO"];
+
+  headers.forEach((header, i) => {
+    doc.rect(x, y, columnas[i], 22).stroke();
+
+    doc
+      .font("Helvetica-Bold")
+      .fontSize(8)
+      .text(header, x + 3, y + 7, {
+        width: columnas[i] - 6,
+        align: "center",
+      });
+
+    x += columnas[i];
+  });
+
+  y += 22;
+
+  x = MARGEN;
+
+  const valores = [trabajador.nombre, trabajador.codigo, trabajador.cargo];
+
+  valores.forEach((valor, i) => {
+    doc.rect(x, y, columnas[i], 25).stroke();
+
+    doc
+      .font("Helvetica")
+      .fontSize(8)
+      .text(texto(valor), x + 4, y + 8, {
+        width: columnas[i] - 8,
+        align: "center",
+      });
+
+    x += columnas[i];
+  });
+
+  return y + 25;
+}
+
+function renderTablaEpp(doc, trabajador, y, nuevaPagina) {
+  const columnas = [365, 90, 90];
+  const headers = ["ELEMENTO EPP", "CONDICIÓN", "USO"];
+  const rowHeight = 22;
+
+  function dibujarEncabezadoTabla(esContinuacion = false) {
+    doc.rect(MARGEN, y, ANCHO, 38).stroke();
+
+    doc
+      .font("Helvetica-Bold")
+      .fontSize(9)
+      .text(
+        esContinuacion
+          ? "EVALUACIÓN DE EPP - CONTINUACIÓN"
+          : "EVALUACIÓN DE ELEMENTOS DE PROTECCIÓN PERSONAL",
+        MARGEN,
+        y + 5,
+        {
+          width: ANCHO,
+          align: "center",
+        },
+      );
+
+    doc
+      .font("Helvetica")
+      .fontSize(7.5)
+      .text(
+        "CONVENCIONES: B: Bueno   R: Regular   M: Malo   NA: No aplica",
+        MARGEN,
+        y + 21,
+        {
+          width: ANCHO,
+          align: "center",
+        },
+      );
+
+    y += 38;
+
+    let x = MARGEN;
+
+    headers.forEach((header, i) => {
+      doc.rect(x, y, columnas[i], 22).stroke();
+
+      doc
+        .font("Helvetica-Bold")
+        .fontSize(8)
+        .text(header, x, y + 7, {
+          width: columnas[i],
+          height: 12,
+          align: "center",
+          lineBreak: false,
+        });
+
+      x += columnas[i];
+    });
+
+    y += 22;
+  }
+
+  // La sección y su encabezado deben caber juntos.
+  if (y + 60 > LIMITE_INFERIOR) {
+    y = nuevaPagina(false);
+  }
+
+  dibujarEncabezadoTabla(false);
+
+  const elementos = Array.isArray(trabajador.elementos)
+    ? trabajador.elementos
+    : [];
+
+  elementos.forEach((elemento) => {
+    // La fila completa pasa a la página siguiente.
+    if (y + rowHeight > LIMITE_INFERIOR) {
+      y = nuevaPagina(false);
+      dibujarEncabezadoTabla(true);
+    }
+
+    let x = MARGEN;
+
+    const fila = [elemento.elemento, elemento.condicion, elemento.uso];
+
+    fila.forEach((valor, i) => {
+      doc.rect(x, y, columnas[i], rowHeight).stroke();
+
+      doc
+        .font("Helvetica")
+        .fontSize(8)
+        .text(texto(valor), x + 5, y + 7, {
+          width: columnas[i] - 10,
+          height: rowHeight - 10,
+          align: i === 0 ? "left" : "center",
+          lineBreak: false,
+          ellipsis: true,
+        });
+
+      x += columnas[i];
+    });
+
+    y += rowHeight;
+  });
+
+  return y;
+}
+
+function renderTextoBloque(doc, titulo, contenido, y) {
+  const contenidoSeguro = texto(contenido) || "Sin registro.";
+
+  const altoTexto = Math.max(
+    35,
+    doc.heightOfString(contenidoSeguro, {
+      width: ANCHO - 10,
+      font: "Helvetica",
+      fontSize: 8,
+    }) + 16,
+  );
+
+  doc.rect(MARGEN, y, ANCHO, 22).stroke();
+
+  doc
+    .font("Helvetica-Bold")
+    .fontSize(9)
+    .text(titulo, MARGEN, y + 6, {
+      width: ANCHO,
+      align: "center",
+    });
+
+  y += 22;
+
+  doc.rect(MARGEN, y, ANCHO, altoTexto).stroke();
+
+  doc
+    .font("Helvetica")
+    .fontSize(8)
+    .text(contenidoSeguro, MARGEN + 5, y + 7, {
+      width: ANCHO - 10,
+    });
+
+  return y + altoTexto;
+}
+
+function renderPlanAccion(doc, trabajador, y, nuevaPagina) {
+  const elementos = Array.isArray(trabajador?.elementos)
+    ? trabajador.elementos
+    : [];
+
+  const planes = elementos.filter(
+    (elemento) =>
+      String(elemento?.planAccion || "").trim() || elemento?.fechaPlanAccion,
+  );
+
+  const columnas = [180, 275, 90];
+  const headers = ["ELEMENTO EPP", "PLAN DE ACCIÓN", "FECHA LÍMITE"];
+
+  function dibujarEncabezadoTabla(esContinuacion = false) {
+    doc.rect(MARGEN, y, ANCHO, 22).stroke();
+
+    doc
+      .font("Helvetica-Bold")
+      .fontSize(9)
+      .text(
+        esContinuacion ? "PLAN DE ACCIÓN - CONTINUACIÓN" : "PLAN DE ACCIÓN",
+        MARGEN,
+        y + 6,
+        {
+          width: ANCHO,
+          align: "center",
+        },
+      );
+
+    y += 22;
+
+    let x = MARGEN;
+
+    headers.forEach((header, i) => {
+      doc.rect(x, y, columnas[i], 22).stroke();
+
+      doc
+        .font("Helvetica-Bold")
+        .fontSize(8)
+        .text(header, x + 3, y + 7, {
+          width: columnas[i] - 6,
+          height: 12,
+          align: "center",
+          lineBreak: false,
+        });
+
+      x += columnas[i];
+    });
+
+    y += 22;
+  }
+
+  if (planes.length === 0) {
+    const altoTotal = 22 + 35;
+
+    if (y + altoTotal > LIMITE_INFERIOR) {
+      y = nuevaPagina(false);
+    }
+
+    doc.rect(MARGEN, y, ANCHO, 22).stroke();
+
+    doc
+      .font("Helvetica-Bold")
+      .fontSize(9)
+      .text("PLAN DE ACCIÓN", MARGEN, y + 6, {
+        width: ANCHO,
+        align: "center",
+      });
+
+    y += 22;
+
+    doc.rect(MARGEN, y, ANCHO, 35).stroke();
+
+    doc
+      .font("Helvetica")
+      .fontSize(8)
+      .text("Sin registro.", MARGEN + 5, y + 12, {
+        width: ANCHO - 10,
+        align: "center",
+      });
+
+    return y + 35;
+  }
+
+  if (y + 44 > LIMITE_INFERIOR) {
+    y = nuevaPagina(false);
+  }
+
+  dibujarEncabezadoTabla(false);
+
+  planes.forEach((elemento) => {
+    const nombreElemento = texto(elemento.elemento).trim() || "—";
+
+    const planAccion = texto(elemento.planAccion).trim() || "Sin registro.";
+
+    const fechaLimite = elemento.fechaPlanAccion
+      ? formatearFecha(elemento.fechaPlanAccion)
+      : "No aplica";
+
+    doc.font("Helvetica").fontSize(8);
+
+    const altoElemento =
+      doc.heightOfString(nombreElemento, {
+        width: columnas[0] - 10,
+      }) + 14;
+
+    const altoPlan =
+      doc.heightOfString(planAccion, {
+        width: columnas[1] - 10,
+      }) + 14;
+
+    const altoFecha =
+      doc.heightOfString(fechaLimite, {
+        width: columnas[2] - 10,
+      }) + 14;
+
+    const rowHeight = Math.max(28, altoElemento, altoPlan, altoFecha);
+
+    // Ninguna columna se escribe hasta garantizar
+    // que la fila completa cabe.
+    if (y + rowHeight > LIMITE_INFERIOR) {
+      y = nuevaPagina(false);
+      dibujarEncabezadoTabla(true);
+    }
+
+    let x = MARGEN;
+
+    const valores = [nombreElemento, planAccion, fechaLimite];
+
+    valores.forEach((valor, i) => {
+      doc.rect(x, y, columnas[i], rowHeight).stroke();
+
+      doc
+        .font("Helvetica")
+        .fontSize(8)
+        .text(valor, x + 5, y + 7, {
+          width: columnas[i] - 10,
+          height: rowHeight - 14,
+          align: i === 2 ? "center" : "left",
+          lineBreak: true,
+          ellipsis: true,
+        });
+
+      x += columnas[i];
+    });
+
+    y += rowHeight;
+  });
+
+  return y;
+}
+
+function renderEvidencia(doc, evidencia, y) {
+  // =========================================================
+  // TAMAÑO MÁXIMO DE LA IMAGEN
+  // =========================================================
+
+  const MAX_ANCHO_IMAGEN = 300;
+  const MAX_ALTO_IMAGEN = 100;
+
+  const PADDING = 5;
+
+  // =========================================================
+  // ENCABEZADO
+  // =========================================================
+
+  doc.rect(MARGEN, y, ANCHO, 20).stroke();
+
+  doc
+    .font("Helvetica-Bold")
+    .fontSize(9)
+    .text("EVIDENCIA DEL TRABAJADOR", MARGEN, y + 6, {
+      width: ANCHO,
+      align: "center",
+    });
+
+  y += 20;
+
+  // =========================================================
+  // SIN EVIDENCIA
+  // =========================================================
+
+  if (!evidencia?.buffer?.length) {
+    const altoSinEvidencia = 30;
+
+    doc.rect(MARGEN, y, ANCHO, altoSinEvidencia).stroke();
+
+    doc
+      .font("Helvetica")
+      .fontSize(9)
+      .fillColor("#666666")
+      .text("Sin evidencia adjunta.", MARGEN, y + 10, {
+        width: ANCHO,
+        align: "center",
+      })
+      .fillColor("black");
+
+    return y + altoSinEvidencia;
+  }
+
+  // =========================================================
+  // ÁREA COMPLETA DEL FORMULARIO
+  // =========================================================
+
+  const areaX = MARGEN + PADDING;
+  const areaY = y + PADDING;
+  const areaWidth = ANCHO - PADDING * 2;
+
+  // =========================================================
+  // DIBUJAR IMAGEN
+  // =========================================================
+
+  const resultado = dibujarImagenAjustada(
+    doc,
+    evidencia,
+    areaX,
+    areaY,
+    areaWidth,
+    MAX_ANCHO_IMAGEN,
+    MAX_ALTO_IMAGEN,
+  );
+
+  // =========================================================
+  // CONTENEDOR DEL FORMULARIO
+  // =========================================================
+
+  /*
+   * El ancho del formulario se mantiene COMPLETO.
+   * Solamente la imagen es pequeña.
+   */
+
+  const altoBloque = MAX_ALTO_IMAGEN + PADDING * 2;
+
+  doc.rect(MARGEN, y, ANCHO, altoBloque).stroke();
+
+  return y + altoBloque;
+}
+
+function renderAprobaciones(doc, y, aprobaciones = null) {
+  doc.save();
+
+  doc.lineWidth(0.5);
+
+  const colW = ANCHO / 3;
+  const boxH = 60;
+
+  doc.rect(MARGEN, y, ANCHO, boxH).stroke();
+
+  const roles = [
+    {
+      key: "inspector",
+      label: "APROBADO POR INSPECTOR",
+    },
+    {
+      key: "jefe",
+      label: "APROBADO POR JEFE DE ÁREA",
+    },
+    {
+      key: "copasst",
+      label: "APROBADO POR COPASST",
+    },
+  ];
+
+  roles.forEach(({ key, label }, i) => {
+    const fx = MARGEN + i * colW;
+
+    if (i > 0) {
+      doc
+        .moveTo(fx, y)
+        .lineTo(fx, y + boxH)
+        .stroke();
+    }
+
+    const lineY = y + 32;
+
+    const aprobacion = aprobaciones?.[key];
+
+    if (aprobacion?.nombre) {
+      doc
+        .font("Helvetica-Bold")
+        .fontSize(8)
+        .text(aprobacion.nombre, fx + 4, y + 6, {
+          width: colW - 8,
+          align: "center",
+        });
+    }
+
+    doc
+      .moveTo(fx + 12, lineY)
+      .lineTo(fx + colW - 12, lineY)
+      .stroke();
+
+    doc
+      .font("Helvetica-Bold")
+      .fontSize(6.5)
+      .text(label, fx, lineY + 4, {
+        width: colW,
+        align: "center",
+      });
+  });
+
+  doc.restore();
+
+  return y + boxH;
+}
+
+/**
+ * Genera el informe PDF completo de una inspección EPP.
+ *
+ * Construye la información general y las secciones de cada trabajador,
+ * incluyendo sus datos personales, evaluaciones de elementos de protección,
+ * planes de acción, observaciones y evidencia fotográfica.
+ *
+ * Controla la creación de páginas para evitar que la información principal
+ * de un trabajador quede dividida de forma incorrecta. Al final incorpora
+ * los responsables que aprobaron la inspección.
+ *
+ * @async
+ * @param {Object} data Información general y trabajadores de la inspección.
+ * @param {Object} [data.general] Información general de la inspección EPP.
+ * @param {Array&lt;Object>} [data.trabajadores] Trabajadores evaluados.
+ * @param {Map} [evidenciasPorTrabajador=new Map()] Evidencias organizadas por
+ * índice o identificador del trabajador.
+ * @param {Object} [opts={}] Opciones adicionales de generación.
+ * @param {Object|null} [opts.aprobaciones=null] Información de los responsables
+ * que aprobaron la inspección.
+ * @returns {Promise&lt;Buffer>} Contenido binario del informe PDF generado.
+ * @throws {Error} Si ocurre un error durante la construcción del documento.
+ */
+
+async function crearPdfInspeccionEpp(
+  data,
+  evidenciasPorTrabajador = new Map(),
+  opts = {},
+) {
+  const { aprobaciones = null } = opts;
+
+  const general = data?.general || data || {};
+
+  const trabajadores = Array.isArray(data?.trabajadores)
+    ? data.trabajadores
+    : Array.isArray(general?.trabajadores)
+      ? general.trabajadores
+      : [];
+
+  return new Promise((resolve, reject) => {
+    const doc = new PDFDocument({
+      size: "A4",
+      margin: MARGEN,
+      autoFirstPage: false,
+    });
+
+    const chunks = [];
+
+    doc.on("data", (chunk) => chunks.push(chunk));
+
+    doc.on("end", () => resolve(Buffer.concat(chunks)));
+
+    doc.on("error", reject);
+
+    let y = 0;
+
+    function nuevaPagina(mostrarInformacionGeneral = false) {
+      doc.addPage();
+
+      y = renderEncabezado(doc);
+
+      if (mostrarInformacionGeneral) {
+        y = renderInformacionGeneral(doc, general, y);
+      }
+
+      return y;
+    }
+
+    nuevaPagina(true);
+
+    trabajadores.forEach((trabajador, index) => {
+      /*
+       * Cada trabajador se inicia en una página
+       * independiente.
+       *
+       * Esto evita cortar la tabla EPP entre dos
+       * trabajadores y hace el informe legible incluso
+       * con 30+ trabajadores.
+       */
+
+      const espacioMinimoTrabajador = 300;
+
+      if (y + espacioMinimoTrabajador > LIMITE_INFERIOR) {
+        nuevaPagina(false);
+      }
+
+      y = renderDatosTrabajador(doc, trabajador, index + 1, y);
+
+      y = renderTablaEpp(doc, trabajador, y, nuevaPagina);
+
+      y = renderPlanAccion(doc, trabajador, y, nuevaPagina);
+
+      y = renderTextoBloque(doc, "OBSERVACIONES", trabajador.observaciones, y);
+
+      /*
+       * La evidencia ocupa bastante espacio.
+       * Si no cabe, pasa completa a la página
+       * siguiente.
+       */
+
+      const altoEvidencia = 130;
+
+      if (y + altoEvidencia > LIMITE_INFERIOR) {
+        dibujarIdInspeccion(doc, general, Math.min(y + 5, 810));
+
+        nuevaPagina(false);
+      }
+
+      const evidencia =
+        evidenciasPorTrabajador.get(index) ||
+        evidenciasPorTrabajador.get(trabajador.trabajadorId) ||
+        null;
+
+      y = renderEvidencia(doc, evidencia, y);
+
+      dibujarIdInspeccion(doc, general, Math.min(y + 5, 810));
+    });
+
+    if (trabajadores.length === 0) {
+      doc
+        .font("Helvetica")
+        .fontSize(10)
+        .text(
+          "No hay trabajadores registrados en esta inspección.",
+          MARGEN,
+          y + 25,
+          {
+            width: ANCHO,
+            align: "center",
+          },
+        );
+
+      y += 70;
+    }
+
+    const espacioAprobaciones = 20 + 25 + 60 + 20;
+
+    if (y + espacioAprobaciones > LIMITE_INFERIOR) {
+      nuevaPagina(false);
+    } else {
+      y += 20;
+    }
+
+    y += 12;
+
+    doc
+      .font("Helvetica-Bold")
+      .fontSize(12)
+      .text("APROBACIÓN DE LA INSPECCIÓN", MARGEN, y, {
+        width: ANCHO,
+        align: "center",
+      });
+
+    // Espacio entre título y firmas
+    y += 28;
+
+    y = renderAprobaciones(doc, y, aprobaciones);
+
+    dibujarIdInspeccion(doc, general, y + 4);
+
+    doc.end();
+  });
+}
+
+/**
+ * Genera el PDF EPP utilizado en el flujo de aprobación.
+ *
+ * Construye la información general a partir del registro de la inspección,
+ * incorpora los trabajadores recuperados de la base de datos y utiliza las
+ * evidencias descargadas previamente desde OneDrive.
+ *
+ * @async
+ * @param {Object} completa Inspección EPP completa.
+ * @param {Array&lt;Object>} completa.trabajadores Trabajadores evaluados.
+ * @param {Object} row Registro general de la inspección.
+ * @param {Object} aprobaciones Información de los responsables que aprobaron.
+ * @param {Map} evidenciasPorTrabajador Evidencias organizadas por trabajador.
+ * @returns {Promise&lt;Object>} Resultado con el PDF generado en `pdf` y la lista
+ * de trabajadores utilizada en `trabajadores`.
+ * @throws {Error} Si falla la generación del documento.
+ */
+
+async function generarPdfEppAprobacion(
+  completa,
+  row,
+  aprobaciones,
+  evidenciasPorTrabajador,
+) {
+  const trabajadores = Array.isArray(completa.trabajadores)
+    ? completa.trabajadores
+    : [];
+
+  const general = {
+    inspeccionId: row.inspeccion_id,
+    numInspeccion: Number(row.inspecciones_id),
+    fecha: row.fecha,
+    sedeOperacion: row.sede_operacion,
+    areaTrabajo: row.area_trabajo,
+    jefeResponsable: row.jefe_responsable,
+    cargoJefe: row.cargo_jefe,
+    responsableInspeccion: row.responsable_inspeccion,
+    cargoResponsable: row.cargo_responsable,
+  };
+
+  const pdf = await crearPdfInspeccionEpp(
+    {
+      general,
+      trabajadores,
+    },
+    evidenciasPorTrabajador,
+    {
+      aprobaciones,
+    },
+  );
+
+  return {
+    pdf,
+    trabajadores,
+  };
+}
+
+module.exports = {
+  generarPdfEppAprobacion,
+};
+</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Modules</h3><ul><li><a href="module-app.html">app</a></li></ul><h3>Global</h3><ul><li><a href="global.html#IMAGE_OPTIMIZER_VERSION">IMAGE_OPTIMIZER_VERSION</a></li><li><a href="global.html#KB">KB</a></li><li><a href="global.html#PDF_OPTIMIZER_CONFIG">PDF_OPTIMIZER_CONFIG</a></li><li><a href="global.html#PDF_OPTIMIZER_VERSION">PDF_OPTIMIZER_VERSION</a></li><li><a href="global.html#PROFILES">PROFILES</a></li><li><a href="global.html#activarRecalculoAutomatico">activarRecalculoAutomatico</a></li><li><a href="global.html#actualizarBotiquines">actualizarBotiquines</a></li><li><a href="global.html#actualizarDimensionHojaXml">actualizarDimensionHojaXml</a></li><li><a href="global.html#actualizarEquiposTecnologicos">actualizarEquiposTecnologicos</a></li><li><a href="global.html#actualizarExcelSeguimientoEpp">actualizarExcelSeguimientoEpp</a></li><li><a href="global.html#actualizarExcelSeguimientoEppEnOneDrive">actualizarExcelSeguimientoEppEnOneDrive</a></li><li><a href="global.html#actualizarExcelSeguimientoSst">actualizarExcelSeguimientoSst</a></li><li><a href="global.html#actualizarExcelSeguimientoSstEnMemoria">actualizarExcelSeguimientoSstEnMemoria</a></li><li><a href="global.html#actualizarExcelSeguimientoSstEnOneDrive">actualizarExcelSeguimientoSstEnOneDrive</a></li><li><a href="global.html#actualizarExtintores">actualizarExtintores</a></li><li><a href="global.html#actualizarFilasHojaXml">actualizarFilasHojaXml</a></li><li><a href="global.html#actualizarFormulasExistentes">actualizarFormulasExistentes</a></li><li><a href="global.html#actualizarGeneral">actualizarGeneral</a></li><li><a href="global.html#actualizarPaso">actualizarPaso</a></li><li><a href="global.html#actualizarPreviewArchivo">actualizarPreviewArchivo</a></li><li><a href="global.html#actualizarRangoTablaXml">actualizarRangoTablaXml</a></li><li><a href="global.html#actualizarResumen">actualizarResumen</a></li><li><a href="global.html#actualizarSenalizaciones">actualizarSenalizaciones</a></li><li><a href="global.html#analizarImagen">analizarImagen</a></li><li><a href="global.html#analizarPdf">analizarPdf</a></li><li><a href="global.html#autorizarAzureEpp">autorizarAzureEpp</a></li><li><a href="global.html#buscarPorToken">buscarPorToken</a></li><li><a href="global.html#calcularDiasRestantes">calcularDiasRestantes</a></li><li><a href="global.html#calcularDimensiones">calcularDimensiones</a></li><li><a href="global.html#calcularResumenEpp">calcularResumenEpp</a></li><li><a href="global.html#cargarCatalogoEpp">cargarCatalogoEpp</a></li><li><a href="global.html#cargarExcelSst">cargarExcelSst</a></li><li><a href="global.html#cargarImagen">cargarImagen</a></li><li><a href="global.html#cerrarPlanesAccionDesdeExcel">cerrarPlanesAccionDesdeExcel</a></li><li><a href="global.html#clasificarPlanesPorInspeccion">clasificarPlanesPorInspeccion</a></li><li><a href="global.html#configurarModalExito">configurarModalExito</a></li><li><a href="global.html#construirAprobaciones">construirAprobaciones</a></li><li><a href="global.html#construirArchivoOptimizado">construirArchivoOptimizado</a></li><li><a href="global.html#construirCeldaXml">construirCeldaXml</a></li><li><a href="global.html#construirEvidenciasDesdeOneDrive">construirEvidenciasDesdeOneDrive</a></li><li><a href="global.html#construirEvidenciasEppDesdeOneDrive">construirEvidenciasEppDesdeOneDrive</a></li><li><a href="global.html#construirFilaBotiquin">construirFilaBotiquin</a></li><li><a href="global.html#construirFilaEquipoTecnologico">construirFilaEquipoTecnologico</a></li><li><a href="global.html#construirFilaResumen">construirFilaResumen</a></li><li><a href="global.html#construirFiltrosExcelEpp">construirFiltrosExcelEpp</a></li><li><a href="global.html#construirFiltrosInspecciones">construirFiltrosInspecciones</a></li><li><a href="global.html#construirFormDataEpp">construirFormDataEpp</a></li><li><a href="global.html#construirHojaGeneralEpp">construirHojaGeneralEpp</a></li><li><a href="global.html#construirHojaInspecciones">construirHojaInspecciones</a></li><li><a href="global.html#construirHojaPlanesAccion">construirHojaPlanesAccion</a></li><li><a href="global.html#construirHojaResumenEpp">construirHojaResumenEpp</a></li><li><a href="global.html#construirHojaSeguimientoEpp">construirHojaSeguimientoEpp</a></li><li><a href="global.html#construirHtmlCorreo">construirHtmlCorreo</a></li><li><a href="global.html#construirHtmlCorreoEpp">construirHtmlCorreoEpp</a></li><li><a href="global.html#construirInspeccionEpp">construirInspeccionEpp</a></li><li><a href="global.html#construirLinksAprobacionEpp">construirLinksAprobacionEpp</a></li><li><a href="global.html#construirNombreArchivo">construirNombreArchivo</a></li><li><a href="global.html#construirResumenTrabajadores">construirResumenTrabajadores</a></li><li><a href="global.html#convertirCanvasABlob">convertirCanvasABlob</a></li><li><a href="global.html#convertirFechaAExcel">convertirFechaAExcel</a></li><li><a href="global.html#copiarLink">copiarLink</a></li><li><a href="global.html#corregirFormulasPuntuales">corregirFormulasPuntuales</a></li><li><a href="global.html#crearArchivosTemporales">crearArchivosTemporales</a></li><li><a href="global.html#crearBloqueEvidencias">crearBloqueEvidencias</a></li><li><a href="global.html#crearCanvas">crearCanvas</a></li><li><a href="global.html#crearPdfInspeccionEpp">crearPdfInspeccionEpp</a></li><li><a href="global.html#crearPdfInspeccionExtintor">crearPdfInspeccionExtintor</a></li><li><a href="global.html#crearWorkbook">crearWorkbook</a></li><li><a href="global.html#createBotiquinesManager">createBotiquinesManager</a></li><li><a href="global.html#createCamillasManager">createCamillasManager</a></li><li><a href="global.html#createEquiposTecnologicosManager">createEquiposTecnologicosManager</a></li><li><a href="global.html#createExtintoresManager">createExtintoresManager</a></li><li><a href="global.html#createSenalizacionesManager">createSenalizacionesManager</a></li><li><a href="global.html#createTrabajadoresEppManager">createTrabajadoresEppManager</a></li><li><a href="global.html#descargarArchivoOneDrive">descargarArchivoOneDrive</a></li><li><a href="global.html#descargarEvidenciaOneDrive">descargarEvidenciaOneDrive</a></li><li><a href="global.html#diagnosticarTablaExtintores">diagnosticarTablaExtintores</a></li><li><a href="global.html#dibujarImagen">dibujarImagen</a></li><li><a href="global.html#ejecutarGhostscript">ejecutarGhostscript</a></li><li><a href="global.html#eliminarCadenaCalculo">eliminarCadenaCalculo</a></li><li><a href="global.html#enviarCorreoPorGraph">enviarCorreoPorGraph</a></li><li><a href="global.html#enviarExtintorOneDrive">enviarExtintorOneDrive</a></li><li><a href="global.html#enviarInspeccionEpp">enviarInspeccionEpp</a></li><li><a href="global.html#enviarPdfPruebaCorreo">enviarPdfPruebaCorreo</a></li><li><a href="global.html#esCampoOpcional">esCampoOpcional</a></li><li><a href="global.html#extraerEvidenciasPorIndex">extraerEvidenciasPorIndex</a></li><li><a href="global.html#extraerFechaExif">extraerFechaExif</a></li><li><a href="global.html#fetchConRetry">fetchConRetry</a></li><li><a href="global.html#finalizarInspeccion">finalizarInspeccion</a></li><li><a href="global.html#formatearFechaMs">formatearFechaMs</a></li><li><a href="global.html#fs">fs</a></li><li><a href="global.html#generarBuffer">generarBuffer</a></li><li><a href="global.html#generarExcelSeguimientoEpp">generarExcelSeguimientoEpp</a></li><li><a href="global.html#generarInspeccionId">generarInspeccionId</a></li><li><a href="global.html#generarPdfEppAprobacion">generarPdfEppAprobacion</a></li><li><a href="global.html#generarPdfPrueba">generarPdfPrueba</a></li><li><a href="global.html#generarPdfSstAprobacion">generarPdfSstAprobacion</a></li><li><a href="global.html#getAccessToken">getAccessToken</a></li><li><a href="global.html#getEvidenceFolderPath">getEvidenceFolderPath</a></li><li><a href="global.html#getRequiredEnv">getRequiredEnv</a></li><li><a href="global.html#ghostscriptExecutable">ghostscriptExecutable</a></li><li><a href="global.html#guardarAprobacion">guardarAprobacion</a></li><li><a href="global.html#guardarInspeccionEnDB">guardarInspeccionEnDB</a></li><li><a href="global.html#guardarInspeccionEppEnDB">guardarInspeccionEppEnDB</a></li><li><a href="global.html#guardarPdfTemporal">guardarPdfTemporal</a></li><li><a href="global.html#inicializarEnvioEpp">inicializarEnvioEpp</a></li><li><a href="global.html#leerArchivosEvidencia">leerArchivosEvidencia</a></li><li><a href="global.html#leerCierresDesdeExcelEpp">leerCierresDesdeExcelEpp</a></li><li><a href="global.html#leerFiltros">leerFiltros</a></li><li><a href="global.html#leerPayload">leerPayload</a></li><li><a href="global.html#leerPdfOptimizado">leerPdfOptimizado</a></li><li><a href="global.html#leerRespuesta">leerRespuesta</a></li><li><a href="global.html#liberarImagen">liberarImagen</a></li><li><a href="global.html#limpiarTemporales">limpiarTemporales</a></li><li><a href="global.html#limpiarValoresCalculados">limpiarValoresCalculados</a></li><li><a href="global.html#listarCatalogoEpp">listarCatalogoEpp</a></li><li><a href="global.html#listarEppPredeterminados">listarEppPredeterminados</a></li><li><a href="global.html#listarInspecciones">listarInspecciones</a></li><li><a href="global.html#listarInspeccionesConFiltros">listarInspeccionesConFiltros</a></li><li><a href="global.html#listarInspeccionesEpp">listarInspeccionesEpp</a></li><li><a href="global.html#listarInspeccionesEppConFiltros">listarInspeccionesEppConFiltros</a></li><li><a href="global.html#mapearCamillaAExcel">mapearCamillaAExcel</a></li><li><a href="global.html#mapearExtintorAExcel">mapearExtintorAExcel</a></li><li><a href="global.html#mapearSenalizacionAExcel">mapearSenalizacionAExcel</a></li><li><a href="global.html#mapearTipoExtintor">mapearTipoExtintor</a></li><li><a href="global.html#marcarInspeccionEnviada">marcarInspeccionEnviada</a></li><li><a href="global.html#maximumInputSize">maximumInputSize</a></li><li><a href="global.html#mostrarModal">mostrarModal</a></li><li><a href="global.html#navegarAPaso">navegarAPaso</a></li><li><a href="global.html#normalizarBotiquin">normalizarBotiquin</a></li><li><a href="global.html#normalizarBotiquinItem">normalizarBotiquinItem</a></li><li><a href="global.html#normalizarBotiquines">normalizarBotiquines</a></li><li><a href="global.html#normalizarCamilla">normalizarCamilla</a></li><li><a href="global.html#normalizarCamillas">normalizarCamillas</a></li><li><a href="global.html#normalizarEquipoTecnologico">normalizarEquipoTecnologico</a></li><li><a href="global.html#normalizarEquiposTecnologicos">normalizarEquiposTecnologicos</a></li><li><a href="global.html#normalizarExtintor">normalizarExtintor</a></li><li><a href="global.html#normalizarExtintores">normalizarExtintores</a></li><li><a href="global.html#normalizarSenalizacion">normalizarSenalizacion</a></li><li><a href="global.html#normalizarSenalizaciones">normalizarSenalizaciones</a></li><li><a href="global.html#obtenerArchivos">obtenerArchivos</a></li><li><a href="global.html#obtenerBotiquinItemsSstAprobados">obtenerBotiquinItemsSstAprobados</a></li><li><a href="global.html#obtenerCamillasSstAprobadas">obtenerCamillasSstAprobadas</a></li><li><a href="global.html#obtenerCatalogoEppActivo">obtenerCatalogoEppActivo</a></li><li><a href="global.html#obtenerContextoAprobacion">obtenerContextoAprobacion</a></li><li><a href="global.html#obtenerDiasRestantes">obtenerDiasRestantes</a></li><li><a href="global.html#obtenerEppPredeterminados">obtenerEppPredeterminados</a></li><li><a href="global.html#obtenerEquiposTecnologicosSstAprobados">obtenerEquiposTecnologicosSstAprobados</a></li><li><a href="global.html#obtenerEstrategiaCompresion">obtenerEstrategiaCompresion</a></li><li><a href="global.html#obtenerExtensionOriginal">obtenerExtensionOriginal</a></li><li><a href="global.html#obtenerExtintoresSstAprobados">obtenerExtintoresSstAprobados</a></li><li><a href="global.html#obtenerFilasBotiquinesSstAprobados">obtenerFilasBotiquinesSstAprobados</a></li><li><a href="global.html#obtenerFilasCamillasSstAprobadas">obtenerFilasCamillasSstAprobadas</a></li><li><a href="global.html#obtenerFilasEquiposTecnologicosSstAprobados">obtenerFilasEquiposTecnologicosSstAprobados</a></li><li><a href="global.html#obtenerFilasExtintoresSstAprobados">obtenerFilasExtintoresSstAprobados</a></li><li><a href="global.html#obtenerFilasResumenSstAprobadas">obtenerFilasResumenSstAprobadas</a></li><li><a href="global.html#obtenerFilasSenalizacionesSstAprobadas">obtenerFilasSenalizacionesSstAprobadas</a></li><li><a href="global.html#obtenerInspeccionCompleta">obtenerInspeccionCompleta</a></li><li><a href="global.html#obtenerInspecciones">obtenerInspecciones</a></li><li><a href="global.html#obtenerLinks">obtenerLinks</a></li><li><a href="global.html#obtenerLinksInspeccion">obtenerLinksInspeccion</a></li><li><a href="global.html#obtenerOCrearHoja">obtenerOCrearHoja</a></li><li><a href="global.html#obtenerPerfil">obtenerPerfil</a></li><li><a href="global.html#obtenerPlanesAccion">obtenerPlanesAccion</a></li><li><a href="global.html#obtenerResumen">obtenerResumen</a></li><li><a href="global.html#obtenerResumenAprobacion">obtenerResumenAprobacion</a></li><li><a href="global.html#obtenerResumenEpp">obtenerResumenEpp</a></li><li><a href="global.html#obtenerResumenInspeccionesSstAprobadas">obtenerResumenInspeccionesSstAprobadas</a></li><li><a href="global.html#obtenerRutaExcelEpp">obtenerRutaExcelEpp</a></li><li><a href="global.html#obtenerRutaExcelSst">obtenerRutaExcelSst</a></li><li><a href="global.html#obtenerSeguimientoEpp">obtenerSeguimientoEpp</a></li><li><a href="global.html#obtenerSenalizacionesSstAprobadas">obtenerSenalizacionesSstAprobadas</a></li><li><a href="global.html#obtenerXml">obtenerXml</a></li><li><a href="global.html#optimizarImagen">optimizarImagen</a></li><li><a href="global.html#optimizarPdf">optimizarPdf</a></li><li><a href="global.html#previsualizarAprobacion">previsualizarAprobacion</a></li><li><a href="global.html#query">query</a></li><li><a href="global.html#reemplazarFormulaCelda">reemplazarFormulaCelda</a></li><li><a href="global.html#reemplazarXml">reemplazarXml</a></li><li><a href="global.html#registrarAprobacion">registrarAprobacion</a></li><li><a href="global.html#registrarEstadisticas">registrarEstadisticas</a></li><li><a href="global.html#registrarOriginalConservado">registrarOriginalConservado</a></li><li><a href="global.html#resolverCarpetaDestinoPdf">resolverCarpetaDestinoPdf</a></li><li><a href="global.html#resolverCorreoDestino">resolverCorreoDestino</a></li><li><a href="global.html#resolverCorreoDestinoEpp">resolverCorreoDestinoEpp</a></li><li><a href="global.html#resolverFechaEvidencia">resolverFechaEvidencia</a></li><li><a href="global.html#seleccionarFormatoSalida">seleccionarFormatoSalida</a></li><li><a href="global.html#sincronizarCierresDesdeExcelEpp">sincronizarCierresDesdeExcelEpp</a></li><li><a href="global.html#sincronizarCierresExcelEpp">sincronizarCierresExcelEpp</a></li><li><a href="global.html#subirArchivoOneDrive">subirArchivoOneDrive</a></li><li><a href="global.html#subirEvidenciasMultiples">subirEvidenciasMultiples</a></li><li><a href="global.html#subirPdfAOneDrive">subirPdfAOneDrive</a></li><li><a href="global.html#timeoutMs">timeoutMs</a></li><li><a href="global.html#uploadEvidenceToOneDrive">uploadEvidenceToOneDrive</a></li><li><a href="global.html#validarArchivo">validarArchivo</a></li><li><a href="global.html#validarBotiquines">validarBotiquines</a></li><li><a href="global.html#validarCamillas">validarCamillas</a></li><li><a href="global.html#validarEquiposTecnologicos">validarEquiposTecnologicos</a></li><li><a href="global.html#validarEvidenciaTrabajador">validarEvidenciaTrabajador</a></li><li><a href="global.html#validarExtintores">validarExtintores</a></li><li><a href="global.html#validarInformacionGeneral">validarInformacionGeneral</a></li><li><a href="global.html#validarInspeccion">validarInspeccion</a></li><li><a href="global.html#validarInspeccionEpp">validarInspeccionEpp</a></li><li><a href="global.html#validarPdf">validarPdf</a></li><li><a href="global.html#validarResultado">validarResultado</a></li><li><a href="global.html#validarSenalizaciones">validarSenalizaciones</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.5</a>
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>

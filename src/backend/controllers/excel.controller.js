@@ -10,6 +10,21 @@ const {
   actualizarExcelSeguimientoSstEnOneDrive,
 } = require("../services/seguimientoSstExcel.service");
 
+/**
+ * Ejecuta manualmente la actualización del Excel de seguimiento EPP.
+ *
+ * Delega la sincronización y generación del archivo al servicio correspondiente
+ * y devuelve la ruta, el estado utilizado como filtro y el tamaño del archivo.
+ *
+ * Corresponde al endpoint POST /api/excel/epp/actualizar-onedrive.
+ *
+ * @async
+ * @param {Object} req Solicitud HTTP de Express.
+ * @param {Object} res Respuesta HTTP de Express.
+ * @returns {Promise<Object>} Respuesta exitosa con los datos del archivo;
+ * estado 423 si está bloqueado en OneDrive o 500 si falla la actualización.
+ */
+
 async function actualizarExcelSeguimientoEpp(req, res) {
   try {
     const resultado = await actualizarExcelSeguimientoEppEnOneDrive();
@@ -50,6 +65,21 @@ async function actualizarExcelSeguimientoEpp(req, res) {
   }
 }
 
+/**
+ * Ejecuta manualmente la actualización del Excel de seguimiento SST.
+ *
+ * Delega la actualización completa del archivo XLSM y devuelve su ruta junto
+ * con el resultado de la validación de conservación de macros.
+ *
+ * Corresponde al endpoint POST /api/excel/sst/actualizar-onedrive.
+ *
+ * @async
+ * @param {Object} req Solicitud HTTP de Express.
+ * @param {Object} res Respuesta HTTP de Express.
+ * @returns {Promise<Object>} Respuesta exitosa con los datos del archivo;
+ * estado 423 si está bloqueado en OneDrive o 500 si falla la actualización.
+ */
+
 async function actualizarExcelSeguimientoSst(req, res) {
   try {
     const resultado = await actualizarExcelSeguimientoSstEnOneDrive();
@@ -86,6 +116,21 @@ async function actualizarExcelSeguimientoSst(req, res) {
     });
   }
 }
+
+/**
+ * Sincroniza manualmente los cierres registrados en el Excel EPP.
+ *
+ * Lee los planes marcados como cumplidos, actualiza los registros
+ * correspondientes en la base de datos y devuelve el resumen del proceso.
+ *
+ * Corresponde al endpoint POST /api/excel/epp/sincronizar-cierres.
+ *
+ * @async
+ * @param {Object} req Solicitud HTTP de Express.
+ * @param {Object} res Respuesta HTTP de Express.
+ * @returns {Promise<Object>} Respuesta con los cierres detectados y
+ * actualizados, o estado 500 si la sincronización falla.
+ */
 
 async function sincronizarCierresExcelEpp(req, res) {
   try {

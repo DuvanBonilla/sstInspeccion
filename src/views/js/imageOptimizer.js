@@ -41,13 +41,13 @@ const PROFILES = Object.freeze({
     medium: Object.freeze({
       maxWidth: 1600,
       maxHeight: 1600,
-      quality: 0.80,
+      quality: 0.8,
     }),
 
     large: Object.freeze({
       maxWidth: 1400,
       maxHeight: 1400,
-      quality: 0.70,
+      quality: 0.7,
     }),
   }),
 
@@ -107,8 +107,16 @@ function obtenerPerfil(profileName) {
 }
 
 /**
- * Valida el archivo recibido.
+ * Valida que el valor recibido sea un archivo de imagen procesable.
+ *
+ * Comprueba que sea una instancia de File, que tenga contenido y que su
+ * tipo MIME se encuentre entre los formatos admitidos por el optimizador.
+ *
+ * @param {File} file - Archivo que se desea validar.
+ * @returns {{ok: boolean, motivo: string|null}} Resultado de la validación
+ * y motivo del rechazo cuando el archivo no es válido.
  */
+
 function validarArchivo(file) {
   if (!(file instanceof File)) {
     return {
@@ -138,8 +146,15 @@ function validarArchivo(file) {
 }
 
 /**
- * Carga la imagen usando createImageBitmap cuando está disponible.
- * Si el navegador no lo soporta, usa FileReader + Image.
+ * Carga un archivo de imagen para poder procesarlo en el navegador.
+ *
+ * Intenta utilizar `createImageBitmap` y, cuando no está disponible o falla,
+ * utiliza FileReader junto con un elemento Image como mecanismo compatible.
+ *
+ * @async
+ * @param {File} file - Archivo de imagen que se desea cargar.
+ * @returns {Promise<ImageBitmap|HTMLImageElement>} Imagen cargada y lista para analizar.
+ * @throws {Error} Si el archivo no puede leerse o convertirse en una imagen.
  */
 async function cargarImagen(file) {
   if (typeof createImageBitmap === "function") {
@@ -149,7 +164,7 @@ async function cargarImagen(file) {
       if (IMAGE_OPTIMIZER_CONFIG.debug) {
         console.info(
           `createImageBitmap no pudo abrir "${file.name}". Se usará el método compatible.`,
-          error
+          error,
         );
       }
     }
@@ -176,13 +191,34 @@ async function cargarImagen(file) {
 }
 
 /**
- * Obtiene información normalizada de la imagen cargada.
+ * Obtiene la información técnica de una imagen cargada.
+ *
+ * Determina sus dimensiones, proporción, orientación, cantidad de
+ * megapíxeles, tipo MIME y tamaño original.
+ *
+ * @param {ImageBitmap|HTMLImageElement} image - Imagen cargada en memoria.
+ * @param {File} file - Archivo original asociado con la imagen.
+ * @returns {{
+ *   width: number,
+ *   height: number,
+ *   aspectRatio: number,
+ *   orientation: string,
+ *   megapixels: number,
+ *   mime: string,
+ *   size: number
+ * }} Información normalizada de la imagen.
+ * @throws {Error} Si la imagen no contiene dimensiones válidas.
  */
 function analizarImagen(image, file) {
   const width = Number(image.naturalWidth || image.width || 0);
   const height = Number(image.naturalHeight || image.height || 0);
 
-  if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) {
+  if (
+    !Number.isFinite(width) ||
+    !Number.isFinite(height) ||
+    width <= 0 ||
+    height <= 0
+  ) {
     throw new Error("La imagen no tiene dimensiones válidas.");
   }
 
@@ -204,7 +240,15 @@ function analizarImagen(image, file) {
 }
 
 /**
- * Elige la estrategia de optimización.
+ * Determina la estrategia de optimización que debe aplicarse a una imagen.
+ *
+ * Selecciona la configuración correspondiente a archivos pequeños, medianos
+ * o grandes y establece si es necesario redimensionar y recomprimir la imagen.
+ *
+ * @param {File} file - Archivo original.
+ * @param {Object} imageInfo - Información técnica de la imagen.
+ * @param {Object} profile - Perfil de optimización seleccionado.
+ * @returns {Object} Estrategia de optimización seleccionada.
  */
 function obtenerEstrategiaCompresion(file, imageInfo, profile) {
   if (file.size <= profile.smallFileLimit) {
@@ -216,18 +260,12 @@ function obtenerEstrategiaCompresion(file, imageInfo, profile) {
   }
 
   const base =
-    file.size > profile.largeFileLimit
-      ? profile.large
-      : profile.medium;
+    file.size > profile.largeFileLimit ? profile.large : profile.medium;
 
-  const tipo =
-    file.size > profile.largeFileLimit
-      ? "large"
-      : "medium";
+  const tipo = file.size > profile.largeFileLimit ? "large" : "medium";
 
   const requiereRedimension =
-    imageInfo.width > base.maxWidth ||
-    imageInfo.height > base.maxHeight;
+    imageInfo.width > base.maxWidth || imageInfo.height > base.maxHeight;
 
   return {
     optimizar: true,
@@ -241,16 +279,22 @@ function obtenerEstrategiaCompresion(file, imageInfo, profile) {
       : "La imagen conservará dimensiones y será recomprimida.",
   };
 }
-
 /**
- * Calcula las dimensiones nuevas sin deformar ni ampliar la imagen.
+ * Calcula las dimensiones de salida manteniendo la proporción original.
+ *
+ * Limita la imagen al ancho y alto máximos permitidos por el perfil,
+ * sin deformarla ni ampliar imágenes que ya sean más pequeñas.
+ *
+ * @param {number} width - Ancho original en píxeles.
+ * @param {number} height - Alto original en píxeles.
+ * @param {number} maxWidth - Ancho máximo permitido.
+ * @param {number} maxHeight - Alto máximo permitido.
+ * @returns {{width: number, height: number, ratio: number}}
+ * Dimensiones calculadas y proporción de redimensionamiento aplicada.
  */
+
 function calcularDimensiones(width, height, maxWidth, maxHeight) {
-  const ratio = Math.min(
-    maxWidth / width,
-    maxHeight / height,
-    1
-  );
+  const ratio = Math.min(maxWidth / width, maxHeight / height, 1);
 
   return {
     width: Math.max(1, Math.round(width * ratio)),
@@ -260,12 +304,17 @@ function calcularDimensiones(width, height, maxWidth, maxHeight) {
 }
 
 /**
- * Decide el formato de salida.
+ * Selecciona el formato y la calidad de la imagen resultante.
  *
- * JPEG se mantiene como JPEG.
- * PNG se mantiene como PNG para preservar texto, líneas y transparencia.
- * WebP se mantiene como WebP.
+ * Conserva el formato JPEG, PNG o WebP del archivo original. La calidad
+ * definida por la estrategia se aplica a los formatos que admiten compresión.
+ *
+ * @param {File} file - Archivo original.
+ * @param {Object} estrategia - Estrategia de compresión seleccionada.
+ * @returns {{mime: string, extension: string, quality: number|undefined}}
+ * Configuración del formato de salida.
  */
+
 function seleccionarFormatoSalida(file, estrategia) {
   switch (file.type) {
     case "image/jpeg":
@@ -336,19 +385,22 @@ function dibujarImagen(canvas, image, dimensiones, formato) {
   ctx.imageSmoothingEnabled = true;
   ctx.imageSmoothingQuality = "high";
 
-  ctx.drawImage(
-    image,
-    0,
-    0,
-    dimensiones.width,
-    dimensiones.height
-  );
+  ctx.drawImage(image, 0, 0, dimensiones.width, dimensiones.height);
 
   return canvas;
 }
 
 /**
- * Convierte un canvas en Blob.
+ * Convierte el contenido renderizado en un canvas a un objeto Blob.
+ *
+ * Aplica el tipo MIME y la calidad definidos para el formato de salida.
+ *
+ * @param {HTMLCanvasElement} canvas - Canvas que contiene la imagen procesada.
+ * @param {Object} formato - Configuración del formato de salida.
+ * @param {string} formato.mime - Tipo MIME que debe generar el canvas.
+ * @param {number} [formato.quality] - Calidad de compresión aplicable.
+ * @returns {Promise<Blob>} Blob resultante de la conversión.
+ * @throws {Error} Si el navegador no puede generar el Blob.
  */
 function convertirCanvasABlob(canvas, formato) {
   return new Promise((resolve, reject) => {
@@ -362,13 +414,25 @@ function convertirCanvasABlob(canvas, formato) {
         resolve(blob);
       },
       formato.mime,
-      formato.quality
+      formato.quality,
     );
   });
 }
 
 /**
- * Valida si el resultado realmente mejora el archivo original.
+ * Determina si el resultado optimizado debe reemplazar al archivo original.
+ *
+ * Verifica que el Blob sea válido, tenga contenido, pese menos que el archivo
+ * original y alcance el porcentaje mínimo de reducción definido por el perfil.
+ *
+ * @param {File} originalFile - Archivo original.
+ * @param {Blob} blob - Resultado generado por el proceso de optimización.
+ * @param {Object} profile - Perfil de optimización aplicado.
+ * @returns {{
+ *   usarOriginal: boolean,
+ *   motivo: string|null,
+ *   reductionPercent: number
+ * }} Evaluación del resultado y porcentaje de reducción obtenido.
  */
 function validarResultado(originalFile, blob, profile) {
   if (!(blob instanceof Blob)) {
@@ -395,8 +459,7 @@ function validarResultado(originalFile, blob, profile) {
     };
   }
 
-  const reductionPercent =
-    (1 - blob.size / originalFile.size) * 100;
+  const reductionPercent = (1 - blob.size / originalFile.size) * 100;
 
   if (reductionPercent < profile.minimumReductionPercent) {
     return {
@@ -417,9 +480,10 @@ function validarResultado(originalFile, blob, profile) {
  * Genera el nombre final del archivo.
  */
 function construirNombreArchivo(originalName, extension) {
-  const base = String(originalName || "imagen")
-    .replace(/\.[^.]+$/, "")
-    .trim() || "imagen";
+  const base =
+    String(originalName || "imagen")
+      .replace(/\.[^.]+$/, "")
+      .trim() || "imagen";
 
   return `${base}.${extension}`;
 }
@@ -434,7 +498,7 @@ function construirArchivoOptimizado(blob, originalFile, formato) {
     {
       type: formato.mime,
       lastModified: originalFile.lastModified,
-    }
+    },
   );
 }
 
@@ -463,7 +527,7 @@ function registrarEstadisticas({
   if (!IMAGE_OPTIMIZER_CONFIG.debug) return;
 
   console.groupCollapsed(
-    `🖼 ${original.name} · ${reductionPercent.toFixed(1)}% menos`
+    `🖼 ${original.name} · ${reductionPercent.toFixed(1)}% menos`,
   );
 
   console.log("Versión:", IMAGE_OPTIMIZER_VERSION);
@@ -471,16 +535,10 @@ function registrarEstadisticas({
   console.log("Formato:", `${original.type} → ${formato.mime}`);
   console.log(
     "Resolución:",
-    `${imageInfo.width}x${imageInfo.height} → ${dimensiones.width}x${dimensiones.height}`
+    `${imageInfo.width}x${imageInfo.height} → ${dimensiones.width}x${dimensiones.height}`,
   );
-  console.log(
-    "Peso original:",
-    `${(original.size / MB).toFixed(2)} MB`
-  );
-  console.log(
-    "Peso optimizado:",
-    `${(optimizado.size / MB).toFixed(2)} MB`
-  );
+  console.log("Peso original:", `${(original.size / MB).toFixed(2)} MB`);
+  console.log("Peso optimizado:", `${(optimizado.size / MB).toFixed(2)} MB`);
   console.log("Reducción:", `${reductionPercent.toFixed(1)}%`);
   console.log("Tiempo:", `${elapsedMs.toFixed(0)} ms`);
 
@@ -493,22 +551,30 @@ function registrarEstadisticas({
 function registrarOriginalConservado(file, motivo) {
   if (!IMAGE_OPTIMIZER_CONFIG.debug) return;
 
-  console.info(
-    `Se conserva "${file.name}" sin cambios: ${motivo}`
-  );
+  console.info(`Se conserva "${file.name}" sin cambios: ${motivo}`);
 }
 
 /**
- * Optimiza una imagen y devuelve el archivo más conveniente.
+ * Optimiza una imagen antes de enviarla al servidor.
  *
- * @param {File} file Archivo original.
- * @param {Object} options Opciones del optimizador.
- * @param {string} options.profile Perfil: inspection, pdf o thumbnail.
- * @returns {Promise<File>} Archivo optimizado o archivo original.
+ * Valida y carga el archivo, analiza sus características, selecciona una
+ * estrategia de compresión, calcula las dimensiones, procesa la imagen en
+ * un canvas y valida que el resultado represente una reducción efectiva.
+ *
+ * Si el archivo ya cumple el límite configurado, el resultado no mejora
+ * su tamaño o se presenta un error, devuelve el archivo original.
+ *
+ * @async
+ * @param {File} file - Archivo de imagen original.
+ * @param {Object} [options={}] - Opciones de optimización.
+ * @param {"inspection"|"pdf"|"thumbnail"} [options.profile="inspection"]
+ * Perfil que determina los límites, dimensiones y calidad de compresión.
+ * @returns {Promise<File>} Archivo optimizado o archivo original cuando
+ * no sea necesario o posible aplicar la optimización.
  */
 export async function optimizarImagen(
   file,
-  { profile = IMAGE_OPTIMIZER_CONFIG.defaultProfile } = {}
+  { profile = IMAGE_OPTIMIZER_CONFIG.defaultProfile } = {},
 ) {
   const validacion = validarArchivo(file);
 
@@ -525,7 +591,7 @@ export async function optimizarImagen(
   if (file.size <= selectedProfile.smallFileLimit) {
     registrarOriginalConservado(
       file,
-      "El archivo está por debajo del límite configurado."
+      "El archivo está por debajo del límite configurado.",
     );
     return file;
   }
@@ -541,7 +607,7 @@ export async function optimizarImagen(
     const estrategia = obtenerEstrategiaCompresion(
       file,
       imageInfo,
-      selectedProfile
+      selectedProfile,
     );
 
     if (!estrategia.optimizar) {
@@ -553,47 +619,25 @@ export async function optimizarImagen(
       imageInfo.width,
       imageInfo.height,
       estrategia.maxWidth,
-      estrategia.maxHeight
+      estrategia.maxHeight,
     );
 
-    const formato = seleccionarFormatoSalida(
-      file,
-      estrategia
-    );
+    const formato = seleccionarFormatoSalida(file, estrategia);
 
-    const canvas = crearCanvas(
-      dimensiones.width,
-      dimensiones.height
-    );
+    const canvas = crearCanvas(dimensiones.width, dimensiones.height);
 
-    dibujarImagen(
-      canvas,
-      image,
-      dimensiones,
-      formato
-    );
+    dibujarImagen(canvas, image, dimensiones, formato);
 
-    const blob = await convertirCanvasABlob(
-      canvas,
-      formato
-    );
+    const blob = await convertirCanvasABlob(canvas, formato);
 
-    const resultado = validarResultado(
-      file,
-      blob,
-      selectedProfile
-    );
+    const resultado = validarResultado(file, blob, selectedProfile);
 
     if (resultado.usarOriginal) {
       registrarOriginalConservado(file, resultado.motivo);
       return file;
     }
 
-    const archivoOptimizado = construirArchivoOptimizado(
-      blob,
-      file,
-      formato
-    );
+    const archivoOptimizado = construirArchivoOptimizado(blob, file, formato);
 
     registrarEstadisticas({
       original: file,
@@ -611,7 +655,7 @@ export async function optimizarImagen(
     if (IMAGE_OPTIMIZER_CONFIG.showWarnings) {
       console.warn(
         `No fue posible optimizar "${file.name}". Se conservará el archivo original.`,
-        error
+        error,
       );
     }
 

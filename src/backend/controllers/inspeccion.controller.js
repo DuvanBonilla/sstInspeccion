@@ -11,6 +11,28 @@ const {
 
 const { validarInspeccion } = require("../validators/inspeccion.validator");
 
+/**
+ * Registra una inspección SST con sus elementos y evidencias.
+ *
+ * Recibe la información enviada desde el formulario, valida el contenido,
+ * carga en OneDrive las evidencias asociadas a extintores, camillas,
+ * señalizaciones, equipos tecnológicos y botiquines, y posteriormente
+ * almacena la inspección en la base de datos.
+ *
+ * Al finalizar, genera los enlaces de aprobación correspondientes al jefe
+ * responsable y al representante de COPASST.
+ *
+ * Corresponde al endpoint POST /enviar-onedrive-extintor.
+ *
+ * @async
+ * @param {Object} req Solicitud HTTP de Express.
+ * @param {Object} req.body Datos enviados desde el formulario.
+ * @param {Array<Object>} req.files Evidencias recibidas mediante Multer.
+ * @param {Object} res Respuesta HTTP de Express.
+ * @returns {Promise<Object>} Respuesta HTTP con el resultado del registro,
+ * los datos de la inspección y sus enlaces de aprobación.
+ */
+
 async function enviarExtintorOneDrive(req, res) {
   let payload;
 
@@ -185,6 +207,23 @@ async function enviarExtintorOneDrive(req, res) {
     });
   }
 }
+
+/**
+ * Consulta los enlaces de aprobación de una inspección.
+ *
+ * Busca la inspección utilizando el identificador recibido en la URL y
+ * devuelve los enlaces asociados a sus responsables de aprobación.
+ *
+ * Corresponde al endpoint GET /api/inspecciones/:id/links.
+ *
+ * @async
+ * @param {Object} req Solicitud HTTP de Express.
+ * @param {Object} req.params Parámetros recibidos en la URL.
+ * @param {string} req.params.id Identificador de la inspección consultada.
+ * @param {Object} res Respuesta HTTP de Express.
+ * @returns {Promise<Object>} Respuesta HTTP con los enlaces de aprobación,
+ * un estado 404 si la inspección no existe o un estado 500 si falla la consulta.
+ */
 
 async function obtenerLinks(req, res) {
   try {

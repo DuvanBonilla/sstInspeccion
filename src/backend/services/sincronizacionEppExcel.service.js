@@ -76,6 +76,27 @@ function exigirColumna(encabezados, nombre) {
   return numeroColumna;
 }
 
+/**
+ * Lee y valida los cierres registrados en el Excel de seguimiento EPP.
+ *
+ * Descarga el archivo desde OneDrive, abre la hoja `03 - Planes de Acción` e
+ * identifica las filas marcadas como cumplidas. Para cada cierre valida el
+ * identificador del plan, el responsable y la ausencia de identificadores
+ * repetidos.
+ *
+ * Esta función solamente interpreta el Excel y construye la lista de cierres;
+ * no actualiza la base de datos.
+ *
+ * @async
+ * @param {Object} [opciones={}] Configuración de la lectura.
+ * @param {boolean} [opciones.permitirArchivoInexistente=false] Permite devolver
+ * un resultado vacío cuando el archivo no está disponible.
+ * @returns {Promise<Object>} Ruta del archivo, cantidad de filas revisadas,
+ * cierres válidos encontrados y errores de validación.
+ * @throws {Error} Si no se puede descargar el archivo, falta la hoja requerida
+ * o no existen las columnas obligatorias.
+ */
+
 async function leerCierresDesdeExcelEpp({
   permitirArchivoInexistente = false,
 } = {}) {
@@ -197,6 +218,26 @@ async function leerCierresDesdeExcelEpp({
     errores,
   };
 }
+
+/**
+ * Sincroniza con la base de datos los cierres registrados en el Excel EPP.
+ *
+ * Lee los planes marcados como cumplidos y delega su cierre en el modelo de
+ * seguimiento. Puede detener completamente el proceso cuando se encuentran
+ * filas inválidas o continuar sincronizando únicamente los cierres válidos.
+ *
+ * @async
+ * @param {Object} [opciones={}] Configuración de la sincronización.
+ * @param {boolean} [opciones.detenerSiHayErrores=false] Impide actualizar la
+ * base de datos cuando el Excel contiene errores.
+ * @param {boolean} [opciones.permitirArchivoInexistente=false] Permite continuar
+ * con un resultado vacío cuando el archivo todavía no existe.
+ * @returns {Promise<Object>} Resumen con las filas revisadas, cierres detectados,
+ * errores del Excel, registros actualizados, planes ya cumplidos y planes no
+ * encontrados.
+ * @throws {Error} Si falla la lectura, se solicita detener ante errores o no
+ * se pueden actualizar los planes de acción.
+ */
 
 async function sincronizarCierresDesdeExcelEpp({
   detenerSiHayErrores = false,
