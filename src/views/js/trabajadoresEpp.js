@@ -1,4 +1,5 @@
 import { optimizarImagen } from "./imageOptimizer.js";
+import { mostrarAlertaEvidencia } from "./shared.js";
 
 let CATALOGO_EPP = [];
 
@@ -563,6 +564,11 @@ export function createTrabajadoresEppManager({
       return;
     }
 
+    const MAX_TAMANO_MB = 10;
+    const MAX_TAMANO_BYTES = MAX_TAMANO_MB * 1024 * 1024;
+
+    const TIPOS_PERMITIDOS = new Set(["image/jpeg", "image/png", "image/webp"]);
+
     const tarjeta = input.closest(".trabajador-card");
 
     if (!tarjeta) {
@@ -575,6 +581,10 @@ export function createTrabajadoresEppManager({
 
     const archivo = input.files?.[0];
 
+    // Limpiar la apariencia de errores anteriores
+    estado?.classList.remove("evidencia-estado--error");
+
+    // Si no existe un archivo seleccionado
     if (!archivo) {
       evidencias.delete(trabajadorId);
 
@@ -585,10 +595,36 @@ export function createTrabajadoresEppManager({
       return;
     }
 
-    // -------------------------------------------------------
-    // INICIAR OPTIMIZACIÓN
-    // -------------------------------------------------------
+    // Validar el formato del archivo
+    if (!TIPOS_PERMITIDOS.has(archivo.type)) {
+      evidencias.delete(trabajadorId);
+      input.value = "";
 
+      if (estado) {
+        estado.textContent =
+          "⚠ La evidencia debe ser una imagen en formato JPG, PNG o WebP.";
+
+        estado.classList.add("evidencia-estado--error");
+      }
+
+      return;
+    }
+
+    // Validar el tamaño máximo del archivo
+    if (archivo.size > MAX_TAMANO_BYTES) {
+      evidencias.delete(trabajadorId);
+      input.value = "";
+
+      if (estado) {
+        estado.textContent = `⚠ La imagen no puede superar los ${MAX_TAMANO_MB} MB.`;
+
+        estado.classList.add("evidencia-estado--error");
+      }
+
+      return;
+    }
+
+    // Bloquear el campo mientras se procesa la imagen
     input.disabled = true;
 
     if (estado) {
@@ -596,31 +632,19 @@ export function createTrabajadoresEppManager({
     }
 
     try {
-      // -----------------------------------------------------
-      // REUTILIZAR EL OPTIMIZADOR EXISTENTE
-      // -----------------------------------------------------
-
+      // Optimizar la imagen seleccionada
       const archivoOptimizado = await optimizarImagen(archivo);
 
-      // -----------------------------------------------------
-      // GUARDAR EVIDENCIA OPTIMIZADA
-      // -----------------------------------------------------
-
+      // Guardar la evidencia optimizada
       evidencias.set(trabajadorId, archivoOptimizado);
 
-      // -----------------------------------------------------
-      // ACTUALIZAR ESTADO VISUAL
-      // -----------------------------------------------------
-
       if (estado) {
+        estado.classList.remove("evidencia-estado--error");
+
         estado.textContent = `Evidencia lista · ${formatearPeso(
           archivoOptimizado.size,
         )}`;
       }
-
-      // -----------------------------------------------------
-      // LOG TEMPORAL PARA PRUEBAS
-      // -----------------------------------------------------
 
       const numeroVisual =
         Array.from(container.querySelectorAll(".trabajador-card")).indexOf(
@@ -636,18 +660,16 @@ export function createTrabajadoresEppManager({
     } catch (error) {
       console.error("Error procesando evidencia EPP:", error);
 
-      // Si falla la optimización, eliminamos cualquier
-      // evidencia que pudiera estar asociada anteriormente.
       evidencias.delete(trabajadorId);
-
-      // Limpiar input.
       input.value = "";
 
       if (estado) {
-        estado.textContent = "No fue posible procesar la imagen.";
+        estado.textContent =
+          "⚠ No fue posible procesar la imagen seleccionada.";
+
+        estado.classList.add("evidencia-estado--error");
       }
     } finally {
-      // Volver a habilitar el input.
       input.disabled = false;
     }
   }
@@ -988,7 +1010,6 @@ export function createTrabajadoresEppManager({
     });
   }
 
-
   function crearTrabajador(trabajadorId) {
     const card = document.createElement("article");
 
@@ -1323,7 +1344,6 @@ export function createTrabajadoresEppManager({
     return card;
   }
 
-
   function crearFilaEpp(datosElemento, elementoIndex) {
     const elementoEppId = datosElemento?.elementoEppId || "";
     const elemento = datosElemento?.elemento || "";
@@ -1547,7 +1567,6 @@ export function createTrabajadoresEppManager({
       }
     }
   }
-
 
   // SELECT M / R / B / NA
   // =======================================================
@@ -1826,7 +1845,6 @@ export function createTrabajadoresEppManager({
     sincronizarCatalogoEpp(card);
   }
 
-
   function mostrarEstado(mensaje) {
     if (!estadoElement) {
       return;
@@ -1837,20 +1855,19 @@ export function createTrabajadoresEppManager({
     estadoElement.classList.remove("hidden");
   }
 
-
-/**
- * Valida todos los trabajadores registrados en la inspección EPP.
- *
- * Comprueba los datos personales, la unicidad y formato de los códigos,
- * la existencia y calificación de los elementos EPP, los planes de acción
- * requeridos, sus fechas límite y la evidencia fotográfica de cada trabajador.
- *
- * Cuando encuentra un dato inválido, abre la tarjeta correspondiente,
- * marca el campo afectado y detiene el proceso de validación.
- *
- * @returns {{valido: boolean, mensaje: string}} Resultado de la validación
- * y descripción del primer incumplimiento encontrado.
- */
+  /**
+   * Valida todos los trabajadores registrados en la inspección EPP.
+   *
+   * Comprueba los datos personales, la unicidad y formato de los códigos,
+   * la existencia y calificación de los elementos EPP, los planes de acción
+   * requeridos, sus fechas límite y la evidencia fotográfica de cada trabajador.
+   *
+   * Cuando encuentra un dato inválido, abre la tarjeta correspondiente,
+   * marca el campo afectado y detiene el proceso de validación.
+   *
+   * @returns {{valido: boolean, mensaje: string}} Resultado de la validación
+   * y descripción del primer incumplimiento encontrado.
+   */
 
   function validar() {
     const tarjetas = container.querySelectorAll(".trabajador-card");
@@ -2204,7 +2221,6 @@ export function createTrabajadoresEppManager({
     };
   }
 
-
   function ocultarEstado() {
     if (!estadoElement) {
       return;
@@ -2215,16 +2231,15 @@ export function createTrabajadoresEppManager({
     estadoElement.classList.add("hidden");
   }
 
-
-/**
- * Obtiene la información estructurada de los trabajadores de la inspección.
- *
- * Lee desde la interfaz los datos de cada trabajador, sus elementos EPP,
- * las calificaciones de condición y uso, las observaciones y los planes
- * de acción asociados con cada elemento.
- *
- * @returns {Array<Object>} Lista de trabajadores con sus evaluaciones EPP.
- */
+  /**
+   * Obtiene la información estructurada de los trabajadores de la inspección.
+   *
+   * Lee desde la interfaz los datos de cada trabajador, sus elementos EPP,
+   * las calificaciones de condición y uso, las observaciones y los planes
+   * de acción asociados con cada elemento.
+   *
+   * @returns {Array<Object>} Lista de trabajadores con sus evaluaciones EPP.
+   */
 
   function leer() {
     const tarjetas = container.querySelectorAll(".trabajador-card");
@@ -2343,19 +2358,19 @@ export function createTrabajadoresEppManager({
     return trabajadores;
   }
 
-/**
- * Obtiene las evidencias fotográficas procesadas de los trabajadores.
- *
- * Relaciona cada archivo optimizado con el identificador del trabajador
- * y con su posición actual dentro del formulario, utilizada posteriormente
- * para construir los campos enviados al backend.
- *
- * @returns {Array<{
- *   trabajadorId: number,
- *   indice: number,
- *   archivo: File
- * }>} Evidencias disponibles para el envío de la inspección.
- */
+  /**
+   * Obtiene las evidencias fotográficas procesadas de los trabajadores.
+   *
+   * Relaciona cada archivo optimizado con el identificador del trabajador
+   * y con su posición actual dentro del formulario, utilizada posteriormente
+   * para construir los campos enviados al backend.
+   *
+   * @returns {Array<{
+   *   trabajadorId: number,
+   *   indice: number,
+   *   archivo: File
+   * }>} Evidencias disponibles para el envío de la inspección.
+   */
 
   function obtenerEvidencias() {
     const tarjetas = container.querySelectorAll(".trabajador-card");

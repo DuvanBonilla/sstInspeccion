@@ -27,28 +27,93 @@ export function createSenalizacionesManager({ crearOpciones }) {
     const body = container.querySelector(
       "[data-role='tabla-condiciones-senalizacion']",
     );
+
     body.innerHTML = `
-      <tr>
-        <td class="left">Cantidad</td>
-        <td><input name="senalizacionCantidad" type="text" inputmode="numeric" pattern="[0-9]*" /></td>
-      </tr>
-      <tr>
-        <td class="left">Estado</td>
-        <td>
-          <select name="senalizacionEstado">
-            ${crearOpciones()}
-          </select>
-        </td>
-      </tr>
-      <tr>
-        <td class="left">Aseo</td>
-        <td>
-          <select name="senalizacionAseo">
-            ${crearOpciones()}
-          </select>
-        </td>
-      </tr>
-    `;
+    <tr>
+      <td class="left">Cantidad</td>
+      <td>
+        <input
+          name="senalizacionCantidad"
+          type="number"
+          min="1"
+          max="1000"
+          step="1"
+          inputmode="numeric"
+          required
+        />
+      </td>
+    </tr>
+
+    <tr>
+      <td class="left">Estado</td>
+      <td>
+        <select name="senalizacionEstado">
+          ${crearOpciones()}
+        </select>
+      </td>
+    </tr>
+
+    <tr>
+      <td class="left">Aseo</td>
+      <td>
+        <select name="senalizacionAseo">
+          ${crearOpciones()}
+        </select>
+      </td>
+    </tr>
+  `;
+
+    const inputCantidad = body.querySelector('[name="senalizacionCantidad"]');
+
+    inputCantidad.addEventListener("keydown", (event) => {
+      const teclasPermitidas = [
+        "Backspace",
+        "Delete",
+        "Tab",
+        "ArrowLeft",
+        "ArrowRight",
+        "Home",
+        "End",
+      ];
+
+      const esAtajo =
+        (event.ctrlKey || event.metaKey) &&
+        ["a", "c", "v", "x"].includes(event.key.toLowerCase());
+
+      if (teclasPermitidas.includes(event.key) || esAtajo) {
+        return;
+      }
+
+      if (!/^\d$/.test(event.key)) {
+        event.preventDefault();
+      }
+    });
+
+    inputCantidad.addEventListener("input", () => {
+      const valorLimpio = inputCantidad.value
+        .replace(/\D/g, "")
+        .replace(/^0+/, "");
+
+      if (!valorLimpio) {
+        inputCantidad.value = "";
+        return;
+      }
+
+      const cantidad = Number(valorLimpio);
+
+      // Evita que el valor sea superior a 1000.
+      inputCantidad.value = cantidad > 1000 ? "1000" : String(cantidad);
+    });
+
+    inputCantidad.addEventListener("paste", (event) => {
+      const textoPegado = event.clipboardData.getData("text").trim();
+
+      const cantidad = Number(textoPegado);
+
+      if (!/^[1-9]\d*$/.test(textoPegado) || cantidad > 1000) {
+        event.preventDefault();
+      }
+    });
   }
 
   function crearSenalizacionCard(index) {
@@ -60,7 +125,20 @@ export function createSenalizacionesManager({ crearOpciones }) {
         </div>
 
         <div class="grid">
-          <div class="field"><label>Tipo de señalización</label><input name="senalizacionTipo" type="text" /></div>
+          <div class="field">
+            <label for="senalizacionTipo">Tipo de señalización</label>
+
+            <select
+              id="senalizacionTipo"
+              name="senalizacionTipo"
+            >
+              <option value="">Seleccione</option>
+              <option value="Prohibición">Prohibición</option>
+              <option value="Advertencia">Advertencia</option>
+              <option value="Obligatorio">Obligatorio</option>
+              <option value="Emergencia">Emergencia</option>
+            </select>
+          </div>
           <div class="field"><label>Ubicación</label><input name="senalizacionUbicacion" type="text" /></div>
           <div class="field" style="grid-column: 1 / -1;"><label class="opcional">Observaciones</label><input name="senalizacionObservaciones" type="text" /></div>
           <div class="field" style="grid-column: 1 / -1;">

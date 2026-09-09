@@ -76,6 +76,7 @@ function normalizarSenalizaciones(lista) {
 function validarSenalizaciones(lista, errores) {
   lista.forEach((item, idx) => {
     const numero = idx + 1;
+    const cantidad = Number(item.cantidad);
 
     if (!item.tipo) {
       errores.push(`Señalización ${numero}: tipo es obligatorio`);
@@ -83,6 +84,17 @@ function validarSenalizaciones(lista, errores) {
 
     if (!item.ubicacion) {
       errores.push(`Señalización ${numero}: ubicación es obligatoria`);
+    }
+
+    if (
+      !Number.isFinite(cantidad) ||
+      !Number.isInteger(cantidad) ||
+      cantidad < 1 ||
+      cantidad > 1000
+    ) {
+      errores.push(
+        `Señalización ${numero}: cantidad debe ser un número entero entre 1 y 1000`,
+      );
     }
 
     if (!ESTADOS_VALIDOS.has(item.estado)) {

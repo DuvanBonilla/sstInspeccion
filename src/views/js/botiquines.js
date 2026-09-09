@@ -175,11 +175,14 @@ export function createBotiquinesManager({ itemsBotiquin, crearOpciones }) {
       Number(tr.querySelector('[name$="-cantidadIdeal"]').value) || 0;
 
     const realInput = tr.querySelector('[name$="-cantidadReal"]');
-
     const integridadSelect = tr.querySelector('[name$="-integridad"]');
+    const fechaInput = tr.querySelector('[name$="-fechaVencimiento"]');
+    const toggleNA = tr.querySelector(".toggle-vencimiento");
+    const plan = tr.querySelector('[name$="-planIntervencion"]');
 
     const realVal = realInput?.value ?? "";
     const integridad = integridadSelect?.value ?? "";
+    const fechaVencimiento = fechaInput?.value ?? "";
 
     if (realVal === "") return;
 
@@ -188,34 +191,42 @@ export function createBotiquinesManager({ itemsBotiquin, crearOpciones }) {
     const integridadCierraFila =
       integridad === "B" || integridad === "NA" || integridad === "NC";
 
-    const cumple = cantidadCumple && integridadCierraFila;
+    const fechaActual = new Date();
+    const hoy =
+      `${fechaActual.getFullYear()}-` +
+      `${String(fechaActual.getMonth() + 1).padStart(2, "0")}-` +
+      `${String(fechaActual.getDate()).padStart(2, "0")}`;
 
-    // F. Intervención, Cumplimiento, Afectación
+    const fechaVencida =
+      !toggleNA?.checked && fechaVencimiento !== "" && fechaVencimiento < hoy;
+
+    // Si el producto está vencido, debe requerir un plan.
+    const cumple = cantidadCumple && integridadCierraFila && !fechaVencida;
+
     tr.querySelectorAll("[data-campo-condicional]").forEach((el) => {
       el.disabled = cumple;
+      el.classList.toggle("campo-deshabilitado", cumple);
 
       if (cumple) {
         el.value = el.tagName === "SELECT" ? "No" : "";
       }
-
-      el.classList.toggle("campo-deshabilitado", cumple);
     });
 
-    // Plan de intervención
-    const plan = tr.querySelector('[name$="-planIntervencion"]');
+    if (!plan) return;
 
-    if (plan) {
-      if (cumple) {
-        plan.value = "Ninguna";
-        plan.disabled = true;
-        plan.classList.add("campo-deshabilitado");
-      } else {
-        plan.disabled = false;
-        plan.classList.remove("campo-deshabilitado");
+    if (cumple) {
+      plan.value = "Ninguna";
+      plan.disabled = true;
+      plan.classList.add("campo-deshabilitado");
+    } else {
+      plan.disabled = false;
+      plan.classList.remove("campo-deshabilitado");
 
-        if (plan.value === "Ninguna") {
-          plan.value = "";
-        }
+      // Un producto vencido no puede conservar “Ninguna”.
+      if (fechaVencida) {
+        plan.value = "Reposición";
+      } else if (plan.value === "Ninguna") {
+        plan.value = "";
       }
     }
   }
@@ -244,50 +255,69 @@ export function createBotiquinesManager({ itemsBotiquin, crearOpciones }) {
   function agregar() {
     const container = document.getElementById("botiquines-container");
     const index = botiquinCounter++;
+
     container.insertAdjacentHTML("beforeend", crearBotiquinCard(index));
+
     const card = container.querySelector(`[data-botiquin-index="${index}"]`);
 
     card.querySelectorAll("tbody tr").forEach((tr) => {
-      // Reevaluar la fila cuando cambia la cantidad real
-      tr.querySelector('[name$="-cantidadReal"]')?.addEventListener(
-        "input",
-        () => aplicarLogicaFila(tr),
-      );
+      const cantidadRealInput = tr.querySelector('[name$="-cantidadReal"]');
 
-      // Reevaluar la fila cuando cambia la integridad
-      tr.querySelector('[name$="-integridad"]')?.addEventListener(
-        "change",
-        () => aplicarLogicaFila(tr),
-      );
+      const integridadSelect = tr.querySelector('[name$="-integridad"]');
 
-      // Reevaluar las columnas posteriores cuando cambia el plan
-      tr.querySelector('[name$="-planIntervencion"]')?.addEventListener(
-        "change",
-        () => aplicarLogicaPlan(tr),
-      );
+      const planSelect = tr.querySelector('[name$="-planIntervencion"]');
 
       const toggleNA = tr.querySelector(".toggle-vencimiento");
+
       const fechaInput = tr.querySelector('[name$="-fechaVencimiento"]');
 
+      // Reevaluar cuando cambia la cantidad real.
+      cantidadRealInput?.addEventListener("input", () => {
+        aplicarLogicaFila(tr);
+      });
+
+      // Reevaluar cuando cambia la integridad.
+      integridadSelect?.addEventListener("change", () => {
+        aplicarLogicaFila(tr);
+      });
+
+      // Reevaluar cuando cambia la fecha de vencimiento.
+      fechaInput?.addEventListener("change", () => {
+        aplicarLogicaFila(tr);
+      });
+
+      // Impedir que un producto vencido tenga un plan diferente de Reposición.
+      planSelect?.addEventListener("change", () => {
+        aplicarLogicaFila(tr);
+        aplicarLogicaPlan(tr);
+      });
+
+      // Activar o desactivar la fecha fragante mediante N/A/A.
       if (toggleNA && fechaInput) {
         toggleNA.addEventListener("change", () => {
           fechaInput.disabled = toggleNA.checked;
+
           fechaInput.classList.toggle("campo-deshabilitado", toggleNA.checked);
 
           if (toggleNA.checked) {
             fechaInput.value = "";
           }
+
+          // N/A modifica la regla de vencimiento.
+          aplicarLogicaFila(tr);
         });
       }
     });
 
     inicializarBloqueEvidencias(card, "botiquin-evidencia");
+
     card
       .querySelector('[data-action="remove-botiquin"]')
       ?.addEventListener("click", () => {
         card.remove();
         actualizarBotonesEliminar();
       });
+
     actualizarBotonesEliminar();
   }
 

@@ -187,18 +187,18 @@ document.addEventListener("DOMContentLoaded", () => {
     actualizarTextoOmitir(seccion);
   }
 
-/**
- * Valida los campos obligatorios del paso actual del formulario.
- *
- * Ignora los campos deshabilitados, los configurados como opcionales y las
- * secciones que fueron omitidas. Cuando encuentra datos incompletos, marca
- * los campos, muestra un mensaje y dirige la vista al primer error.
- *
- * En el paso final también impide enviar una inspección sin elementos.
- *
- * @param {number} numeroPaso Número del paso que será validado.
- * @returns {boolean} `true` cuando el paso puede continuar.
- */
+  /**
+   * Valida los campos obligatorios del paso actual del formulario.
+   *
+   * Ignora los campos deshabilitados, los configurados como opcionales y las
+   * secciones que fueron omitidas. Cuando encuentra datos incompletos, marca
+   * los campos, muestra un mensaje y dirige la vista al primer error.
+   *
+   * En el paso final también impide enviar una inspección sin elementos.
+   *
+   * @param {number} numeroPaso Número del paso que será validado.
+   * @returns {boolean} `true` cuando el paso puede continuar.
+   */
 
   function validarPaso(numeroPaso) {
     const panel = document.querySelector(`[data-step-panel="${numeroPaso}"]`);
@@ -285,16 +285,40 @@ document.addEventListener("DOMContentLoaded", () => {
 
     return valido;
   }
-/**
- * Cambia el paso visible del formulario SST.
- *
- * Antes de avanzar valida el paso actual. También actualiza los paneles,
- * indicadores de progreso y, al llegar al último paso, genera el resumen
- * final de la inspección.
- *
- * @param {number} step Número del paso de destino.
- * @returns {void}
- */
+
+  function actualizarBotonSiguienteGeneral() {
+    const panel = document.querySelector('[data-step-panel="1"]');
+
+    const botonSiguiente = panel?.querySelector('[data-step-target="2"]');
+
+    if (!panel || !botonSiguiente) {
+      return;
+    }
+
+    const camposTexto = panel.querySelectorAll(
+      'input[type="text"], input[type="date"], select',
+    );
+
+    const camposCompletos = Array.from(camposTexto).every((campo) => {
+      if (campo.disabled || esCampoOpcional(campo)) {
+        return true;
+      }
+
+      return String(campo.value || "").trim() !== "";
+    });
+
+    botonSiguiente.disabled = !camposCompletos;
+  }
+  /**
+   * Cambia el paso visible del formulario SST.
+   *
+   * Antes de avanzar valida el paso actual. También actualiza los paneles,
+   * indicadores de progreso y, al llegar al último paso, genera el resumen
+   * final de la inspección.
+   *
+   * @param {number} step Número del paso de destino.
+   * @returns {void}
+   */
   function irPaso(step) {
     if (step < 1 || step > totalSteps) return;
     if (step > currentStep && !validarPaso(currentStep)) return;
@@ -332,30 +356,30 @@ document.addEventListener("DOMContentLoaded", () => {
 
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
-/**
- * Genera un identificador único para una inspección.
- *
- * Combina el prefijo `INSP`, la fecha actual y un código aleatorio de cuatro
- * caracteres.
- *
- * @returns {string} Identificador con formato `INSP-YYYYMMDD-XXXX`.
- */
+  /**
+   * Genera un identificador único para una inspección.
+   *
+   * Combina el prefijo `INSP`, la fecha actual y un código aleatorio de cuatro
+   * caracteres.
+   *
+   * @returns {string} Identificador con formato `INSP-YYYYMMDD-XXXX`.
+   */
   function generarInspeccionId() {
     const hoy = new Date();
     const fecha = `${hoy.getFullYear()}${String(hoy.getMonth() + 1).padStart(2, "0")}${String(hoy.getDate()).padStart(2, "0")}`;
     const aleatorio = Math.random().toString(36).slice(2, 6).toUpperCase();
     return `INSP-${fecha}-${aleatorio}`;
   }
-/**
- * Construye el objeto completo de una inspección SST.
- *
- * Recopila la información general y los elementos registrados por los
- * administradores de cada sección. Las secciones marcadas como omitidas se
- * incluyen como arreglos vacíos.
- *
- * @param {string} [inspeccionId] Identificador previamente generado.
- * @returns {Object} Información general y secciones de la inspección SST.
- */
+  /**
+   * Construye el objeto completo de una inspección SST.
+   *
+   * Recopila la información general y los elementos registrados por los
+   * administradores de cada sección. Las secciones marcadas como omitidas se
+   * incluyen como arreglos vacíos.
+   *
+   * @param {string} [inspeccionId] Identificador previamente generado.
+   * @returns {Object} Información general y secciones de la inspección SST.
+   */
   function payload(inspeccionId) {
     // Las secciones omitidas (solo posible en sede Urabá) se envían vacías,
     // sin importar lo que haya quedado en el DOM.
@@ -416,15 +440,15 @@ document.addEventListener("DOMContentLoaded", () => {
     return contarItemsInspeccion() > 0;
   }
 
-/**
- * Muestra el resumen final de la inspección SST.
- *
- * Presenta la información general y la cantidad de elementos registrados en
- * cada sección. También deshabilita el envío cuando la inspección no contiene
- * ningún elemento.
- *
- * @returns {void}
- */
+  /**
+   * Muestra el resumen final de la inspección SST.
+   *
+   * Presenta la información general y la cantidad de elementos registrados en
+   * cada sección. También deshabilita el envío cuando la inspección no contiene
+   * ningún elemento.
+   *
+   * @returns {void}
+   */
 
   function renderResumenFinal() {
     document.getElementById("resumen-fecha").textContent =
@@ -502,18 +526,18 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-/**
- * Optimiza una imagen y la incorpora al FormData.
- *
- * También agrega la fecha de última modificación del archivo optimizado para
- * que el backend pueda utilizarla cuando la imagen no contenga fecha EXIF.
- *
- * @async
- * @param {FormData} fd FormData que recibirá el archivo.
- * @param {string} fieldName Nombre del campo de la evidencia.
- * @param {File} file Imagen original seleccionada por el usuario.
- * @returns {Promise<void>} Finaliza cuando la imagen y su fecha fueron agregadas.
- */
+  /**
+   * Optimiza una imagen y la incorpora al FormData.
+   *
+   * También agrega la fecha de última modificación del archivo optimizado para
+   * que el backend pueda utilizarla cuando la imagen no contenga fecha EXIF.
+   *
+   * @async
+   * @param {FormData} fd FormData que recibirá el archivo.
+   * @param {string} fieldName Nombre del campo de la evidencia.
+   * @param {File} file Imagen original seleccionada por el usuario.
+   * @returns {Promise<void>} Finaliza cuando la imagen y su fecha fueron agregadas.
+   */
 
   async function anexarArchivoOptimizado(fd, fieldName, file) {
     const archivo = await optimizarImagen(file);
@@ -523,20 +547,20 @@ document.addEventListener("DOMContentLoaded", () => {
     fd.append(`${fieldName}-lastmod`, archivo.lastModified);
   }
 
-/**
- * Optimiza y agrega las evidencias de un elemento al FormData.
- *
- * Recorre los campos de archivo asociados a una tarjeta y construye sus nombres
- * utilizando el tipo de evidencia, índice del elemento e índice de la fotografía.
- *
- * @async
- * @param {FormData} fd FormData que recibirá las evidencias.
- * @param {HTMLElement} card Tarjeta del elemento inspeccionado.
- * @param {string} rolePrefix Identificador de los campos de evidencia.
- * @param {string} fieldPrefix Prefijo enviado al backend.
- * @param {number} itemIndex Índice del elemento dentro de su sección.
- * @returns {Promise<void>} Finaliza cuando todas las evidencias fueron agregadas.
- */
+  /**
+   * Optimiza y agrega las evidencias de un elemento al FormData.
+   *
+   * Recorre los campos de archivo asociados a una tarjeta y construye sus nombres
+   * utilizando el tipo de evidencia, índice del elemento e índice de la fotografía.
+   *
+   * @async
+   * @param {FormData} fd FormData que recibirá las evidencias.
+   * @param {HTMLElement} card Tarjeta del elemento inspeccionado.
+   * @param {string} rolePrefix Identificador de los campos de evidencia.
+   * @param {string} fieldPrefix Prefijo enviado al backend.
+   * @param {number} itemIndex Índice del elemento dentro de su sección.
+   * @returns {Promise<void>} Finaliza cuando todas las evidencias fueron agregadas.
+   */
 
   async function anexarEvidenciasMultiples(
     fd,
@@ -562,17 +586,17 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-/**
- * Construye el FormData utilizado para enviar la inspección SST.
- *
- * Serializa el payload de la inspección y agrega las evidencias optimizadas de
- * extintores, camillas, señalizaciones, equipos tecnológicos y botiquines.
- *
- * @async
- * @param {string} inspeccionId Identificador único de la inspección.
- * @param {number|null} [numInspeccion] Número consecutivo de la inspección.
- * @returns {Promise<FormData>} Datos y evidencias preparados para el backend.
- */
+  /**
+   * Construye el FormData utilizado para enviar la inspección SST.
+   *
+   * Serializa el payload de la inspección y agrega las evidencias optimizadas de
+   * extintores, camillas, señalizaciones, equipos tecnológicos y botiquines.
+   *
+   * @async
+   * @param {string} inspeccionId Identificador único de la inspección.
+   * @param {number|null} [numInspeccion] Número consecutivo de la inspección.
+   * @returns {Promise<FormData>} Datos y evidencias preparados para el backend.
+   */
 
   async function construirFormData(inspeccionId, numInspeccion) {
     const fd = new FormData();
@@ -642,19 +666,19 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("cancelar-modal").classList.remove("visible");
   }
 
-/**
- * Envía la inspección SST al backend.
- *
- * Valida el paso final, comprueba que exista al menos un elemento, genera el
- * identificador, construye el FormData y realiza la solicitud de registro.
- *
- * Durante el proceso controla el estado del botón y muestra el modal de carga,
- * éxito o error. Cuando el registro finaliza correctamente, presenta el número
- * de inspección y los enlaces de aprobación recibidos.
- *
- * @async
- * @returns {Promise<void>} Finaliza cuando la solicitud ha sido procesada.
- */
+  /**
+   * Envía la inspección SST al backend.
+   *
+   * Valida el paso final, comprueba que exista al menos un elemento, genera el
+   * identificador, construye el FormData y realiza la solicitud de registro.
+   *
+   * Durante el proceso controla el estado del botón y muestra el modal de carga,
+   * éxito o error. Cuando el registro finaliza correctamente, presenta el número
+   * de inspección y los enlaces de aprobación recibidos.
+   *
+   * @async
+   * @returns {Promise<void>} Finaliza cuando la solicitud ha sido procesada.
+   */
 
   async function enviarOneDrive() {
     if (!validarPaso(currentStep)) return;
@@ -736,6 +760,22 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   irPaso(1);
+
+  const panelInformacionGeneral = document.querySelector(
+    '[data-step-panel="1"]',
+  );
+
+  panelInformacionGeneral?.addEventListener(
+    "input",
+    actualizarBotonSiguienteGeneral,
+  );
+
+  panelInformacionGeneral?.addEventListener(
+    "change",
+    actualizarBotonSiguienteGeneral,
+  );
+
+  actualizarBotonSiguienteGeneral();
 
   document
     .getElementById("btn-agregar-extintor")

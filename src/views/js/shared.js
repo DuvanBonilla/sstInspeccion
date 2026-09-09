@@ -20,7 +20,7 @@ export const condiciones = [
   ["manija", "Manija"],
   ["sello", "Sello"],
   ["llaveSpanner", "Llave Spanner"],
-  ["otros", "Otros"]
+  ["otros", "Otros"],
 ];
 
 export const condicionesCamilla = [
@@ -30,60 +30,72 @@ export const condicionesCamilla = [
   ["instalacionPared", "Instalación a pared"],
   ["correasSeguridad", "Correas de seguridad"],
   ["limpieza", "Limpieza"],
-  ["inmovilizador", "Inmovilizador"]
+  ["inmovilizador", "Inmovilizador"],
 ];
 
 export const tipoOptionsHtml = [
   ["Solkaflam", "Solkaflam"],
   ["CO2", "CO2"],
   ["Multiproposito", "Multipropósito"],
-  ["Agua", "Agua"]
-].map(([value, label]) => `<option value="${value}">${label}</option>`).join("");
+  ["Agua", "Agua"],
+]
+  .map(([value, label]) => `<option value="${value}">${label}</option>`)
+  .join("");
 
 // [clave, etiqueta, cantidadIdeal, tieneVencimiento]
 export const itemsBotiquin = [
-  ["morral",                 "Morral (Limpio, señalizado, acceso)",                          1,  false],
-  ["estructuraFija",         "Estructura fija (Limpio, señalizado, acceso, llaves)",          1,  false],
-  ["gasaEsteril4",           "Gasa estéril por 4 unidades.",                                 8,  true],
-  ["esparadrapoTela2",       "Esparadrapo en tela de 2 cm.",                                 1,  true],
-  ["micropore2",             "Micropore de 2 cm.",                                            1,  true],
-  ["bajalenguas",            "Bajalenguas en madera.",                                        10, false],
-  ["guantesDesechables",     "Guantes desechables de nitrilo o vinilo x par - En bolsa.",    5,  true],
-  ["vendaRigida4",           "Venda en tela rígida 4 cm x 5 cm.",                            1,  true],
-  ["vendaRigida5",           "Venda en tela rígida 5 cm x 5 cm.",                            1,  true],
-  ["jabonQuirurgico",        "Jabón quirúrgico PH neutro.",                                  1,  true],
-  ["solucionSalina",         "Solución salina 100 cc.",                                      2,  true],
-  ["termometroDigital",      "Termómetro digital.",                                          1,  false],
-  ["alcohol100",             "Alcohol antiseptico por 100 ml.",                              1,  true],
-  ["vendasAdhesivas",        "Vendas adhesivas (Curas) - En bolsa.",                         15, true],
-  ["vendaTriangular",        "Venda triangular desechable.",                                  1,  false],
-  ["linterna",               "Linterna.",                                                     1,  false],
-  ["tijerasTrauma",          "Tijeras cortatodo de trauma",                                   1,  false],
-  ["apositosOculares",       "Apósitos oculares - En bolsa.",                                8,  true],
-  ["silbato",                "Silbato - En bolsa.",                                           1,  false],
-  ["monogafa",               "Monogafa de seguridad.",                                        1,  false],
-  ["libretaLapicero",        "Libreta y bolígrafo.",                                          1,  false],
-  ["manualPrimerosAuxilios", "Manual de primeros auxilios.",                                  1,  false],
-  ["inmovilizadores",        "Inmovilizadores.",                                              1,  false],
-  ["tapabocas",              "Tapabocas - En bolsa.",                                         10, true],
-  ["bolsaRoja",              "Bolsa roja.",                                                   5,  false],
-  ["bolsaVerde",             "Bolsa verde.",                                                  5,  false],
-  ["algodon",                "Algodón mediano.",                                              1,  true],
-  ["candela",                "Candela.",                                                      1,  false]
+  ["morral", "Morral (Limpio, señalizado, acceso)", 1, false],
+  [
+    "estructuraFija",
+    "Estructura fija (Limpio, señalizado, acceso, llaves)",
+    1,
+    false,
+  ],
+  ["gasaEsteril4", "Gasa estéril por 4 unidades.", 8, true],
+  ["esparadrapoTela2", "Esparadrapo en tela de 2 cm.", 1, true],
+  ["micropore2", "Micropore de 2 cm.", 1, true],
+  ["bajalenguas", "Bajalenguas en madera.", 10, false],
+  [
+    "guantesDesechables",
+    "Guantes desechables de nitrilo o vinilo x par - En bolsa.",
+    5,
+    true,
+  ],
+  ["vendaRigida4", "Venda en tela rígida 4 cm x 5 cm.", 1, true],
+  ["vendaRigida5", "Venda en tela rígida 5 cm x 5 cm.", 1, true],
+  ["jabonQuirurgico", "Jabón quirúrgico PH neutro.", 1, true],
+  ["solucionSalina", "Solución salina 100 cc.", 2, true],
+  ["termometroDigital", "Termómetro digital.", 1, false],
+  ["alcohol100", "Alcohol antiseptico por 100 ml.", 1, true],
+  ["vendasAdhesivas", "Vendas adhesivas (Curas) - En bolsa.", 15, true],
+  ["vendaTriangular", "Venda triangular desechable.", 1, false],
+  ["linterna", "Linterna.", 1, false],
+  ["tijerasTrauma", "Tijeras cortatodo de trauma", 1, false],
+  ["apositosOculares", "Apósitos oculares - En bolsa.", 8, true],
+  ["silbato", "Silbato - En bolsa.", 1, false],
+  ["monogafa", "Monogafa de seguridad.", 1, false],
+  ["libretaLapicero", "Libreta y bolígrafo.", 1, false],
+  ["manualPrimerosAuxilios", "Manual de primeros auxilios.", 1, false],
+  ["inmovilizadores", "Inmovilizadores.", 1, false],
+  ["tapabocas", "Tapabocas - En bolsa.", 10, true],
+  ["bolsaRoja", "Bolsa roja.", 5, false],
+  ["bolsaVerde", "Bolsa verde.", 5, false],
+  ["algodon", "Algodón mediano.", 1, true],
+  ["candela", "Candela.", 1, false],
 ];
 
 export const equiposTecnologicos = [
   ["sensorHumo", "Sensor de humo"],
   ["sensorMovimiento", "Sensor de movimiento"],
   ["camarasSeguridad", "Cámaras de seguridad"],
-  ["alarmaEmergencia", "Alarma de emergencia"]
+  ["alarmaEmergencia", "Alarma de emergencia"],
 ];
 
 const CAMPOS_OPCIONALES = new Set([
   "observaciones",
   "camillaObservaciones",
   "senalizacionObservaciones",
-  "observacionGeneral"
+  "observacionGeneral",
 ]);
 
 /**
@@ -134,7 +146,9 @@ function crearSlotEvidenciaHtml(rolePrefix, requerido) {
  */
 
 export function crearBloqueEvidencias(rolePrefix, minSlots = 2) {
-  const slots = Array.from({ length: minSlots }, (_, i) => crearSlotEvidenciaHtml(rolePrefix, i === 0)).join("");
+  const slots = Array.from({ length: minSlots }, (_, i) =>
+    crearSlotEvidenciaHtml(rolePrefix, i === 0),
+  ).join("");
   return `
     <div class="evidencias-wrap" data-role="${rolePrefix}-wrap">
       <div class="evidencias-grid" data-role="${rolePrefix}-slots">${slots}</div>
@@ -145,47 +159,190 @@ export function crearBloqueEvidencias(rolePrefix, minSlots = 2) {
 
 // Marca el primer slot visible como obligatorio y el resto como opcional (tras agregar/quitar slots).
 function actualizarRequeridosEvidencia(slotsContainer, rolePrefix) {
-  slotsContainer.querySelectorAll(`[data-role="${rolePrefix}-input"]`).forEach((input, i) => {
-    if (i === 0) delete input.dataset.optional;
-    else input.dataset.optional = "true";
-  });
+  slotsContainer
+    .querySelectorAll(`[data-role="${rolePrefix}-input"]`)
+    .forEach((input, i) => {
+      if (i === 0) delete input.dataset.optional;
+      else input.dataset.optional = "true";
+    });
+}
+
+export function mostrarAlertaEvidencia(mensaje) {
+  document.querySelector(".alerta-evidencia")?.remove();
+
+  const alerta = document.createElement("div");
+  alerta.className = "alerta-evidencia";
+
+  alerta.innerHTML = `
+    <div class="alerta-evidencia__icon">!</div>
+
+    <div class="alerta-evidencia__contenido">
+      <strong>Archivo no permitido</strong>
+      <span>${mensaje}</span>
+    </div>
+
+    <button
+      type="button"
+      class="alerta-evidencia__cerrar"
+      aria-label="Cerrar alerta"
+    >
+      &times;
+    </button>
+  `;
+
+  document.body.appendChild(alerta);
+
+  const cerrar = () => alerta.remove();
+
+  alerta
+    .querySelector(".alerta-evidencia__cerrar")
+    .addEventListener("click", cerrar);
+
+  setTimeout(cerrar, 5000);
 }
 
 export function inicializarBloqueEvidencias(card, rolePrefix) {
-  const wrap = card.querySelector(`[data-role="${rolePrefix}-wrap"]`);
+  const MAX_EVIDENCIAS = 3;
+  const MAX_TAMANO_MB = 10;
+  const MAX_TAMANO_BYTES = MAX_TAMANO_MB * 1024 * 1024;
+
+  const wrap = card.querySelector(
+    `[data-role="${rolePrefix}-wrap"]`,
+  );
+
   if (!wrap) return;
-  const slotsContainer = wrap.querySelector(`[data-role="${rolePrefix}-slots"]`);
-  const addBtn = wrap.querySelector(`[data-action="add-${rolePrefix}-slot"]`);
+
+  const slotsContainer = wrap.querySelector(
+    `[data-role="${rolePrefix}-slots"]`,
+  );
+
+  const addBtn = wrap.querySelector(
+    `[data-action="add-${rolePrefix}-slot"]`,
+  );
+
+  function actualizarBotonAgregar() {
+    if (!addBtn) return;
+
+    const alcanzoLimite =
+      slotsContainer.children.length >= MAX_EVIDENCIAS;
+
+    addBtn.classList.toggle("hidden", alcanzoLimite);
+    addBtn.disabled = alcanzoLimite;
+  }
 
   function wireSlot(slot) {
-    const input = slot.querySelector(`[data-role="${rolePrefix}-input"]`);
-    const nombre = slot.querySelector(`[data-role="${rolePrefix}-nombre"]`);
-    const preview = slot.querySelector(`[data-role="${rolePrefix}-preview"]`);
-    const removeBtn = slot.querySelector(`[data-action="remove-${rolePrefix}-slot"]`);
+    const input = slot.querySelector(
+      `[data-role="${rolePrefix}-input"]`,
+    );
 
-    input.addEventListener("change", () => actualizarPreviewArchivo(input, nombre, preview));
+    const nombre = slot.querySelector(
+      `[data-role="${rolePrefix}-nombre"]`,
+    );
+
+    const preview = slot.querySelector(
+      `[data-role="${rolePrefix}-preview"]`,
+    );
+
+    const removeBtn = slot.querySelector(
+      `[data-action="remove-${rolePrefix}-slot"]`,
+    );
+
+    input.addEventListener("change", () => {
+      const archivo = input.files?.[0];
+
+      // Limpiar errores anteriores
+      nombre.classList.remove("evidencia-estado--error");
+
+      if (!archivo) {
+        actualizarPreviewArchivo(input, nombre, preview);
+        return;
+      }
+
+      // Validar que sea una imagen
+      if (!archivo.type.startsWith("image/")) {
+        input.value = "";
+
+        actualizarPreviewArchivo(input, nombre, preview);
+
+        nombre.textContent =
+          "⚠ El archivo seleccionado debe tener un formato de imagen.";
+
+        nombre.classList.add("evidencia-estado--error");
+
+        return;
+      }
+
+      // Validar peso máximo de 10 MB
+      if (archivo.size > MAX_TAMANO_BYTES) {
+        input.value = "";
+
+        actualizarPreviewArchivo(input, nombre, preview);
+
+        nombre.textContent =
+          `⚠ La imagen no puede superar los ${MAX_TAMANO_MB} MB.`;
+
+        nombre.classList.add("evidencia-estado--error");
+
+        return;
+      }
+
+      // Archivo válido
+      nombre.classList.remove("evidencia-estado--error");
+
+      actualizarPreviewArchivo(input, nombre, preview);
+    });
 
     removeBtn.addEventListener("click", () => {
       if (slotsContainer.children.length > 1) {
         slot.remove();
       } else {
         input.value = "";
+
+        nombre.classList.remove("evidencia-estado--error");
+
         actualizarPreviewArchivo(input, nombre, preview);
       }
-      actualizarRequeridosEvidencia(slotsContainer, rolePrefix);
+
+      actualizarRequeridosEvidencia(
+        slotsContainer,
+        rolePrefix,
+      );
+
+      actualizarBotonAgregar();
     });
   }
 
-  slotsContainer.querySelectorAll(`[data-role="${rolePrefix}-slot"]`).forEach(wireSlot);
+  slotsContainer
+    .querySelectorAll(`[data-role="${rolePrefix}-slot"]`)
+    .forEach(wireSlot);
 
   addBtn?.addEventListener("click", () => {
+    if (slotsContainer.children.length >= MAX_EVIDENCIAS) {
+      return;
+    }
+
     const contenedor = document.createElement("div");
-    contenedor.innerHTML = crearSlotEvidenciaHtml(rolePrefix, false).trim();
+
+    contenedor.innerHTML = crearSlotEvidenciaHtml(
+      rolePrefix,
+      false,
+    ).trim();
+
     const nuevoSlot = contenedor.firstElementChild;
+
     slotsContainer.appendChild(nuevoSlot);
+
     wireSlot(nuevoSlot);
-    actualizarRequeridosEvidencia(slotsContainer, rolePrefix);
+
+    actualizarRequeridosEvidencia(
+      slotsContainer,
+      rolePrefix,
+    );
+
+    actualizarBotonAgregar();
   });
+
+  actualizarBotonAgregar();
 }
 
 /**
@@ -207,13 +364,19 @@ export function leerArchivosEvidencia(card, rolePrefix) {
 
 export function crearOpciones() {
   return [`<option value="">Seleccione</option>`]
-    .concat(estados.map((estado) => `<option value="${estado}">${estado}</option>`))
+    .concat(
+      estados.map((estado) => `<option value="${estado}">${estado}</option>`),
+    )
     .join("");
 }
 
 export function crearOpcionesAfectacion() {
   return [`<option value="">Seleccione</option>`]
-    .concat(afectacionServicio.map((valor) => `<option value="${valor}">${valor}</option>`))
+    .concat(
+      afectacionServicio.map(
+        (valor) => `<option value="${valor}">${valor}</option>`,
+      ),
+    )
     .join("");
 }
 

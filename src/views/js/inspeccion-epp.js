@@ -26,11 +26,9 @@ import {
   cargarCatalogoEpp,
 } from "./trabajadoresEpp.js";
 
-
 let pasoActual = 1;
 
 const TOTAL_PASOS = 3;
-
 
 const fecha = document.getElementById("fecha");
 
@@ -161,7 +159,6 @@ function navegarAPaso(destino) {
     }
   }
 
-
   if (pasoActual === 2 && destino > pasoActual) {
     const resultado = trabajadoresManager.validar();
 
@@ -259,6 +256,28 @@ function validarInformacionGeneral() {
   return valido;
 }
 
+function actualizarBotonSiguienteGeneral() {
+  const botonSiguiente = document.querySelector(
+    '[data-step-panel="1"] [data-step-target="2"]',
+  );
+
+  if (!botonSiguiente) {
+    return;
+  }
+
+  const camposCompletos = camposInformacionGeneral.every((id) => {
+    const campo = document.getElementById(id);
+
+    if (!campo || campo.disabled) {
+      return true;
+    }
+
+    return String(campo.value || "").trim() !== "";
+  });
+
+  botonSiguiente.disabled = !camposCompletos;
+}
+
 camposInformacionGeneral.forEach((id) => {
   const campo = document.getElementById(id);
 
@@ -266,17 +285,19 @@ camposInformacionGeneral.forEach((id) => {
     return;
   }
 
-  const limpiarError = () => {
+  const actualizarCampo = () => {
     if (campo.value.trim()) {
       campo.classList.remove("campo-error");
     }
+
+    actualizarBotonSiguienteGeneral();
   };
 
-  campo.addEventListener("input", limpiarError);
-
-  campo.addEventListener("change", limpiarError);
+  campo.addEventListener("input", actualizarCampo);
+  campo.addEventListener("change", actualizarCampo);
 });
 
+actualizarBotonSiguienteGeneral();
 
 function construirResumenGeneral() {
   asignarTextoResumen("resumen-fecha", obtenerValor("fecha"));

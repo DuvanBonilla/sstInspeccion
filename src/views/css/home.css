@@ -109,9 +109,20 @@ body {
   flex: 1;
   display: flex;
   justify-content: center;
+  align-items: flex-start;
   padding: 8px 24px 64px;
   position: relative;
   z-index: 2;
+}
+
+.card-header-process {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+
+  /* Separación respecto a las paredes de la tarjeta */
+  padding: 22px 24px 0;
+  box-sizing: border-box;
 }
 
 /* ── CARDS GRID ──────────────────────────────────── */
@@ -122,6 +133,9 @@ body {
 
 /* ── CARD ────────────────────────────────────────── */
 .card {
+  width: 100%;
+  max-width: 440px;
+  height: fit-content;
   background: var(--panel);
   border-radius: 20px;
   display: flex;
@@ -129,9 +143,11 @@ body {
   overflow: hidden;
   box-shadow:
     0 1px 3px rgba(15, 23, 42, 0.04),
-    0 10px 36px rgba(15, 23, 42, 0.10);
+    0 10px 36px rgba(15, 23, 42, 0.1);
   border: 1px solid rgba(15, 23, 42, 0.06);
-  transition: box-shadow 250ms ease, transform 250ms ease;
+  transition:
+    box-shadow 250ms ease,
+    transform 250ms ease;
   animation: fadeUp 0.5s ease 0.22s both;
 }
 
@@ -153,16 +169,17 @@ body {
 
 /* ── ICONO ───────────────────────────────────────── */
 .card-icon-wrap {
-  width: 52px;
-  height: 52px;
+  width: 48px;
+  height: 48px;
   border-radius: 14px;
   background: #eff6ff;
   color: var(--primary);
-  display: flex;
   align-items: center;
   justify-content: center;
-  margin: 26px 26px 0;
+  margin: 0;
+  flex: 0 0 48px;
   flex-shrink: 0;
+  display: flex;
 }
 
 .card-icon-wrap svg {
@@ -173,16 +190,17 @@ body {
 /* ── CUERPO ──────────────────────────────────────── */
 .card-body {
   padding: 18px 26px 22px;
-  flex: 1;
+
 }
 
 .card-process {
-  margin: 0 0 5px;
+  margin: 0;
   font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.6px;
   text-transform: uppercase;
   color: var(--primary);
+  line-height: 1.25;
 }
 
 .card-title {
@@ -247,7 +265,9 @@ body {
   color: #ffffff;
   background: linear-gradient(135deg, #1d4ed8 0%, #3b82f6 100%);
   box-shadow: 0 4px 12px rgba(37, 99, 235, 0.28);
-  transition: box-shadow 180ms ease, transform 180ms ease;
+  transition:
+    box-shadow 180ms ease,
+    transform 180ms ease;
   border: 0;
   cursor: pointer;
   font-family: inherit;
@@ -343,8 +363,7 @@ body.modal-open {
   border: 1px solid var(--line);
   border-radius: 20px;
 
-  box-shadow:
-    0 24px 70px rgba(15, 23, 42, 0.25);
+  box-shadow: 0 24px 70px rgba(15, 23, 42, 0.25);
 }
 
 .selector-modal-close {
@@ -399,7 +418,7 @@ body.modal-open {
   font-weight: 900;
 }
 
-.selector-modal-header>p:last-child {
+.selector-modal-header > p:last-child {
   margin: 0;
 
   color: var(--muted);
@@ -407,14 +426,12 @@ body.modal-open {
   font-size: 14px;
 }
 
-
 /* ── OPCIONES ─────────────────────────────────────── */
 
 .selector-options {
   display: grid;
 
-  grid-template-columns:
-    repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 
   gap: 18px;
 }
@@ -444,11 +461,9 @@ body.modal-open {
 .selector-option:hover {
   transform: translateY(-2px);
 
-  border-color:
-    rgba(37, 99, 235, 0.45);
+  border-color: rgba(37, 99, 235, 0.45);
 
-  box-shadow:
-    0 12px 30px rgba(37, 99, 235, 0.12);
+  box-shadow: 0 12px 30px rgba(37, 99, 235, 0.12);
 }
 
 .selector-option-icon {
@@ -554,4 +569,19 @@ body.modal-open {
   .card-actions {
     grid-template-columns: 1fr;
   }
+}
+
+.contenedor-accion {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.contenedor-accion svg {
+  flex-shrink: 0;
+}
+
+.contenedor-accion span {
+  white-space: nowrap;
 }
