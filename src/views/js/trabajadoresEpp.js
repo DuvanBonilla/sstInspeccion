@@ -39,6 +39,8 @@ import {
   registrarEventosCatalogoEpp,
 } from "./epp/controllers/catalogoEppUi.controller.js";
 
+import { manejarCambioCalificacionEpp as manejarCambioEvaluacionEpp } from "./epp/controllers/evaluacionEppUi.controller.js";
+
 let ELEMENTOS_EPP_PREDETERMINADOS = [];
 let ELEMENTOS_EPP_OTROS = [];
 let ELEMENTOS_EPP = [];
@@ -130,7 +132,15 @@ export function createTrabajadoresEppManager({
 
     container?.addEventListener("click", manejarAccionesTrabajador);
 
-    container?.addEventListener("change", manejarCambioCalificacionEpp);
+    container?.addEventListener("change", (event) => {
+      manejarCambioEvaluacionEpp(event, {
+        requierePlanAccion,
+
+        obtenerFechaInspeccion() {
+          return document.querySelector('[name="fecha"]')?.value || "";
+        },
+      });
+    });
 
     registrarEventosCatalogoEpp({
       container,
@@ -561,92 +571,6 @@ export function createTrabajadoresEppManager({
     card.classList.add("trabajador-collapsed");
 
     return card;
-  }
-
-  function manejarCambioCalificacionEpp(event) {
-    const select = event.target.closest(".epp-calificacion");
-
-    if (!select) {
-      return;
-    }
-
-    const fila = select.closest("tr[data-elemento]");
-
-    if (!fila) {
-      return;
-    }
-
-    actualizarPlanElemento(fila);
-  }
-
-  /**
-   * Actualiza la sección del plan de acción asociada con un elemento EPP.
-   *
-   * Evalúa las calificaciones de condición y uso para determinar si debe
-   * mostrarse el plan de acción. También establece como fecha mínima la fecha
-   * de la inspección y limpia el plan cuando deja de ser obligatorio.
-   *
-   * @param {HTMLTableRowElement} fila - Fila que contiene la evaluación del elemento EPP.
-   * @returns {void}
-   */
-
-  function actualizarPlanElemento(fila) {
-    if (!fila) {
-      return;
-    }
-
-    const condicion = fila.querySelector('[data-role="condicion"]')?.value;
-
-    const uso = fila.querySelector('[data-role="uso"]')?.value;
-
-    const filaPlan = fila.nextElementSibling;
-
-    if (!filaPlan || !filaPlan.classList.contains("epp-plan-row")) {
-      return;
-    }
-
-    const plan = filaPlan.querySelector('[data-role="epp-plan-accion"]');
-
-    const fecha = filaPlan.querySelector('[data-role="epp-fecha-plan"]');
-
-    const fechaInspeccion =
-      document.querySelector('[name="fecha"]')?.value || "";
-
-    // -------------------------------------------------------
-    // ESTABLECER FECHA MÍNIMA DEL PLAN
-    // -------------------------------------------------------
-
-    if (fecha) {
-      if (fechaInspeccion) {
-        fecha.min = fechaInspeccion;
-      } else {
-        fecha.removeAttribute("min");
-      }
-    }
-
-    // -------------------------------------------------------
-    // DETERMINAR SI REQUIERE PLAN
-    // -------------------------------------------------------
-
-    const mostrar = requierePlanAccion(condicion, uso);
-
-    filaPlan.hidden = !mostrar;
-
-    // -------------------------------------------------------
-    // SI YA NO REQUIERE PLAN, LIMPIAR LOS DATOS
-    // -------------------------------------------------------
-
-    if (!mostrar) {
-      if (plan) {
-        plan.value = "";
-        plan.classList.remove("campo-error");
-      }
-
-      if (fecha) {
-        fecha.value = "";
-        fecha.classList.remove("campo-error");
-      }
-    }
   }
 
   function obtenerElementosActuales(card) {
