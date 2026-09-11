@@ -132,3 +132,157 @@ export function alternarCatalogoEpp(card, boton) {
       : "+ Agregar elementos EPP";
   }
 }
+
+/**
+ * Registra los eventos del buscador y del catálogo EPP.
+ *
+ * La función de filtrado se recibe como dependencia porque el controlador
+ * no debe conocer el estado general del administrador de trabajadores.
+ *
+ * @param {Object} dependencias Dependencias del controlador.
+ * @param {HTMLElement|null} dependencias.container Contenedor de trabajadores.
+ * @param {Document} dependencias.documento Documento de la interfaz.
+ * @param {Function} dependencias.filtrarElementosEpp Función de filtrado.
+ * @returns {void}
+ */
+export function registrarEventosCatalogoEpp({
+  container,
+  documento = document,
+  filtrarElementosEpp,
+}) {
+  container?.addEventListener("focusin", (event) => {
+    const buscador = event.target.closest(".epp-catalogo-buscador");
+
+    if (!buscador) {
+      return;
+    }
+
+    const card = buscador.closest(".trabajador-card");
+
+    if (!card) {
+      return;
+    }
+
+    filtrarElementosEpp(card, buscador.value);
+  });
+
+  container?.addEventListener("input", (event) => {
+    const buscador = event.target.closest(".epp-catalogo-buscador");
+
+    if (!buscador) {
+      return;
+    }
+
+    const card = buscador.closest(".trabajador-card");
+
+    if (!card) {
+      return;
+    }
+
+    filtrarElementosEpp(card, buscador.value);
+  });
+
+  container?.addEventListener("keydown", (event) => {
+    const buscador = event.target.closest(".epp-catalogo-buscador");
+
+    if (!buscador) {
+      return;
+    }
+
+    const card = buscador.closest(".trabajador-card");
+
+    if (!card) {
+      return;
+    }
+
+    const resultados = card.querySelector(".epp-catalogo-resultados");
+
+    if (!resultados || resultados.hidden) {
+      return;
+    }
+
+    const opciones = Array.from(
+      resultados.querySelectorAll(".epp-combobox-opcion"),
+    );
+
+    if (opciones.length === 0) {
+      return;
+    }
+
+    let indiceActivo = opciones.findIndex((opcion) =>
+      opcion.classList.contains("epp-combobox-opcion-activa"),
+    );
+
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+
+      indiceActivo =
+        indiceActivo < opciones.length - 1
+          ? indiceActivo + 1
+          : 0;
+    } else if (event.key === "ArrowUp") {
+      event.preventDefault();
+
+      indiceActivo =
+        indiceActivo > 0
+          ? indiceActivo - 1
+          : opciones.length - 1;
+    } else if (event.key === "Enter") {
+      event.preventDefault();
+
+      const opcionSeleccionada =
+        indiceActivo >= 0
+          ? opciones[indiceActivo]
+          : opciones[0];
+
+      opcionSeleccionada?.click();
+
+      return;
+    } else if (event.key === "Escape") {
+      resultados.hidden = true;
+      resultados.innerHTML = "";
+
+      buscador.setAttribute("aria-expanded", "false");
+
+      return;
+    } else {
+      return;
+    }
+
+    opciones.forEach((opcion) => {
+      opcion.classList.remove("epp-combobox-opcion-activa");
+    });
+
+    const opcionActiva = opciones[indiceActivo];
+
+    opcionActiva.classList.add("epp-combobox-opcion-activa");
+
+    opcionActiva.scrollIntoView({
+      block: "nearest",
+    });
+  });
+
+  documento.addEventListener("click", (event) => {
+    if (
+      event.target.closest(".epp-catalogo-buscador") ||
+      event.target.closest(".epp-catalogo-resultados")
+    ) {
+      return;
+    }
+
+    container
+      ?.querySelectorAll(".epp-catalogo-resultados")
+      .forEach((resultados) => {
+        resultados.hidden = true;
+        resultados.innerHTML = "";
+
+        const card = resultados.closest(".trabajador-card");
+
+        const buscador = card?.querySelector(
+          ".epp-catalogo-buscador",
+        );
+
+        buscador?.setAttribute("aria-expanded", "false");
+      });
+  });
+}

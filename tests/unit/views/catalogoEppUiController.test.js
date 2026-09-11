@@ -294,3 +294,305 @@ test("alternarCatalogoEpp abre y cierra el panel", async () => {
     "+ Agregar elementos EPP",
   );
 });
+
+function crearClassListEventos(clasesIniciales = []) {
+  const clases = new Set(clasesIniciales);
+
+  return {
+    add(clase) {
+      clases.add(clase);
+    },
+
+    remove(clase) {
+      clases.delete(clase);
+    },
+
+    contains(clase) {
+      return clases.has(clase);
+    },
+  };
+}
+
+function crearEscenarioEventosCatalogo({
+  resultadosOcultos = false,
+} = {}) {
+  const eventosContainer = {};
+  const eventosDocumento = {};
+
+  const atributosBuscador = new Map();
+
+  const crearOpcion = (activa = false) => ({
+    classList: crearClassListEventos(
+      activa ? ["epp-combobox-opcion-activa"] : [],
+    ),
+
+    clicks: 0,
+    desplazamientos: [],
+
+    click() {
+      this.clicks += 1;
+    },
+
+    scrollIntoView(opciones) {
+      this.desplazamientos.push(opciones);
+    },
+  });
+
+  const opciones = [
+    crearOpcion(),
+    crearOpcion(),
+  ];
+
+  let card;
+
+  const buscador = {
+    value: "casco",
+
+    closest(selector) {
+      if (selector === ".epp-catalogo-buscador") {
+        return buscador;
+      }
+
+      if (selector === ".trabajador-card") {
+        return card;
+      }
+
+      return null;
+    },
+
+    setAttribute(nombre, valor) {
+      atributosBuscador.set(nombre, valor);
+    },
+  };
+
+  const resultados = {
+    hidden: resultadosOcultos,
+    innerHTML: "<div>Resultados</div>",
+
+    querySelectorAll(selector) {
+      return selector === ".epp-combobox-opcion"
+        ? opciones
+        : [];
+    },
+
+    closest(selector) {
+      return selector === ".trabajador-card"
+        ? card
+        : null;
+    },
+  };
+
+  card = {
+    querySelector(selector) {
+      if (selector === ".epp-catalogo-resultados") {
+        return resultados;
+      }
+
+      if (selector === ".epp-catalogo-buscador") {
+        return buscador;
+      }
+
+      return null;
+    },
+  };
+
+  const container = {
+    addEventListener(tipo, callback) {
+      eventosContainer[tipo] = callback;
+    },
+
+    querySelectorAll(selector) {
+      return selector === ".epp-catalogo-resultados"
+        ? [resultados]
+        : [];
+    },
+  };
+
+  const documento = {
+    addEventListener(tipo, callback) {
+      eventosDocumento[tipo] = callback;
+    },
+  };
+
+  return {
+    container,
+    documento,
+    card,
+    buscador,
+    resultados,
+    opciones,
+    atributosBuscador,
+    eventosContainer,
+    eventosDocumento,
+  };
+}
+
+test("registrarEventosCatalogoEpp registra los eventos esperados", async () => {
+  const { registrarEventosCatalogoEpp } =
+    await moduloPromise;
+
+  const escenario = crearEscenarioEventosCatalogo();
+
+  registrarEventosCatalogoEpp({
+    container: escenario.container,
+    documento: escenario.documento,
+    filtrarElementosEpp() {},
+  });
+
+  assert.deepEqual(
+    Object.keys(escenario.eventosContainer).sort(),
+    ["focusin", "input", "keydown"],
+  );
+
+  assert.equal(
+    typeof escenario.eventosDocumento.click,
+    "function",
+  );
+});
+
+test("los eventos de foco y escritura solicitan filtrar el catálogo", async () => {
+  const { registrarEventosCatalogoEpp } =
+    await moduloPromise;
+
+  const escenario = crearEscenarioEventosCatalogo();
+  const llamadas = [];
+
+  registrarEventosCatalogoEpp({
+    container: escenario.container,
+    documento: escenario.documento,
+
+    filtrarElementosEpp(card, termino) {
+      llamadas.push({
+        card,
+        termino,
+      });
+    },
+  });
+
+  const event = {
+    target: escenario.buscador,
+  };
+
+  escenario.eventosContainer.focusin(event);
+  escenario.eventosContainer.input(event);
+
+  assert.equal(llamadas.length, 2);
+
+  assert.strictEqual(
+    llamadas[0].card,
+    escenario.card,
+  );
+
+  assert.equal(llamadas[0].termino, "casco");
+
+  assert.strictEqual(
+    llamadas[1].card,
+    escenario.card,
+  );
+
+  assert.equal(llamadas[1].termino, "casco");
+});
+
+test("la flecha abajo activa y desplaza una opción del catálogo", async () => {
+  const { registrarEventosCatalogoEpp } =
+    await moduloPromise;
+
+  const escenario = crearEscenarioEventosCatalogo();
+
+  registrarEventosCatalogoEpp({
+    container: escenario.container,
+    documento: escenario.documento,
+    filtrarElementosEpp() {},
+  });
+
+  let prevenido = false;
+
+  escenario.eventosContainer.keydown({
+    target: escenario.buscador,
+    key: "ArrowDown",
+
+    preventDefault() {
+      prevenido = true;
+    },
+  });
+
+  assert.equal(prevenido, true);
+
+  assert.equal(
+    escenario.opciones[0].classList.contains(
+      "epp-combobox-opcion-activa",
+    ),
+    true,
+  );
+
+  assert.deepEqual(
+    escenario.opciones[0].desplazamientos,
+    [{ block: "nearest" }],
+  );
+});
+
+test("Enter selecciona una opción y Escape cierra los resultados", async () => {
+  const { registrarEventosCatalogoEpp } =
+    await moduloPromise;
+
+  const escenario = crearEscenarioEventosCatalogo();
+
+  registrarEventosCatalogoEpp({
+    container: escenario.container,
+    documento: escenario.documento,
+    filtrarElementosEpp() {},
+  });
+
+  escenario.eventosContainer.keydown({
+    target: escenario.buscador,
+    key: "Enter",
+    preventDefault() {},
+  });
+
+  assert.equal(escenario.opciones[0].clicks, 1);
+
+  escenario.eventosContainer.keydown({
+    target: escenario.buscador,
+    key: "Escape",
+    preventDefault() {},
+  });
+
+  assert.equal(escenario.resultados.hidden, true);
+  assert.equal(escenario.resultados.innerHTML, "");
+
+  assert.equal(
+    escenario.atributosBuscador.get("aria-expanded"),
+    "false",
+  );
+});
+
+test("el clic fuera del catálogo cierra los resultados abiertos", async () => {
+  const { registrarEventosCatalogoEpp } =
+    await moduloPromise;
+
+  const escenario = crearEscenarioEventosCatalogo();
+
+  registrarEventosCatalogoEpp({
+    container: escenario.container,
+    documento: escenario.documento,
+    filtrarElementosEpp() {},
+  });
+
+  const elementoExterno = {
+    closest() {
+      return null;
+    },
+  };
+
+  escenario.eventosDocumento.click({
+    target: elementoExterno,
+  });
+
+  assert.equal(escenario.resultados.hidden, true);
+  assert.equal(escenario.resultados.innerHTML, "");
+
+  assert.equal(
+    escenario.atributosBuscador.get("aria-expanded"),
+    "false",
+  );
+});
