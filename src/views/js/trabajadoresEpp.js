@@ -1,5 +1,7 @@
 import { optimizarImagen } from "./imageOptimizer.js";
 
+import { consultarCatalogoEpp } from "./epp/catalogoEpp.api.js";
+
 import {
   formatearPesoArchivo,
   validarEvidenciaEpp,
@@ -29,19 +31,7 @@ let ELEMENTOS_EPP = [];
  */
 
 export async function cargarCatalogoEpp() {
-  const response = await fetch("/api/catalogo-epp");
-
-  if (!response.ok) {
-    throw new Error(`Error cargando catálogo EPP. HTTP ${response.status}`);
-  }
-
-  const data = await response.json();
-
-  if (!data.ok || !Array.isArray(data.elementos)) {
-    throw new Error("Respuesta inválida del catálogo EPP");
-  }
-
-  CATALOGO_EPP = data.elementos;
+  CATALOGO_EPP = await consultarCatalogoEpp();
 
   ELEMENTOS_EPP_PREDETERMINADOS = CATALOGO_EPP.filter(
     (elemento) => elemento.predeterminado === true,
