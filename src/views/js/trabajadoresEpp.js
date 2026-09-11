@@ -29,6 +29,8 @@ import {
   crearPanelCatalogoEpp,
 } from "./epp/catalogoEpp.templates.js";
 
+import { validarTrabajadoresEpp } from "./epp/validators/trabajadoresEpp.validator.js";
+
 import { crearFilaEpp } from "./epp/evaluacionEpp.templates.js";
 
 let ELEMENTOS_EPP_PREDETERMINADOS = [];
@@ -1236,16 +1238,9 @@ export function createTrabajadoresEppManager({
    */
 
   function validar() {
-    const tarjetas = container.querySelectorAll(".trabajador-card");
-    // =====================================================
-    // CONTROL DE CÓDIGOS DUPLICADOS
-    // =====================================================
+    const tarjetas = Array.from(container.querySelectorAll(".trabajador-card"));
 
-    const codigosRegistrados = new Set();
-
-    // =====================================================
-    // FECHA DE LA INSPECCIÓN
-    // =====================================================
+    const trabajadores = leerTrabajadoresEpp(container);
 
     const inputFechaInspeccion =
       document.querySelector('[data-role="fecha-inspeccion"]') ||
@@ -1253,316 +1248,90 @@ export function createTrabajadoresEppManager({
       document.querySelector("#fechaInspeccion") ||
       document.querySelector('[name="fecha"]');
 
-    const fechaInspeccion = inputFechaInspeccion?.value || "";
+    const resultado = validarTrabajadoresEpp({
+      trabajadores,
+      evidencias,
+      fechaInspeccion: inputFechaInspeccion?.value || "",
+    });
 
-    // -----------------------------------------------------
-    // DEBE EXISTIR AL MENOS UN TRABAJADOR
-    // -----------------------------------------------------
+    if (resultado.valido) {
+      ocultarEstado();
 
-    if (tarjetas.length === 0) {
+      return {
+        valido: true,
+        mensaje: "",
+      };
+    }
+
+    if (resultado.campo === "cantidad") {
       mostrarEstado("Debe generar al menos un trabajador antes de continuar.");
 
       cantidadInput?.focus();
 
       return {
         valido: false,
-        mensaje: "Debe generar al menos un trabajador.",
+        mensaje: resultado.mensaje,
       };
     }
 
-    // -----------------------------------------------------
-    // RECORRER TRABAJADORES
-    // -----------------------------------------------------
+    const tarjeta = tarjetas[resultado.trabajadorIndex];
 
-    for (
-      let trabajadorIndex = 0;
-      trabajadorIndex < tarjetas.length;
-      trabajadorIndex++
-    ) {
-      const tarjeta = tarjetas[trabajadorIndex];
+    if (!tarjeta) {
+      mostrarEstado(resultado.mensaje);
 
-      const numeroTrabajador = trabajadorIndex + 1;
+      return {
+        valido: false,
+        mensaje: resultado.mensaje,
+      };
+    }
 
-      const trabajadorId = Number(tarjeta.dataset.trabajadorId);
+    abrirTrabajador(tarjeta);
 
-      // ===================================================
-      // DATOS DEL TRABAJADOR
-      // ===================================================
+    if (resultado.campo === "elementos") {
+      mostrarEstado(resultado.mensaje);
 
-      const nombre = tarjeta.querySelector('[data-role="nombre"]');
+      return {
+        valido: false,
+        mensaje: resultado.mensaje,
+      };
+    }
 
-      const codigo = tarjeta.querySelector('[data-role="codigo"]');
+    const selectoresTrabajador = {
+      nombre: '[data-role="nombre"]',
+      codigo: '[data-role="codigo"]',
+      cargo: '[data-role="cargo"]',
+      evidencia: '[data-role="evidencia"]',
+    };
 
-      const cargo = tarjeta.querySelector('[data-role="cargo"]');
+    let elemento = null;
 
-      // ---------------------------------------------------
-      // NOMBRE Y APELLIDO
-      // ---------------------------------------------------
-
-      const nombreValor = nombre?.value.trim() || "";
-
-      // Obligatorio
-      if (!nombreValor) {
-        abrirTrabajador(tarjeta);
-
-        return marcarError(
-          nombre,
-          `Trabajador ${numeroTrabajador}: ingrese el nombre y apellido.`,
-        );
-      }
-
-      // Longitud mínima
-      if (nombreValor.length < 5) {
-        abrirTrabajador(tarjeta);
-
-        return marcarError(
-          nombre,
-          `Trabajador ${numeroTrabajador}: el nombre y apellido debe contener al menos 5 caracteres.`,
-        );
-      }
-
-      // Solo letras y caracteres válidos para nombres
-      if (!/^[A-Za-zÁÉÍÓÚáéíóúÜüÑñ' -]+$/.test(nombreValor)) {
-        abrirTrabajador(tarjeta);
-
-        return marcarError(
-          nombre,
-          `Trabajador ${numeroTrabajador}: el nombre y apellido no puede contener números ni caracteres especiales.`,
-        );
-      }
-
-      // Debe existir al menos nombre + apellido
-      const partesNombre = nombreValor.split(/\s+/).filter(Boolean);
-
-      if (partesNombre.length < 2) {
-        abrirTrabajador(tarjeta);
-
-        return marcarError(
-          nombre,
-          `Trabajador ${numeroTrabajador}: registre al menos el nombre y un apellido.`,
-        );
-      }
-
-      // ---------------------------------------------------
-      // CÓDIGO DEL TRABAJADOR
-      // ---------------------------------------------------
-
-      const codigoValor = codigo?.value.trim() || "";
-
-      // Código obligatorio
-      if (!codigoValor) {
-        abrirTrabajador(tarjeta);
-
-        return marcarError(
-          codigo,
-          `Trabajador ${numeroTrabajador}: ingrese el código.`,
-        );
-      }
-
-      // Debe contener únicamente números y máximo 6 dígitos
-      if (!/^\d{1,6}$/.test(codigoValor)) {
-        abrirTrabajador(tarjeta);
-
-        return marcarError(
-          codigo,
-          `Trabajador ${numeroTrabajador}: el código debe contener únicamente números y tener máximo 6 dígitos.`,
-        );
-      }
-
-      // 000000 no está permitido
-      if (Number(codigoValor) < 1) {
-        abrirTrabajador(tarjeta);
-
-        return marcarError(
-          codigo,
-          `Trabajador ${numeroTrabajador}: el código debe estar entre 000001 y 999999.`,
-        );
-      }
-
-      // ---------------------------------------------------
-      // EVITAR CÓDIGOS DUPLICADOS
-      // ---------------------------------------------------
-
-      if (codigosRegistrados.has(codigoValor)) {
-        abrirTrabajador(tarjeta);
-
-        return marcarError(
-          codigo,
-          `Trabajador ${numeroTrabajador}: el código "${codigoValor}" ya fue registrado en otro trabajador.`,
-        );
-      }
-
-      codigosRegistrados.add(codigoValor);
-
-      if (!cargo?.value.trim()) {
-        abrirTrabajador(tarjeta);
-
-        return marcarError(
-          cargo,
-          `Trabajador ${numeroTrabajador}: ingrese la labor o cargo.`,
-        );
-      }
-
-      // ===================================================
-      // ELEMENTOS EPP
-      // ===================================================
-
+    if (selectoresTrabajador[resultado.campo]) {
+      elemento = tarjeta.querySelector(selectoresTrabajador[resultado.campo]);
+    } else {
       const filasEpp = tarjeta.querySelectorAll("tr[data-elemento]");
 
-      // ---------------------------------------------------
-      // DEBE EXISTIR AL MENOS UN ELEMENTO EPP
-      // ---------------------------------------------------
+      const fila = filasEpp[resultado.elementoIndex];
 
-      if (filasEpp.length === 0) {
-        abrirTrabajador(tarjeta);
-
-        mostrarEstado(
-          `Trabajador ${numeroTrabajador}: debe tener al menos un elemento EPP.`,
-        );
-
-        return {
-          valido: false,
-          mensaje: `Trabajador ${numeroTrabajador}: debe tener al menos un elemento EPP.`,
-        };
+      if (resultado.campo === "condicion") {
+        elemento = fila?.querySelector('[data-role="condicion"]');
       }
 
-      // ===================================================
-      // RECORRER ELEMENTOS EPP
-      // ===================================================
-
-      for (
-        let elementoIndex = 0;
-        elementoIndex < filasEpp.length;
-        elementoIndex++
-      ) {
-        const fila = filasEpp[elementoIndex];
-
-        const nombreElemento =
-          fila.dataset.elemento ||
-          fila.querySelector(".epp-nombre")?.textContent?.trim() ||
-          `Elemento ${elementoIndex + 1}`;
-
-        const condicion = fila.querySelector('[data-role="condicion"]');
-
-        const uso = fila.querySelector('[data-role="uso"]');
-
-        // -------------------------------------------------
-        // CONDICIÓN OBLIGATORIA
-        // -------------------------------------------------
-
-        if (!condicion?.value) {
-          abrirTrabajador(tarjeta);
-
-          return marcarError(
-            condicion,
-            `Trabajador ${numeroTrabajador}: seleccione la condición de "${nombreElemento}".`,
-          );
-        }
-
-        // -------------------------------------------------
-        // USO OBLIGATORIO
-        // -------------------------------------------------
-
-        if (!uso?.value) {
-          abrirTrabajador(tarjeta);
-
-          return marcarError(
-            uso,
-            `Trabajador ${numeroTrabajador}: seleccione el uso de "${nombreElemento}".`,
-          );
-        }
-
-        // =================================================
-        // PLAN DE ACCIÓN POR ELEMENTO
-        // =================================================
-
-        const requierePlan = requierePlanAccion(condicion.value, uso.value);
-
-        if (requierePlan) {
-          const filaPlan = fila.nextElementSibling;
-
-          const planAccion = filaPlan?.querySelector(
-            '[data-role="epp-plan-accion"]',
-          );
-
-          const fechaPlanAccion = filaPlan?.querySelector(
-            '[data-role="epp-fecha-plan"]',
-          );
-
-          // -----------------------------------------------
-          // PLAN DE ACCIÓN OBLIGATORIO
-          // -----------------------------------------------
-
-          if (!planAccion?.value.trim()) {
-            abrirTrabajador(tarjeta);
-
-            return marcarError(
-              planAccion,
-              `Trabajador ${numeroTrabajador}: registre el plan de acción para "${nombreElemento}".`,
-            );
-          }
-
-          // -----------------------------------------------
-          // FECHA LÍMITE OBLIGATORIA
-          // -----------------------------------------------
-
-          if (!fechaPlanAccion?.value) {
-            abrirTrabajador(tarjeta);
-
-            return marcarError(
-              fechaPlanAccion,
-              `Trabajador ${numeroTrabajador}: registre la fecha límite del plan de acción para "${nombreElemento}".`,
-            );
-          }
-
-          // -----------------------------------------------
-          // FECHA DEL PLAN NO PUEDE SER ANTERIOR
-          // A LA FECHA DE LA INSPECCIÓN
-          // -----------------------------------------------
-
-          if (fechaInspeccion && fechaPlanAccion.value < fechaInspeccion) {
-            abrirTrabajador(tarjeta);
-
-            return marcarError(
-              fechaPlanAccion,
-              `Trabajador ${numeroTrabajador}: la fecha límite del plan de acción para "${nombreElemento}" no puede ser anterior a la fecha de la inspección.`,
-            );
-          }
-        }
+      if (resultado.campo === "uso") {
+        elemento = fila?.querySelector('[data-role="uso"]');
       }
 
-      // ===================================================
-      // EVIDENCIA FOTOGRÁFICA
-      // ===================================================
+      const filaPlan = fila?.nextElementSibling;
 
-      const inputEvidencia = tarjeta.querySelector('[data-role="evidencia"]');
+      if (resultado.campo === "planAccion") {
+        elemento = filaPlan?.querySelector('[data-role="epp-plan-accion"]');
+      }
 
-      // La validación se realiza contra el Map de archivos
-      // optimizados, no contra input.files.
-      //
-      // Esto garantiza que la fotografía fue procesada
-      // correctamente antes de continuar.
-
-      if (!evidencias.has(trabajadorId)) {
-        abrirTrabajador(tarjeta);
-
-        return marcarError(
-          inputEvidencia,
-          `Trabajador ${numeroTrabajador}: registre la evidencia fotográfica de constancia del operario.`,
-        );
+      if (resultado.campo === "fechaPlanAccion") {
+        elemento = filaPlan?.querySelector('[data-role="epp-fecha-plan"]');
       }
     }
 
-    // -----------------------------------------------------
-    // TODO CORRECTO
-    // -----------------------------------------------------
-
-    ocultarEstado();
-
-    return {
-      valido: true,
-      mensaje: "",
-    };
+    return marcarError(elemento, resultado.mensaje);
   }
 
   function marcarError(elemento, mensaje) {
