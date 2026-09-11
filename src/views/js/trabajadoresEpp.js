@@ -38,10 +38,9 @@ import {
   agregarElementosSeleccionados,
   alternarCatalogoEpp,
   eliminarElementoEpp,
-  limpiarSeleccionCatalogoEpp,
+  filtrarElementosEpp as filtrarElementosCatalogoEpp,
   obtenerSeleccionCatalogoEpp,
   registrarEventosCatalogoEpp,
-  sincronizarCatalogoEpp,
 } from "./epp/controllers/catalogoEppUi.controller.js";
 
 let ELEMENTOS_EPP_PREDETERMINADOS = [];
@@ -78,61 +77,6 @@ export async function cargarCatalogoEpp() {
 
 function obtenerElementosPredeterminados() {
   return prepararElementosPredeterminadosEpp(ELEMENTOS_EPP_PREDETERMINADOS);
-}
-
-function filtrarElementosEpp(card, terminoBusqueda = "") {
-  const contenedorResultados = card.querySelector(".epp-catalogo-resultados");
-
-  const buscador = card.querySelector(".epp-catalogo-buscador");
-
-  if (!contenedorResultados) {
-    return;
-  }
-
-  const idsActuales = new Set(
-    Array.from(
-      card.querySelectorAll(
-        ".epp-table tbody tr.epp-fila[data-elemento-epp-id]",
-      ),
-    )
-      .map((fila) => fila.dataset.elementoEppId)
-      .filter(Boolean),
-  );
-
-  const seleccionados = obtenerSeleccionCatalogoEpp(card);
-
-  const resultados = filtrarCatalogoEpp({
-    elementos: ELEMENTOS_EPP,
-    idsActuales,
-    terminoBusqueda,
-  });
-
-  // =====================================================
-  // SIN RESULTADOS
-  // =====================================================
-
-  if (resultados.length === 0) {
-    contenedorResultados.innerHTML = crearMensajeCatalogoSinResultados();
-
-    contenedorResultados.hidden = false;
-
-    buscador?.setAttribute("aria-expanded", "true");
-
-    return;
-  }
-
-  // =====================================================
-  // RENDERIZAR RESULTADOS
-  // =====================================================
-
-  contenedorResultados.innerHTML = crearOpcionesCatalogoEpp(
-    resultados,
-    seleccionados,
-  );
-
-  contenedorResultados.hidden = false;
-
-  buscador?.setAttribute("aria-expanded", "true");
 }
 
 /**
@@ -195,7 +139,15 @@ export function createTrabajadoresEppManager({
     registrarEventosCatalogoEpp({
       container,
       documento: document,
-      filtrarElementosEpp,
+
+      filtrarElementosEpp(card, terminoBusqueda) {
+        filtrarElementosCatalogoEpp(card, terminoBusqueda, {
+          elementosEpp: ELEMENTOS_EPP,
+          filtrarCatalogoEpp,
+          crearMensajeCatalogoSinResultados,
+          crearOpcionesCatalogoEpp,
+        });
+      },
     });
   }
 
@@ -470,11 +422,7 @@ export function createTrabajadoresEppManager({
         return;
       }
 
-      eliminarElementoEpp(
-        tarjeta,
-        fila,
-        mostrarEstado,
-      );
+      eliminarElementoEpp(tarjeta, fila, mostrarEstado);
 
       return;
     }

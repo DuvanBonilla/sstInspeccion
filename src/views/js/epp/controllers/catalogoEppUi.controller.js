@@ -74,9 +74,7 @@ export function sincronizarCatalogoEpp(card) {
 
   const idsActuales = new Set(
     Array.from(
-      card.querySelectorAll(
-        ".epp-table tbody tr[data-elemento-epp-id]",
-      ),
+      card.querySelectorAll(".epp-table tbody tr[data-elemento-epp-id]"),
     )
       .map((fila) => fila.dataset.elementoEppId)
       .filter(Boolean),
@@ -87,8 +85,7 @@ export function sincronizarCatalogoEpp(card) {
   checks.forEach((check) => {
     const elementoEppId = check.dataset.elementoEppId;
 
-    const yaAgregado =
-      elementoEppId && idsActuales.has(elementoEppId);
+    const yaAgregado = elementoEppId && idsActuales.has(elementoEppId);
 
     check.checked = false;
     check.disabled = Boolean(yaAgregado);
@@ -131,6 +128,74 @@ export function alternarCatalogoEpp(card, boton) {
       ? "− Ocultar elementos EPP"
       : "+ Agregar elementos EPP";
   }
+}
+
+/**
+ * Filtra y representa los elementos disponibles del catálogo EPP.
+ *
+ * @param {HTMLElement} card Tarjeta del trabajador.
+ * @param {string} terminoBusqueda Texto ingresado en el buscador.
+ * @param {Object} dependencias Dependencias del catálogo.
+ * @param {Array<Object>} dependencias.elementosEpp Elementos disponibles.
+ * @param {Function} dependencias.filtrarCatalogoEpp Función de filtrado.
+ * @param {Function} dependencias.crearMensajeCatalogoSinResultados Plantilla vacía.
+ * @param {Function} dependencias.crearOpcionesCatalogoEpp Plantilla de opciones.
+ * @returns {void}
+ */
+export function filtrarElementosEpp(
+  card,
+  terminoBusqueda = "",
+  {
+    elementosEpp,
+    filtrarCatalogoEpp,
+    crearMensajeCatalogoSinResultados,
+    crearOpcionesCatalogoEpp,
+  },
+) {
+  const contenedorResultados = card.querySelector(".epp-catalogo-resultados");
+
+  const buscador = card.querySelector(".epp-catalogo-buscador");
+
+  if (!contenedorResultados) {
+    return;
+  }
+
+  const idsActuales = new Set(
+    Array.from(
+      card.querySelectorAll(
+        ".epp-table tbody tr.epp-fila[data-elemento-epp-id]",
+      ),
+    )
+      .map((fila) => fila.dataset.elementoEppId)
+      .filter(Boolean),
+  );
+
+  const seleccionados = obtenerSeleccionCatalogoEpp(card);
+
+  const resultados = filtrarCatalogoEpp({
+    elementos: elementosEpp,
+    idsActuales,
+    terminoBusqueda,
+  });
+
+  if (resultados.length === 0) {
+    contenedorResultados.innerHTML = crearMensajeCatalogoSinResultados();
+
+    contenedorResultados.hidden = false;
+
+    buscador?.setAttribute("aria-expanded", "true");
+
+    return;
+  }
+
+  contenedorResultados.innerHTML = crearOpcionesCatalogoEpp(
+    resultados,
+    seleccionados,
+  );
+
+  contenedorResultados.hidden = false;
+
+  buscador?.setAttribute("aria-expanded", "true");
 }
 
 /**
@@ -216,24 +281,16 @@ export function registrarEventosCatalogoEpp({
     if (event.key === "ArrowDown") {
       event.preventDefault();
 
-      indiceActivo =
-        indiceActivo < opciones.length - 1
-          ? indiceActivo + 1
-          : 0;
+      indiceActivo = indiceActivo < opciones.length - 1 ? indiceActivo + 1 : 0;
     } else if (event.key === "ArrowUp") {
       event.preventDefault();
 
-      indiceActivo =
-        indiceActivo > 0
-          ? indiceActivo - 1
-          : opciones.length - 1;
+      indiceActivo = indiceActivo > 0 ? indiceActivo - 1 : opciones.length - 1;
     } else if (event.key === "Enter") {
       event.preventDefault();
 
       const opcionSeleccionada =
-        indiceActivo >= 0
-          ? opciones[indiceActivo]
-          : opciones[0];
+        indiceActivo >= 0 ? opciones[indiceActivo] : opciones[0];
 
       opcionSeleccionada?.click();
 
@@ -278,9 +335,7 @@ export function registrarEventosCatalogoEpp({
 
         const card = resultados.closest(".trabajador-card");
 
-        const buscador = card?.querySelector(
-          ".epp-catalogo-buscador",
-        );
+        const buscador = card?.querySelector(".epp-catalogo-buscador");
 
         buscador?.setAttribute("aria-expanded", "false");
       });
@@ -299,11 +354,7 @@ export function registrarEventosCatalogoEpp({
  */
 export function agregarElementosSeleccionados(
   card,
-  {
-    elementosEpp,
-    crearFilaEpp,
-    valoresCalificacion,
-  },
+  { elementosEpp, crearFilaEpp, valoresCalificacion },
 ) {
   if (!card) {
     return;
@@ -322,9 +373,7 @@ export function agregarElementosSeleccionados(
   }
 
   const idsActuales = new Set(
-    Array.from(
-      tbody.querySelectorAll("tr[data-elemento-epp-id]"),
-    )
+    Array.from(tbody.querySelectorAll("tr[data-elemento-epp-id]"))
       .map((fila) => fila.dataset.elementoEppId)
       .filter(Boolean),
   );
@@ -335,8 +384,7 @@ export function agregarElementosSeleccionados(
     }
 
     const elementoCatalogo = elementosEpp.find(
-      (elemento) =>
-        String(elemento.id) === String(elementoEppId),
+      (elemento) => String(elemento.id) === String(elementoEppId),
     );
 
     if (!elementoCatalogo) {
@@ -348,8 +396,7 @@ export function agregarElementosSeleccionados(
       return;
     }
 
-    const nuevoIndex =
-      tbody.querySelectorAll("tr[data-elemento]").length;
+    const nuevoIndex = tbody.querySelectorAll("tr[data-elemento]").length;
 
     tbody.insertAdjacentHTML(
       "beforeend",
@@ -371,9 +418,7 @@ export function agregarElementosSeleccionados(
 
   const panel = card.querySelector(".epp-catalogo-panel");
 
-  const boton = card.querySelector(
-    ".btn-toggle-catalogo-epp",
-  );
+  const boton = card.querySelector(".btn-toggle-catalogo-epp");
 
   if (panel) {
     panel.hidden = true;
@@ -392,11 +437,7 @@ export function agregarElementosSeleccionados(
  * @param {Function} mostrarEstado Función para mostrar mensajes.
  * @returns {void}
  */
-export function eliminarElementoEpp(
-  card,
-  fila,
-  mostrarEstado,
-) {
+export function eliminarElementoEpp(card, fila, mostrarEstado) {
   if (!card || !fila) {
     return;
   }
@@ -410,17 +451,14 @@ export function eliminarElementoEpp(
   const filas = tbody.querySelectorAll("tr[data-elemento]");
 
   if (filas.length <= 1) {
-    mostrarEstado(
-      "Cada trabajador debe tener al menos un elemento EPP.",
-    );
+    mostrarEstado("Cada trabajador debe tener al menos un elemento EPP.");
 
     return;
   }
 
   const filaPlan = fila.nextElementSibling;
 
-  const tieneFilaPlan =
-    filaPlan?.classList.contains("epp-plan-row");
+  const tieneFilaPlan = filaPlan?.classList.contains("epp-plan-row");
 
   if (tieneFilaPlan) {
     filaPlan.remove();

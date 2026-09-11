@@ -882,3 +882,205 @@ test("eliminarElementoEpp elimina el elemento y su plan asociado", async () => {
   assert.equal(planEliminado, true);
   assert.equal(filaEliminada, true);
 });
+
+function crearEscenarioFiltradoCatalogo({
+  idsActuales = [],
+} = {}) {
+  const atributosBuscador = new Map();
+
+  const contenedorResultados = {
+    innerHTML: "",
+    hidden: true,
+  };
+
+  const buscador = {
+    setAttribute(nombre, valor) {
+      atributosBuscador.set(nombre, valor);
+    },
+  };
+
+  const filas = idsActuales.map((id) => ({
+    dataset: {
+      elementoEppId: String(id),
+    },
+  }));
+
+  const card = {
+    querySelector(selector) {
+      if (selector === ".epp-catalogo-resultados") {
+        return contenedorResultados;
+      }
+
+      if (selector === ".epp-catalogo-buscador") {
+        return buscador;
+      }
+
+      return null;
+    },
+
+    querySelectorAll(selector) {
+      if (
+        selector ===
+        ".epp-table tbody tr.epp-fila[data-elemento-epp-id]"
+      ) {
+        return filas;
+      }
+
+      return [];
+    },
+  };
+
+  return {
+    card,
+    buscador,
+    contenedorResultados,
+    atributosBuscador,
+  };
+}
+
+test("filtrarElementosEpp representa los elementos encontrados", async () => {
+  const {
+    filtrarElementosEpp,
+    obtenerSeleccionCatalogoEpp,
+  } = await moduloPromise;
+
+  const escenario = crearEscenarioFiltradoCatalogo({
+    idsActuales: ["10"],
+  });
+
+  const elementosEpp = [
+    {
+      id: 10,
+      nombre: "Casco",
+    },
+    {
+      id: 20,
+      nombre: "Guantes",
+    },
+  ];
+
+  const seleccionados =
+    obtenerSeleccionCatalogoEpp(escenario.card);
+
+  seleccionados.add("20");
+
+  let parametrosFiltrado;
+  let parametrosPlantilla;
+
+  filtrarElementosEpp(
+    escenario.card,
+    "guantes",
+    {
+      elementosEpp,
+
+      filtrarCatalogoEpp(parametros) {
+        parametrosFiltrado = parametros;
+
+        return [elementosEpp[1]];
+      },
+
+      crearMensajeCatalogoSinResultados() {
+        return "<div>Sin resultados</div>";
+      },
+
+      crearOpcionesCatalogoEpp(
+        resultados,
+        seleccion,
+      ) {
+        parametrosPlantilla = {
+          resultados,
+          seleccion,
+        };
+
+        return "<label>Guantes</label>";
+      },
+    },
+  );
+
+  assert.strictEqual(
+    parametrosFiltrado.elementos,
+    elementosEpp,
+  );
+
+  assert.deepEqual(
+    [...parametrosFiltrado.idsActuales],
+    ["10"],
+  );
+
+  assert.equal(
+    parametrosFiltrado.terminoBusqueda,
+    "guantes",
+  );
+
+  assert.deepEqual(parametrosPlantilla.resultados, [
+    elementosEpp[1],
+  ]);
+
+  assert.strictEqual(
+    parametrosPlantilla.seleccion,
+    seleccionados,
+  );
+
+  assert.equal(
+    escenario.contenedorResultados.innerHTML,
+    "<label>Guantes</label>",
+  );
+
+  assert.equal(
+    escenario.contenedorResultados.hidden,
+    false,
+  );
+
+  assert.equal(
+    escenario.atributosBuscador.get("aria-expanded"),
+    "true",
+  );
+});
+
+test("filtrarElementosEpp representa el mensaje sin resultados", async () => {
+  const { filtrarElementosEpp } =
+    await moduloPromise;
+
+  const escenario = crearEscenarioFiltradoCatalogo();
+
+  let opcionesGeneradas = false;
+
+  filtrarElementosEpp(
+    escenario.card,
+    "inexistente",
+    {
+      elementosEpp: [],
+
+      filtrarCatalogoEpp() {
+        return [];
+      },
+
+      crearMensajeCatalogoSinResultados() {
+        return "<div>Sin resultados</div>";
+      },
+
+      crearOpcionesCatalogoEpp() {
+        opcionesGeneradas = true;
+
+        return "";
+      },
+    },
+  );
+
+  assert.equal(opcionesGeneradas, false);
+
+  assert.equal(
+    escenario.contenedorResultados.innerHTML,
+    "<div>Sin resultados</div>",
+  );
+
+  assert.equal(
+    escenario.contenedorResultados.hidden,
+    false,
+  );
+
+  assert.equal(
+    escenario.atributosBuscador.get("aria-expanded"),
+    "true",
+  );
+});
