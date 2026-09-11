@@ -596,3 +596,289 @@ test("el clic fuera del catálogo cierra los resultados abiertos", async () => {
     "false",
   );
 });
+
+function crearEscenarioMutacionCatalogo({
+  idsActuales = [],
+  cantidadFilas = idsActuales.length,
+} = {}) {
+  const inserciones = [];
+
+  const contador = {
+    textContent: "",
+  };
+
+  const botonAgregar = {
+    textContent: "",
+    disabled: false,
+  };
+
+  const panel = {
+    hidden: false,
+  };
+
+  const botonCatalogo = {
+    textContent: "− Ocultar elementos EPP",
+  };
+
+  const filasIds = idsActuales.map((id) => ({
+    dataset: {
+      elementoEppId: String(id),
+    },
+  }));
+
+  const filasEvaluacion = Array.from(
+    { length: cantidadFilas },
+    (_, indice) => ({
+      dataset: {
+        elementoEppId:
+          String(idsActuales[indice] || indice + 1),
+      },
+    }),
+  );
+
+  const tbody = {
+    querySelectorAll(selector) {
+      if (selector === "tr[data-elemento-epp-id]") {
+        return filasIds;
+      }
+
+      if (selector === "tr[data-elemento]") {
+        return filasEvaluacion;
+      }
+
+      return [];
+    },
+
+    insertAdjacentHTML(posicion, html) {
+      inserciones.push({
+        posicion,
+        html,
+      });
+    },
+  };
+
+  const card = {
+    querySelector(selector) {
+      const elementos = {
+        ".epp-table tbody": tbody,
+        ".epp-catalogo-contador": contador,
+        ".epp-catalogo-agregar-seleccionados":
+          botonAgregar,
+        ".epp-catalogo-panel": panel,
+        ".btn-toggle-catalogo-epp": botonCatalogo,
+      };
+
+      return elementos[selector] || null;
+    },
+
+    querySelectorAll(selector) {
+      if (
+        selector ===
+        ".epp-table tbody tr[data-elemento-epp-id]"
+      ) {
+        return filasIds;
+      }
+
+      if (selector === ".epp-catalogo-checkbox") {
+        return [];
+      }
+
+      return [];
+    },
+  };
+
+  return {
+    card,
+    tbody,
+    panel,
+    botonCatalogo,
+    contador,
+    botonAgregar,
+    inserciones,
+  };
+}
+
+test("agregarElementosSeleccionados incorpora las filas seleccionadas", async () => {
+  const {
+    agregarElementosSeleccionados,
+    obtenerSeleccionCatalogoEpp,
+  } = await moduloPromise;
+
+  const escenario = crearEscenarioMutacionCatalogo({
+    idsActuales: ["10"],
+    cantidadFilas: 1,
+  });
+
+  obtenerSeleccionCatalogoEpp(
+    escenario.card,
+  ).add("20");
+
+  const llamadasPlantilla = [];
+
+  agregarElementosSeleccionados(escenario.card, {
+    elementosEpp: [
+      {
+        id: 20,
+        nombre: "Guantes",
+      },
+    ],
+
+    crearFilaEpp(datos, indice, valores) {
+      llamadasPlantilla.push({
+        datos,
+        indice,
+        valores,
+      });
+
+      return "<tr>Guantes</tr>";
+    },
+
+    valoresCalificacion: ["B", "R", "M", "NA"],
+  });
+
+  assert.deepEqual(llamadasPlantilla, [
+    {
+      datos: {
+        elementoEppId: 20,
+        elemento: "Guantes",
+      },
+      indice: 1,
+      valores: ["B", "R", "M", "NA"],
+    },
+  ]);
+
+  assert.deepEqual(escenario.inserciones, [
+    {
+      posicion: "beforeend",
+      html: "<tr>Guantes</tr>",
+    },
+  ]);
+
+  assert.equal(
+    obtenerSeleccionCatalogoEpp(escenario.card).size,
+    0,
+  );
+
+  assert.equal(escenario.panel.hidden, true);
+
+  assert.equal(
+    escenario.botonCatalogo.textContent,
+    "+ Agregar elementos EPP",
+  );
+});
+
+test("agregarElementosSeleccionados evita elementos duplicados", async () => {
+  const {
+    agregarElementosSeleccionados,
+    obtenerSeleccionCatalogoEpp,
+  } = await moduloPromise;
+
+  const escenario = crearEscenarioMutacionCatalogo({
+    idsActuales: ["10"],
+    cantidadFilas: 1,
+  });
+
+  obtenerSeleccionCatalogoEpp(
+    escenario.card,
+  ).add("10");
+
+  agregarElementosSeleccionados(escenario.card, {
+    elementosEpp: [
+      {
+        id: 10,
+        nombre: "Casco",
+      },
+    ],
+
+    crearFilaEpp() {
+      return "<tr>Casco</tr>";
+    },
+
+    valoresCalificacion: ["B", "R", "M", "NA"],
+  });
+
+  assert.equal(escenario.inserciones.length, 0);
+
+  assert.equal(
+    obtenerSeleccionCatalogoEpp(escenario.card).size,
+    0,
+  );
+});
+
+test("eliminarElementoEpp conserva al menos un elemento", async () => {
+  const { eliminarElementoEpp } =
+    await moduloPromise;
+
+  const escenario = crearEscenarioMutacionCatalogo({
+    idsActuales: ["10"],
+    cantidadFilas: 1,
+  });
+
+  let mensaje = "";
+  let filaEliminada = false;
+
+  const fila = {
+    nextElementSibling: null,
+
+    remove() {
+      filaEliminada = true;
+    },
+  };
+
+  eliminarElementoEpp(
+    escenario.card,
+    fila,
+    (valor) => {
+      mensaje = valor;
+    },
+  );
+
+  assert.equal(
+    mensaje,
+    "Cada trabajador debe tener al menos un elemento EPP.",
+  );
+
+  assert.equal(filaEliminada, false);
+});
+
+test("eliminarElementoEpp elimina el elemento y su plan asociado", async () => {
+  const { eliminarElementoEpp } =
+    await moduloPromise;
+
+  const escenario = crearEscenarioMutacionCatalogo({
+    idsActuales: ["10", "20"],
+    cantidadFilas: 2,
+  });
+
+  let filaEliminada = false;
+  let planEliminado = false;
+
+  const filaPlan = {
+    classList: {
+      contains(clase) {
+        return clase === "epp-plan-row";
+      },
+    },
+
+    remove() {
+      planEliminado = true;
+    },
+  };
+
+  const fila = {
+    nextElementSibling: filaPlan,
+
+    remove() {
+      filaEliminada = true;
+    },
+  };
+
+  eliminarElementoEpp(
+    escenario.card,
+    fila,
+    () => {},
+  );
+
+  assert.equal(planEliminado, true);
+  assert.equal(filaEliminada, true);
+});

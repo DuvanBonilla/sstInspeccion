@@ -286,3 +286,147 @@ export function registrarEventosCatalogoEpp({
       });
   });
 }
+
+/**
+ * Agrega a la evaluación los elementos seleccionados del catálogo.
+ *
+ * @param {HTMLElement} card Tarjeta del trabajador.
+ * @param {Object} dependencias Dependencias necesarias para crear las filas.
+ * @param {Array<Object>} dependencias.elementosEpp Catálogo disponible.
+ * @param {Function} dependencias.crearFilaEpp Generador de filas EPP.
+ * @param {Array<string>} dependencias.valoresCalificacion Calificaciones permitidas.
+ * @returns {void}
+ */
+export function agregarElementosSeleccionados(
+  card,
+  {
+    elementosEpp,
+    crearFilaEpp,
+    valoresCalificacion,
+  },
+) {
+  if (!card) {
+    return;
+  }
+
+  const seleccionados = obtenerSeleccionCatalogoEpp(card);
+
+  if (seleccionados.size === 0) {
+    return;
+  }
+
+  const tbody = card.querySelector(".epp-table tbody");
+
+  if (!tbody) {
+    return;
+  }
+
+  const idsActuales = new Set(
+    Array.from(
+      tbody.querySelectorAll("tr[data-elemento-epp-id]"),
+    )
+      .map((fila) => fila.dataset.elementoEppId)
+      .filter(Boolean),
+  );
+
+  seleccionados.forEach((elementoEppId) => {
+    if (idsActuales.has(elementoEppId)) {
+      return;
+    }
+
+    const elementoCatalogo = elementosEpp.find(
+      (elemento) =>
+        String(elemento.id) === String(elementoEppId),
+    );
+
+    if (!elementoCatalogo) {
+      console.warn(
+        "[EPP] Elemento seleccionado no encontrado en catálogo:",
+        elementoEppId,
+      );
+
+      return;
+    }
+
+    const nuevoIndex =
+      tbody.querySelectorAll("tr[data-elemento]").length;
+
+    tbody.insertAdjacentHTML(
+      "beforeend",
+      crearFilaEpp(
+        {
+          elementoEppId: elementoCatalogo.id,
+          elemento: elementoCatalogo.nombre,
+        },
+        nuevoIndex,
+        valoresCalificacion,
+      ),
+    );
+
+    idsActuales.add(String(elementoEppId));
+  });
+
+  limpiarSeleccionCatalogoEpp(card);
+  sincronizarCatalogoEpp(card);
+
+  const panel = card.querySelector(".epp-catalogo-panel");
+
+  const boton = card.querySelector(
+    ".btn-toggle-catalogo-epp",
+  );
+
+  if (panel) {
+    panel.hidden = true;
+  }
+
+  if (boton) {
+    boton.textContent = "+ Agregar elementos EPP";
+  }
+}
+
+/**
+ * Elimina un elemento EPP y su fila de plan asociada.
+ *
+ * @param {HTMLElement} card Tarjeta del trabajador.
+ * @param {HTMLTableRowElement} fila Fila del elemento.
+ * @param {Function} mostrarEstado Función para mostrar mensajes.
+ * @returns {void}
+ */
+export function eliminarElementoEpp(
+  card,
+  fila,
+  mostrarEstado,
+) {
+  if (!card || !fila) {
+    return;
+  }
+
+  const tbody = card.querySelector(".epp-table tbody");
+
+  if (!tbody) {
+    return;
+  }
+
+  const filas = tbody.querySelectorAll("tr[data-elemento]");
+
+  if (filas.length <= 1) {
+    mostrarEstado(
+      "Cada trabajador debe tener al menos un elemento EPP.",
+    );
+
+    return;
+  }
+
+  const filaPlan = fila.nextElementSibling;
+
+  const tieneFilaPlan =
+    filaPlan?.classList.contains("epp-plan-row");
+
+  if (tieneFilaPlan) {
+    filaPlan.remove();
+  }
+
+  fila.remove();
+
+  sincronizarCatalogoEpp(card);
+}

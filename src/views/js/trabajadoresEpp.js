@@ -35,7 +35,9 @@ import { crearFilaEpp } from "./epp/evaluacionEpp.templates.js";
 
 import {
   actualizarSeleccionCatalogoEpp,
+  agregarElementosSeleccionados,
   alternarCatalogoEpp,
+  eliminarElementoEpp,
   limpiarSeleccionCatalogoEpp,
   obtenerSeleccionCatalogoEpp,
   registrarEventosCatalogoEpp,
@@ -401,7 +403,11 @@ export function createTrabajadoresEppManager({
         return;
       }
 
-      agregarElementosSeleccionados(tarjeta);
+      agregarElementosSeleccionados(tarjeta, {
+        elementosEpp: ELEMENTOS_EPP,
+        crearFilaEpp,
+        valoresCalificacion: VALORES_CALIFICACION,
+      });
 
       return;
     }
@@ -464,7 +470,11 @@ export function createTrabajadoresEppManager({
         return;
       }
 
-      eliminarElementoEpp(tarjeta, fila);
+      eliminarElementoEpp(
+        tarjeta,
+        fila,
+        mostrarEstado,
+      );
 
       return;
     }
@@ -797,160 +807,6 @@ export function createTrabajadoresEppManager({
     return Array.from(
       card.querySelectorAll(".epp-table tbody tr[data-elemento]"),
     ).map((fila) => fila.dataset.elemento);
-  }
-
-  /**
-   * Agrega a un trabajador los elementos seleccionados desde el catálogo EPP.
-   *
-   * Evita agregar elementos duplicados, genera las filas de evaluación
-   * correspondientes y actualiza el estado del catálogo después de completar
-   * la operación.
-   *
-   * @param {HTMLElement} card - Tarjeta del trabajador que recibirá los elementos.
-   * @returns {void}
-   */
-
-  function agregarElementosSeleccionados(card) {
-    if (!card) {
-      return;
-    }
-
-    const seleccionados = obtenerSeleccionCatalogoEpp(card);
-
-    if (seleccionados.size === 0) {
-      return;
-    }
-
-    const tbody = card.querySelector(".epp-table tbody");
-
-    if (!tbody) {
-      return;
-    }
-
-    // =====================================================
-    // IDs DE ELEMENTOS EPP YA AGREGADOS
-    // =====================================================
-
-    const idsActuales = new Set(
-      Array.from(tbody.querySelectorAll("tr[data-elemento-epp-id]"))
-        .map((fila) => fila.dataset.elementoEppId)
-        .filter(Boolean),
-    );
-
-    // =====================================================
-    // AGREGAR ELEMENTOS SELECCIONADOS
-    // =====================================================
-
-    seleccionados.forEach((elementoEppId) => {
-      if (idsActuales.has(elementoEppId)) {
-        return;
-      }
-
-      const elementoCatalogo = ELEMENTOS_EPP.find(
-        (elemento) => String(elemento.id) === String(elementoEppId),
-      );
-
-      if (!elementoCatalogo) {
-        console.warn(
-          "[EPP] Elemento seleccionado no encontrado en catálogo:",
-          elementoEppId,
-        );
-
-        return;
-      }
-
-      const nuevoIndex = tbody.querySelectorAll("tr[data-elemento]").length;
-
-      tbody.insertAdjacentHTML(
-        "beforeend",
-        crearFilaEpp(
-          {
-            elementoEppId: elementoCatalogo.id,
-            elemento: elementoCatalogo.nombre,
-          },
-          nuevoIndex,
-          VALORES_CALIFICACION,
-        ),
-      );
-
-      idsActuales.add(String(elementoEppId));
-    });
-
-    // =====================================================
-    // LIMPIAR SELECCIÓN TEMPORAL
-    // =====================================================
-
-    limpiarSeleccionCatalogoEpp(card);
-
-    // =====================================================
-    // ACTUALIZAR ESTADO DEL CATÁLOGO
-    // =====================================================
-
-    sincronizarCatalogoEpp(card);
-
-    // =====================================================
-    // CERRAR PANEL
-    // =====================================================
-
-    const panel = card.querySelector(".epp-catalogo-panel");
-
-    const boton = card.querySelector(".btn-toggle-catalogo-epp");
-
-    if (panel) {
-      panel.hidden = true;
-    }
-
-    if (boton) {
-      boton.textContent = "+ Agregar elementos EPP";
-    }
-  }
-
-  function eliminarElementoEpp(card, fila) {
-    if (!card || !fila) {
-      return;
-    }
-
-    const tbody = card.querySelector(".epp-table tbody");
-
-    if (!tbody) {
-      return;
-    }
-
-    const filas = tbody.querySelectorAll("tr[data-elemento]");
-
-    if (filas.length <= 1) {
-      mostrarEstado("Cada trabajador debe tener al menos un elemento EPP.");
-
-      return;
-    }
-
-    // -------------------------------------------------------
-    // BUSCAR FILA DEL PLAN ASOCIADA AL ELEMENTO
-    // -------------------------------------------------------
-
-    const filaPlan = fila.nextElementSibling;
-
-    const tieneFilaPlan = filaPlan?.classList.contains("epp-plan-row");
-
-    // -------------------------------------------------------
-    // ELIMINAR PLAN DEL ELEMENTO
-    // -------------------------------------------------------
-
-    if (tieneFilaPlan) {
-      filaPlan.remove();
-    }
-
-    // -------------------------------------------------------
-    // ELIMINAR ELEMENTO EPP
-    // -------------------------------------------------------
-
-    fila.remove();
-
-    // -------------------------------------------------------
-    // ACTUALIZAR CATÁLOGO
-    // -------------------------------------------------------
-
-    sincronizarCatalogoEpp(card);
   }
 
   function mostrarEstado(mensaje) {
