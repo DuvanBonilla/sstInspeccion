@@ -3,6 +3,11 @@ import { optimizarImagen } from "./imageOptimizer.js";
 import { consultarCatalogoEpp } from "./epp/catalogoEpp.api.js";
 
 import {
+  clasificarCatalogoEpp,
+  prepararElementosPredeterminadosEpp,
+} from "./epp/catalogoEpp.model.js";
+
+import {
   formatearPesoArchivo,
   validarEvidenciaEpp,
 } from "./epp/evidenciasEpp.js";
@@ -11,8 +16,6 @@ import {
   VALORES_CALIFICACION,
   requierePlanAccion,
 } from "./epp/reglasEpp.js";
-
-let CATALOGO_EPP = [];
 
 let ELEMENTOS_EPP_PREDETERMINADOS = [];
 let ELEMENTOS_EPP_OTROS = [];
@@ -31,17 +34,15 @@ let ELEMENTOS_EPP = [];
  */
 
 export async function cargarCatalogoEpp() {
-  CATALOGO_EPP = await consultarCatalogoEpp();
-
-  ELEMENTOS_EPP_PREDETERMINADOS = CATALOGO_EPP.filter(
-    (elemento) => elemento.predeterminado === true,
+  const catalogo = clasificarCatalogoEpp(
+    await consultarCatalogoEpp(),
   );
 
-  ELEMENTOS_EPP_OTROS = CATALOGO_EPP.filter(
-    (elemento) => elemento.predeterminado !== true,
-  );
+  ELEMENTOS_EPP_PREDETERMINADOS = catalogo.predeterminados;
 
-  ELEMENTOS_EPP = [...CATALOGO_EPP];
+  ELEMENTOS_EPP_OTROS = catalogo.otros;
+
+  ELEMENTOS_EPP = catalogo.todos;
 
   console.log("[EPP] Catálogo cargado:", {
     total: ELEMENTOS_EPP.length,
@@ -51,11 +52,9 @@ export async function cargarCatalogoEpp() {
 }
 
 function obtenerElementosPredeterminados() {
-  return ELEMENTOS_EPP_PREDETERMINADOS.map((elemento) => ({
-    elementoEppId: elemento.id,
-    elemento: elemento.nombre,
-    categoria: elemento.categoria,
-  }));
+  return prepararElementosPredeterminadosEpp(
+    ELEMENTOS_EPP_PREDETERMINADOS,
+  );
 }
 
 function crearPanelCatalogoEpp() {
