@@ -1,5 +1,10 @@
 import { optimizarImagen } from "./imageOptimizer.js";
-import { mostrarAlertaEvidencia } from "./shared.js";
+
+import {
+  formatearPesoArchivo,
+  validarEvidenciaEpp,
+} from "./epp/evidenciasEpp.js";
+
 import {
   VALORES_CALIFICACION,
   requierePlanAccion,
@@ -251,8 +256,6 @@ function filtrarElementosEpp(card, terminoBusqueda = "") {
 
   buscador?.setAttribute("aria-expanded", "true");
 }
-
-
 
 /**
  * Crea el administrador encargado de gestionar los trabajadores de una
@@ -568,11 +571,6 @@ export function createTrabajadoresEppManager({
       return;
     }
 
-    const MAX_TAMANO_MB = 10;
-    const MAX_TAMANO_BYTES = MAX_TAMANO_MB * 1024 * 1024;
-
-    const TIPOS_PERMITIDOS = new Set(["image/jpeg", "image/png", "image/webp"]);
-
     const tarjeta = input.closest(".trabajador-card");
 
     if (!tarjeta) {
@@ -599,35 +597,19 @@ export function createTrabajadoresEppManager({
       return;
     }
 
-    // Validar el formato del archivo
-    if (!TIPOS_PERMITIDOS.has(archivo.type)) {
+    const validacion = validarEvidenciaEpp(archivo);
+
+    if (!validacion.valido) {
       evidencias.delete(trabajadorId);
       input.value = "";
 
       if (estado) {
-        estado.textContent =
-          "⚠ La evidencia debe ser una imagen en formato JPG, PNG o WebP.";
-
+        estado.textContent = validacion.mensaje;
         estado.classList.add("evidencia-estado--error");
       }
 
       return;
     }
-
-    // Validar el tamaño máximo del archivo
-    if (archivo.size > MAX_TAMANO_BYTES) {
-      evidencias.delete(trabajadorId);
-      input.value = "";
-
-      if (estado) {
-        estado.textContent = `⚠ La imagen no puede superar los ${MAX_TAMANO_MB} MB.`;
-
-        estado.classList.add("evidencia-estado--error");
-      }
-
-      return;
-    }
-
     // Bloquear el campo mientras se procesa la imagen
     input.disabled = true;
 
@@ -645,7 +627,7 @@ export function createTrabajadoresEppManager({
       if (estado) {
         estado.classList.remove("evidencia-estado--error");
 
-        estado.textContent = `Evidencia lista · ${formatearPeso(
+        estado.textContent = `Evidencia lista · ${formatearPesoArchivo(
           archivoOptimizado.size,
         )}`;
       }
@@ -676,22 +658,6 @@ export function createTrabajadoresEppManager({
     } finally {
       input.disabled = false;
     }
-  }
-  // FORMATEAR PESO DE ARCHIVO
-  // =======================================================
-
-  function formatearPeso(bytes) {
-    if (!Number.isFinite(bytes)) {
-      return "";
-    }
-
-    // Mostrar KB cuando el archivo sea menor de 1 MB.
-    if (bytes < 1024 * 1024) {
-      return `${(bytes / 1024).toFixed(0)} KB`;
-    }
-
-    // Mostrar MB para archivos mayores.
-    return `${(bytes / 1024 / 1024).toFixed(2)} MB`;
   }
 
   function manejarAccionesTrabajador(event) {
@@ -1477,7 +1443,6 @@ export function createTrabajadoresEppManager({
    * @returns {boolean} `true` si debe registrarse un plan de acción;
    * de lo contrario, `false`.
    */
-
 
   function manejarCambioCalificacionEpp(event) {
     const select = event.target.closest(".epp-calificacion");
