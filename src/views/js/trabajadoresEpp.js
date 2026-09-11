@@ -33,6 +33,14 @@ import { validarTrabajadoresEpp } from "./epp/validators/trabajadoresEpp.validat
 
 import { crearFilaEpp } from "./epp/evaluacionEpp.templates.js";
 
+import {
+  actualizarSeleccionCatalogoEpp,
+  alternarCatalogoEpp,
+  limpiarSeleccionCatalogoEpp,
+  obtenerSeleccionCatalogoEpp,
+  sincronizarCatalogoEpp,
+} from "./epp/controllers/catalogoEppUi.controller.js";
+
 let ELEMENTOS_EPP_PREDETERMINADOS = [];
 let ELEMENTOS_EPP_OTROS = [];
 let ELEMENTOS_EPP = [];
@@ -67,14 +75,6 @@ export async function cargarCatalogoEpp() {
 
 function obtenerElementosPredeterminados() {
   return prepararElementosPredeterminadosEpp(ELEMENTOS_EPP_PREDETERMINADOS);
-}
-
-function obtenerSeleccionCatalogoEpp(card) {
-  if (!card._eppSeleccionados) {
-    card._eppSeleccionados = new Set();
-  }
-
-  return card._eppSeleccionados;
 }
 
 function filtrarElementosEpp(card, terminoBusqueda = "") {
@@ -969,94 +969,6 @@ export function createTrabajadoresEppManager({
     return Array.from(
       card.querySelectorAll(".epp-table tbody tr[data-elemento]"),
     ).map((fila) => fila.dataset.elemento);
-  }
-
-  function limpiarSeleccionCatalogoEpp(card) {
-    if (!card) {
-      return;
-    }
-
-    card._eppSeleccionados = new Set();
-
-    actualizarSeleccionCatalogoEpp(card);
-  }
-
-  function actualizarSeleccionCatalogoEpp(card) {
-    if (!card) {
-      return;
-    }
-
-    const seleccionados = obtenerSeleccionCatalogoEpp(card);
-
-    const cantidad = seleccionados.size;
-
-    const contador = card.querySelector(".epp-catalogo-contador");
-
-    const botonAgregar = card.querySelector(
-      ".epp-catalogo-agregar-seleccionados",
-    );
-
-    if (contador) {
-      contador.textContent =
-        cantidad === 1
-          ? "1 elemento seleccionado"
-          : `${cantidad} elementos seleccionados`;
-    }
-
-    if (botonAgregar) {
-      botonAgregar.textContent = `Agregar seleccionados (${cantidad})`;
-      botonAgregar.disabled = cantidad === 0;
-    }
-  }
-
-  function sincronizarCatalogoEpp(card) {
-    const idsActuales = new Set(
-      Array.from(
-        card.querySelectorAll(".epp-table tbody tr[data-elemento-epp-id]"),
-      )
-        .map((fila) => fila.dataset.elementoEppId)
-        .filter(Boolean),
-    );
-
-    const checks = card.querySelectorAll(".epp-catalogo-checkbox");
-
-    checks.forEach((check) => {
-      const elementoEppId = check.dataset.elementoEppId;
-
-      const yaAgregado = elementoEppId && idsActuales.has(elementoEppId);
-
-      check.checked = false;
-      check.disabled = Boolean(yaAgregado);
-
-      const opcion = check.closest(".epp-catalogo-opcion");
-
-      if (opcion) {
-        opcion.classList.toggle(
-          "epp-catalogo-opcion-agregada",
-          Boolean(yaAgregado),
-        );
-      }
-    });
-  }
-
-  function alternarCatalogoEpp(card, boton) {
-    const panel = card.querySelector(".epp-catalogo-panel");
-
-    if (!panel) {
-      return;
-    }
-
-    const abrir = panel.hidden;
-
-    if (abrir) {
-      sincronizarCatalogoEpp(card);
-    }
-
-    panel.hidden = !abrir;
-
-    boton.textContent = abrir
-      ? "− Ocultar elementos EPP"
-      : "+ Agregar elementos EPP";
   }
 
   /**
