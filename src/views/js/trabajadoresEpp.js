@@ -5,6 +5,11 @@ import { consultarCatalogoEpp } from "./epp/catalogoEpp.api.js";
 import { crearContenidoTrabajador } from "./epp/trabajadorEpp.template.js";
 
 import {
+  leerTrabajadoresEpp,
+  obtenerEvidenciasTrabajadoresEpp,
+} from "./epp/trabajadoresEpp.reader.js";
+
+import {
   clasificarCatalogoEpp,
   prepararElementosPredeterminadosEpp,
 } from "./epp/catalogoEpp.model.js";
@@ -16,10 +21,7 @@ import {
   validarEvidenciaEpp,
 } from "./epp/evidenciasEpp.js";
 
-import {
-  VALORES_CALIFICACION,
-  requierePlanAccion,
-} from "./epp/reglasEpp.js";
+import { VALORES_CALIFICACION, requierePlanAccion } from "./epp/reglasEpp.js";
 
 import {
   crearMensajeCatalogoSinResultados,
@@ -46,9 +48,7 @@ let ELEMENTOS_EPP = [];
  */
 
 export async function cargarCatalogoEpp() {
-  const catalogo = clasificarCatalogoEpp(
-    await consultarCatalogoEpp(),
-  );
+  const catalogo = clasificarCatalogoEpp(await consultarCatalogoEpp());
 
   ELEMENTOS_EPP_PREDETERMINADOS = catalogo.predeterminados;
 
@@ -64,9 +64,7 @@ export async function cargarCatalogoEpp() {
 }
 
 function obtenerElementosPredeterminados() {
-  return prepararElementosPredeterminadosEpp(
-    ELEMENTOS_EPP_PREDETERMINADOS,
-  );
+  return prepararElementosPredeterminadosEpp(ELEMENTOS_EPP_PREDETERMINADOS);
 }
 
 function obtenerSeleccionCatalogoEpp(card) {
@@ -1610,118 +1608,13 @@ export function createTrabajadoresEppManager({
    */
 
   function leer() {
-    const tarjetas = container.querySelectorAll(".trabajador-card");
-
-    const trabajadores = Array.from(tarjetas).map(
-      (tarjeta, trabajadorIndex) => {
-        // =================================================
-        // ELEMENTOS EPP
-        // =================================================
-
-        const filasEpp = tarjeta.querySelectorAll("tr[data-elemento]");
-
-        const elementos = Array.from(filasEpp).map((fila, elementoIndex) => {
-          const elementoEppId = fila.dataset.elementoEppId
-            ? Number(fila.dataset.elementoEppId)
-            : null;
-          // ---------------------------------------------
-          // DATOS DEL ELEMENTO EPP
-          // ---------------------------------------------
-
-          const elemento =
-            fila.dataset.elemento ||
-            fila.querySelector(".epp-nombre")?.textContent?.trim() ||
-            "";
-
-          const condicion =
-            fila.querySelector('[data-role="condicion"]')?.value || "";
-
-          const uso = fila.querySelector('[data-role="uso"]')?.value || "";
-
-          // ---------------------------------------------
-          // FILA DEL PLAN ASOCIADA AL ELEMENTO
-          // ---------------------------------------------
-
-          const filaPlan = fila.nextElementSibling;
-
-          const esFilaPlan = filaPlan?.classList.contains("epp-plan-row");
-
-          // ---------------------------------------------
-          // PLAN DE ACCIÓN DEL ELEMENTO
-          // ---------------------------------------------
-
-          const planAccion = esFilaPlan
-            ? filaPlan
-                .querySelector('[data-role="epp-plan-accion"]')
-                ?.value.trim() || ""
-            : "";
-
-          // ---------------------------------------------
-          // FECHA DEL PLAN DEL ELEMENTO
-          // ---------------------------------------------
-
-          const fechaPlanAccion = esFilaPlan
-            ? filaPlan.querySelector('[data-role="epp-fecha-plan"]')?.value ||
-              ""
-            : "";
-
-          // ---------------------------------------------
-          // RETORNAR ELEMENTO
-          // ---------------------------------------------
-
-          return {
-            indice: elementoIndex,
-            elementoEppId,
-            elemento,
-            condicion,
-            uso,
-            planAccion,
-            fechaPlanAccion,
-          };
-        });
-
-        // =================================================
-        // RETORNAR TRABAJADOR
-        // =================================================
-
-        return {
-          trabajadorId: Number(tarjeta.dataset.trabajadorId),
-
-          indice: trabajadorIndex,
-
-          nombre:
-            tarjeta.querySelector('[data-role="nombre"]')?.value.trim() || "",
-
-          codigo:
-            tarjeta.querySelector('[data-role="codigo"]')?.value.trim() || "",
-
-          cargo:
-            tarjeta.querySelector('[data-role="cargo"]')?.value.trim() || "",
-
-          elementos,
-
-          observaciones:
-            tarjeta
-              .querySelector('[data-role="observaciones"]')
-              ?.value.trim() || "",
-        };
-      },
-    );
-
-    // =====================================================
-    // LOG TEMPORAL DE PRUEBA
-    // =====================================================
+    const trabajadores = leerTrabajadoresEpp(container);
 
     console.log("📋 Trabajadores EPP:", trabajadores);
-
     console.log(
       "📋 Trabajadores EPP JSON:",
       JSON.stringify(trabajadores, null, 2),
     );
-
-    // =====================================================
-    // RETORNAR TRABAJADORES
-    // =====================================================
 
     return trabajadores;
   }
@@ -1741,27 +1634,7 @@ export function createTrabajadoresEppManager({
    */
 
   function obtenerEvidencias() {
-    const tarjetas = container.querySelectorAll(".trabajador-card");
-
-    return Array.from(tarjetas)
-      .map((tarjeta, indice) => {
-        const trabajadorId = Number(tarjeta.dataset.trabajadorId);
-
-        const archivo = evidencias.get(trabajadorId);
-
-        if (!archivo) {
-          return null;
-        }
-
-        return {
-          trabajadorId,
-
-          indice,
-
-          archivo,
-        };
-      })
-      .filter(Boolean);
+    return obtenerEvidenciasTrabajadoresEpp(container, evidencias);
   }
 
   // =======================================================
