@@ -468,3 +468,112 @@ export function eliminarElementoEpp(card, fila, mostrarEstado) {
 
   sincronizarCatalogoEpp(card);
 }
+
+/**
+ * Atiende las acciones por clic relacionadas con el catálogo EPP.
+ *
+ * @param {Event} event Evento delegado desde el contenedor.
+ * @param {Object} dependencias Dependencias de la gestión del catálogo.
+ * @param {Array<Object>} dependencias.elementosEpp Catálogo disponible.
+ * @param {Function} dependencias.crearFilaEpp Generador de filas EPP.
+ * @param {Array<string>} dependencias.valoresCalificacion Calificaciones permitidas.
+ * @param {Function} dependencias.mostrarEstado Función para mostrar mensajes.
+ * @param {Function} dependencias.programar Función utilizada para diferir tareas.
+ * @returns {boolean} `true` cuando la acción pertenecía al catálogo.
+ */
+export function manejarAccionCatalogoEpp(
+  event,
+  {
+    elementosEpp,
+    crearFilaEpp,
+    valoresCalificacion,
+    mostrarEstado,
+    programar = setTimeout,
+  },
+) {
+  const botonCatalogo = event.target.closest(".btn-toggle-catalogo-epp");
+
+  if (botonCatalogo) {
+    event.stopPropagation();
+
+    const tarjeta = botonCatalogo.closest(".trabajador-card");
+
+    if (tarjeta) {
+      alternarCatalogoEpp(tarjeta, botonCatalogo);
+    }
+
+    return true;
+  }
+
+  const botonAgregarSeleccionados = event.target.closest(
+    ".epp-catalogo-agregar-seleccionados",
+  );
+
+  if (botonAgregarSeleccionados) {
+    event.stopPropagation();
+
+    const tarjeta = botonAgregarSeleccionados.closest(".trabajador-card");
+
+    if (tarjeta) {
+      agregarElementosSeleccionados(tarjeta, {
+        elementosEpp,
+        crearFilaEpp,
+        valoresCalificacion,
+      });
+    }
+
+    return true;
+  }
+
+  const opcionEpp = event.target.closest(".epp-combobox-opcion");
+
+  if (opcionEpp) {
+    event.stopPropagation();
+
+    const tarjeta = opcionEpp.closest(".trabajador-card");
+
+    if (!tarjeta) {
+      return true;
+    }
+
+    const checkbox = opcionEpp.querySelector(".epp-catalogo-checkbox");
+
+    if (!checkbox) {
+      return true;
+    }
+
+    programar(() => {
+      const seleccionados = obtenerSeleccionCatalogoEpp(tarjeta);
+
+      const elementoEppId = String(checkbox.dataset.elementoEppId);
+
+      if (checkbox.checked) {
+        seleccionados.add(elementoEppId);
+      } else {
+        seleccionados.delete(elementoEppId);
+      }
+
+      actualizarSeleccionCatalogoEpp(tarjeta);
+    }, 0);
+
+    return true;
+  }
+
+  const botonEliminarEpp = event.target.closest('[data-action="eliminar-epp"]');
+
+  if (botonEliminarEpp) {
+    event.stopPropagation();
+
+    const tarjeta = botonEliminarEpp.closest(".trabajador-card");
+
+    const fila = botonEliminarEpp.closest("tr[data-elemento]");
+
+    if (tarjeta && fila) {
+      eliminarElementoEpp(tarjeta, fila, mostrarEstado);
+    }
+
+    return true;
+  }
+
+  return false;
+}

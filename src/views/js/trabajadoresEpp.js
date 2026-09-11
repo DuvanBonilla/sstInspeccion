@@ -34,12 +34,8 @@ import { validarTrabajadoresEpp } from "./epp/validators/trabajadoresEpp.validat
 import { crearFilaEpp } from "./epp/evaluacionEpp.templates.js";
 
 import {
-  actualizarSeleccionCatalogoEpp,
-  agregarElementosSeleccionados,
-  alternarCatalogoEpp,
-  eliminarElementoEpp,
   filtrarElementosEpp as filtrarElementosCatalogoEpp,
-  obtenerSeleccionCatalogoEpp,
+  manejarAccionCatalogoEpp,
   registrarEventosCatalogoEpp,
 } from "./epp/controllers/catalogoEppUi.controller.js";
 
@@ -318,112 +314,14 @@ export function createTrabajadoresEppManager({
   }
 
   function manejarAccionesTrabajador(event) {
-    // -------------------------------------------------------
-    // ABRIR / CERRAR CATÁLOGO EPP
-    // -------------------------------------------------------
+    const accionCatalogoManejada = manejarAccionCatalogoEpp(event, {
+      elementosEpp: ELEMENTOS_EPP,
+      crearFilaEpp,
+      valoresCalificacion: VALORES_CALIFICACION,
+      mostrarEstado,
+    });
 
-    const botonCatalogo = event.target.closest(".btn-toggle-catalogo-epp");
-
-    if (botonCatalogo) {
-      event.stopPropagation();
-
-      const tarjeta = botonCatalogo.closest(".trabajador-card");
-
-      if (!tarjeta) {
-        return;
-      }
-
-      alternarCatalogoEpp(tarjeta, botonCatalogo);
-
-      return;
-    }
-
-    // -------------------------------------------------------
-    // AGREGAR EPP DESDE EL BUSCADOR
-    // -------------------------------------------------------
-
-    const botonAgregarSeleccionados = event.target.closest(
-      ".epp-catalogo-agregar-seleccionados",
-    );
-
-    if (botonAgregarSeleccionados) {
-      event.stopPropagation();
-
-      const tarjeta = botonAgregarSeleccionados.closest(".trabajador-card");
-
-      if (!tarjeta) {
-        return;
-      }
-
-      agregarElementosSeleccionados(tarjeta, {
-        elementosEpp: ELEMENTOS_EPP,
-        crearFilaEpp,
-        valoresCalificacion: VALORES_CALIFICACION,
-      });
-
-      return;
-    }
-    // -------------------------------------------------------
-    // SELECCIONAR / DESELECCIONAR EPP DEL CATÁLOGO
-    // -------------------------------------------------------
-
-    const opcionEpp = event.target.closest(".epp-combobox-opcion");
-
-    if (opcionEpp) {
-      event.stopPropagation();
-
-      const tarjeta = opcionEpp.closest(".trabajador-card");
-
-      if (!tarjeta) {
-        return;
-      }
-
-      const checkbox = opcionEpp.querySelector(".epp-catalogo-checkbox");
-
-      if (!checkbox) {
-        return;
-      }
-
-      // Esperar a que el checkbox termine de cambiar su estado
-      // antes de actualizar el contador.
-      setTimeout(() => {
-        const seleccionados = obtenerSeleccionCatalogoEpp(tarjeta);
-
-        const elementoEppId = String(checkbox.dataset.elementoEppId);
-
-        if (checkbox.checked) {
-          seleccionados.add(elementoEppId);
-        } else {
-          seleccionados.delete(elementoEppId);
-        }
-
-        actualizarSeleccionCatalogoEpp(tarjeta);
-      }, 0);
-
-      return;
-    }
-
-    // -------------------------------------------------------
-    // ELIMINAR ELEMENTO EPP
-    // -------------------------------------------------------
-
-    const botonEliminarEpp = event.target.closest(
-      '[data-action="eliminar-epp"]',
-    );
-
-    if (botonEliminarEpp) {
-      event.stopPropagation();
-
-      const tarjeta = botonEliminarEpp.closest(".trabajador-card");
-
-      const fila = botonEliminarEpp.closest("tr[data-elemento]");
-
-      if (!tarjeta || !fila) {
-        return;
-      }
-
-      eliminarElementoEpp(tarjeta, fila, mostrarEstado);
-
+    if (accionCatalogoManejada) {
       return;
     }
 
