@@ -7,6 +7,8 @@ import {
   prepararElementosPredeterminadosEpp,
 } from "./epp/catalogoEpp.model.js";
 
+import { filtrarCatalogoEpp } from "./epp/catalogoEpp.search.js";
+
 import {
   formatearPesoArchivo,
   validarEvidenciaEpp,
@@ -143,20 +145,6 @@ function filtrarElementosEpp(card, terminoBusqueda = "") {
     return;
   }
 
-  // =====================================================
-  // NORMALIZAR TEXTO DE BÚSQUEDA
-  // =====================================================
-
-  const termino = String(terminoBusqueda || "")
-    .trim()
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "");
-
-  // =====================================================
-  // IDs QUE EL TRABAJADOR YA TIENE AGREGADOS
-  // =====================================================
-
   const idsActuales = new Set(
     Array.from(
       card.querySelectorAll(
@@ -167,29 +155,12 @@ function filtrarElementosEpp(card, terminoBusqueda = "") {
       .filter(Boolean),
   );
 
-  // =====================================================
-  // FILTRAR CATÁLOGO
-  // =====================================================
   const seleccionados = obtenerSeleccionCatalogoEpp(card);
-  const resultados = ELEMENTOS_EPP.filter((elemento) => {
-    const elementoEppId = String(elemento.id);
 
-    // No mostrar elementos ya agregados al trabajador.
-    if (idsActuales.has(elementoEppId)) {
-      return false;
-    }
-
-    // Si el buscador está vacío, mostrar todos los disponibles.
-    if (!termino) {
-      return true;
-    }
-
-    const nombreNormalizado = String(elemento.nombre || "")
-      .toLowerCase()
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "");
-
-    return nombreNormalizado.includes(termino);
+  const resultados = filtrarCatalogoEpp({
+    elementos: ELEMENTOS_EPP,
+    idsActuales,
+    terminoBusqueda,
   });
 
   // =====================================================
