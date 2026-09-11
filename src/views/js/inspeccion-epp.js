@@ -26,6 +26,8 @@ import {
   cargarCatalogoEpp,
 } from "./trabajadoresEpp.js";
 
+import { esNovedadEpp } from "./epp/reglasEpp.js";
+
 let pasoActual = 1;
 
 const TOTAL_PASOS = 3;
@@ -361,12 +363,8 @@ function construirResumenTrabajadores() {
   let trabajadoresConNovedades = 0;
 
   trabajadores.forEach((trabajador) => {
-    const novedades = trabajador.elementos.filter(
-      (elemento) =>
-        elemento.condicion === "M" ||
-        elemento.condicion === "R" ||
-        elemento.uso === "M" ||
-        elemento.uso === "R",
+    const novedades = trabajador.elementos.filter((elemento) =>
+      esNovedadEpp(elemento.condicion, elemento.uso),
     );
 
     if (novedades.length > 0) {

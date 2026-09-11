@@ -1,5 +1,9 @@
 import { optimizarImagen } from "./imageOptimizer.js";
 import { mostrarAlertaEvidencia } from "./shared.js";
+import {
+  VALORES_CALIFICACION,
+  requierePlanAccion,
+} from "./epp/reglasEpp.js";
 
 let CATALOGO_EPP = [];
 
@@ -248,7 +252,7 @@ function filtrarElementosEpp(card, terminoBusqueda = "") {
   buscador?.setAttribute("aria-expanded", "true");
 }
 
-const VALORES_CALIFICACION = ["B", "R", "M", "NA"];
+
 
 /**
  * Crea el administrador encargado de gestionar los trabajadores de una
@@ -1474,13 +1478,6 @@ export function createTrabajadoresEppManager({
    * de lo contrario, `false`.
    */
 
-  function requierePlanAccion(condicion, uso) {
-    if (!condicion || !uso) {
-      return false;
-    }
-
-    return condicion === "R" || condicion === "M" || uso === "R" || uso === "M";
-  }
 
   function manejarCambioCalificacionEpp(event) {
     const select = event.target.closest(".epp-calificacion");
