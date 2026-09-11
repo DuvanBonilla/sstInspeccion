@@ -25,6 +25,8 @@ import {
   crearPanelCatalogoEpp,
 } from "./epp/catalogoEpp.templates.js";
 
+import { crearFilaEpp } from "./epp/evaluacionEpp.templates.js";
+
 let ELEMENTOS_EPP_PREDETERMINADOS = [];
 let ELEMENTOS_EPP_OTROS = [];
 let ELEMENTOS_EPP = [];
@@ -1033,11 +1035,11 @@ export function createTrabajadoresEppManager({
 
             <tbody>
 
-              ${obtenerElementosPredeterminados()
-                .map((elemento, elementoIndex) =>
-                  crearFilaEpp(elemento, elementoIndex),
-                )
-                .join("")}
+${obtenerElementosPredeterminados()
+  .map((elemento, elementoIndex) =>
+    crearFilaEpp(elemento, elementoIndex, VALORES_CALIFICACION),
+  )
+  .join("")}
 
             </tbody>
 
@@ -1185,136 +1187,6 @@ export function createTrabajadoresEppManager({
     return card;
   }
 
-  function crearFilaEpp(datosElemento, elementoIndex) {
-    const elementoEppId = datosElemento?.elementoEppId || "";
-    const elemento = datosElemento?.elemento || "";
-
-    return `
-    <tr
-      data-epp-index="${elementoIndex}"
-      data-elemento-epp-id="${elementoEppId}"
-      data-elemento="${elemento}"
-      class="epp-fila"
-    >
-
-      <td class="epp-nombre">
-        ${elemento}
-      </td>
-
-      <td>
-        ${crearSelectCalificacion("condicion")}
-      </td>
-
-      <td>
-        ${crearSelectCalificacion("uso")}
-      </td>
-
-      <td class="epp-accion">
-        <button
-          type="button"
-          class="btn-eliminar-epp"
-          data-action="eliminar-epp"
-          title="Eliminar elemento EPP"
-          aria-label="Eliminar ${elemento}"
-        >
-          <svg
-            class="icon-trash-epp"
-            viewBox="0 0 24 24"
-            aria-hidden="true"
-          >
-            <path
-              d="M3 6h18"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-            />
-
-            <path
-              d="M8 6V4h8v2"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            />
-
-            <path
-              d="M19 6l-1 14H6L5 6"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            />
-
-            <path
-              d="M10 11v5M14 11v5"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-            />
-          </svg>
-        </button>
-      </td>
-
-    </tr>
-
-    <tr
-      class="epp-plan-row"
-      data-elemento-epp-id="${elementoEppId}"
-      data-plan-elemento="${elemento}"
-      hidden
-    >
-      <td colspan="4">
-
-        <div class="epp-plan-container">
-
-          <div class="field epp-plan-field">
-            <label>
-              Plan de acción
-              <span class="required">*</span>
-            </label>
-
-            <textarea
-              data-role="epp-plan-accion"
-              rows="2"
-              placeholder="Describa la acción correctiva para ${elemento}."
-            ></textarea>
-          </div>
-
-          <div class="field epp-fecha-field">
-            <label>
-              Fecha límite
-              <span class="required">*</span>
-            </label>
-
-            <input
-              type="date"
-              data-role="epp-fecha-plan"
-            >
-          </div>
-
-        </div>
-
-      </td>
-    </tr>
-  `;
-  }
-
-  /**
-   * Determina si la evaluación de un elemento EPP requiere un plan de acción.
-   *
-   * El plan es obligatorio cuando la condición o el uso del elemento recibe
-   * una calificación regular (`R`) o mala (`M`).
-   *
-   * @param {string} condicion - Calificación correspondiente a la condición del EPP.
-   * @param {string} uso - Calificación correspondiente al uso del EPP.
-   * @returns {boolean} `true` si debe registrarse un plan de acción;
-   * de lo contrario, `false`.
-   */
-
   function manejarCambioCalificacionEpp(event) {
     const select = event.target.closest(".epp-calificacion");
 
@@ -1399,36 +1271,6 @@ export function createTrabajadoresEppManager({
         fecha.classList.remove("campo-error");
       }
     }
-  }
-
-  // SELECT M / R / B / NA
-  // =======================================================
-
-  function crearSelectCalificacion(tipo) {
-    return `
-      <select
-        class="epp-calificacion"
-        data-role="${tipo}"
-      >
-
-        <option
-          value=""
-          selected
-          disabled
-        >
-          —
-        </option>
-
-        ${VALORES_CALIFICACION.map(
-          (valor) => `
-              <option value="${valor}">
-                ${valor}
-              </option>
-            `,
-        ).join("")}
-
-      </select>
-    `;
   }
 
   function obtenerElementosActuales(card) {
@@ -1595,6 +1437,7 @@ export function createTrabajadoresEppManager({
             elemento: elementoCatalogo.nombre,
           },
           nuevoIndex,
+          VALORES_CALIFICACION,
         ),
       );
 
