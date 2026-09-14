@@ -36,7 +36,7 @@ import { enviarInspeccionEpp as enviarInspeccionEppApi } from "./epp/inspeccionE
 
 import { inicializarEnvioEpp } from "./epp/controllers/envioInspeccionEpp.controller.js";
 
-let pasoActual = 1;
+import { crearNavegacionInspeccionEpp } from "./epp/controllers/navegacionInspeccionEpp.controller.js";
 
 const TOTAL_PASOS = 3;
 
@@ -76,13 +76,38 @@ const camposInformacionGeneral = [
   "cargoResponsable",
 ];
 
+const navegacion =
+  crearNavegacionInspeccionEpp({
+    documento: document,
+
+    ventana: window,
+
+    totalPasos: TOTAL_PASOS,
+
+    validarInformacionGeneral,
+
+    validarTrabajadores() {
+      return trabajadoresManager.validar().valido;
+    },
+
+    prepararResumen() {
+      construirResumenGeneral();
+
+      construirResumenTrabajadores();
+
+      verificarInspeccionEpp();
+
+      verificarFormDataEpp();
+    },
+  });
+
 document.addEventListener("DOMContentLoaded", async () => {
   try {
     await cargarCatalogoEpp();
 
     inicializarFecha();
 
-    inicializarNavegacion();
+    navegacion.inicializar();;
 
     inicializarSalida();
 
@@ -96,7 +121,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       enviarInspeccionEpp,
     });
 
-    actualizarPaso();
+    navegacion.navegacion.actualizarPaso();
 
     inicializarAccionesModalExito();
   } catch (error) {
@@ -134,97 +159,6 @@ function inicializarAccionesModalExito() {
 
   btnNueva?.addEventListener("click", () => {
     window.location.href = "/inspeccion-epp";
-  });
-}
-
-function inicializarNavegacion() {
-  document.querySelectorAll("[data-step-target]").forEach((boton) => {
-    boton.addEventListener("click", () => {
-      const destino = Number(boton.dataset.stepTarget);
-
-      if (!destino) {
-        return;
-      }
-
-      navegarAPaso(destino);
-    });
-  });
-}
-
-/**
- * Controla la navegación entre las etapas del formulario de inspección EPP.
- *
- * Antes de avanzar, valida la información correspondiente al paso actual.
- * Cuando se accede al resumen, actualiza la información general, el detalle
- * de los trabajadores y las verificaciones previas al envío.
- *
- * @param {number} destino - Número del paso al que se desea navegar.
- * @returns {void}
- */
-
-function navegarAPaso(destino) {
-  if (destino < 1 || destino > TOTAL_PASOS) {
-    return;
-  }
-
-  if (pasoActual === 1 && destino > pasoActual) {
-    const formularioValido = validarInformacionGeneral();
-
-    if (!formularioValido) {
-      return;
-    }
-  }
-
-  if (pasoActual === 2 && destino > pasoActual) {
-    const resultado = trabajadoresManager.validar();
-
-    if (!resultado.valido) {
-      return;
-    }
-  }
-
-  if (destino === 3) {
-    construirResumenGeneral();
-
-    construirResumenTrabajadores();
-
-    verificarInspeccionEpp();
-
-    verificarFormDataEpp();
-  }
-
-  pasoActual = destino;
-
-  actualizarPaso();
-}
-
-/**
- * Actualiza visualmente el paso activo del formulario.
- *
- * Muestra el panel correspondiente, actualiza los indicadores de progreso
- * y desplaza la página hacia la parte superior.
- *
- * @returns {void}
- */
-
-function actualizarPaso() {
-  document.querySelectorAll("[data-step-panel]").forEach((panel) => {
-    const numeroPaso = Number(panel.dataset.stepPanel);
-
-    panel.classList.toggle("hidden", numeroPaso !== pasoActual);
-  });
-
-  document.querySelectorAll("[data-step-indicator]").forEach((indicador) => {
-    const numeroPaso = Number(indicador.dataset.stepIndicator);
-
-    indicador.classList.toggle("active", numeroPaso === pasoActual);
-
-    indicador.classList.toggle("completed", numeroPaso < pasoActual);
-  });
-
-  window.scrollTo({
-    top: 0,
-    behavior: "smooth",
   });
 }
 
