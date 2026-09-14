@@ -40,6 +40,28 @@ import { crearNavegacionInspeccionEpp } from "./epp/controllers/navegacionInspec
 
 import { crearValidacionInformacionGeneralEpp } from "./epp/controllers/validacionInformacionGeneralEpp.controller.js";
 
+import { crearResumenTrabajadorHtml } from "./epp/resumenEpp.template.js";
+
+import { crearResumenInspeccionEpp } from "./epp/controllers/resumenInspeccionEpp.controller.js";
+
+const resumenInspeccion = crearResumenInspeccionEpp({
+  documento: document,
+
+  obtenerValor,
+
+  leerTrabajadores() {
+    return trabajadoresManager.leer();
+  },
+
+  obtenerEvidencias() {
+    return trabajadoresManager.obtenerEvidencias();
+  },
+
+  esNovedadEpp,
+
+  crearResumenTrabajadorHtml,
+});
+
 const TOTAL_PASOS = 3;
 
 const fecha = document.getElementById("fecha");
@@ -86,9 +108,7 @@ const navegacion = crearNavegacionInspeccionEpp({
   },
 
   prepararResumen() {
-    construirResumenGeneral();
-
-    construirResumenTrabajadores();
+    resumenInspeccion.construir();
 
     verificarInspeccionEpp();
 
@@ -157,226 +177,6 @@ function inicializarAccionesModalExito() {
   btnNueva?.addEventListener("click", () => {
     window.location.href = "/inspeccion-epp";
   });
-}
-
-/**
- * Valida que los campos obligatorios de la información general estén completos.
- *
- * Marca visualmente los campos vacíos y posiciona el foco sobre el primer
- * campo que no cumple la validación.
- *
- * @returns {boolean} `true` si todos los campos requeridos tienen información;
- * de lo contrario, `false`.
- */
-
-function construirResumenGeneral() {
-  asignarTextoResumen("resumen-fecha", obtenerValor("fecha"));
-
-  asignarTextoResumen("resumen-sede", obtenerValor("sedeOperacion"));
-
-  asignarTextoResumen("resumen-area", obtenerValor("areaTrabajo"));
-
-  asignarTextoResumen("resumen-jefe", obtenerValor("jefeResponsable"));
-
-  asignarTextoResumen("resumen-cargo-jefe", obtenerValor("cargoJefe"));
-
-  asignarTextoResumen(
-    "resumen-responsable",
-    obtenerValor("responsableInspeccion"),
-  );
-
-  asignarTextoResumen(
-    "resumen-cargo-responsable",
-    obtenerValor("cargoResponsable"),
-  );
-}
-
-/**
- * Construye el resumen visual de los trabajadores incluidos en la inspección.
- *
- * Por cada trabajador muestra sus datos principales, la cantidad de elementos
- * EPP evaluados, las novedades encontradas, el estado del plan de acción y la
- * existencia de evidencia. También calcula los totales generales del resumen.
- *
- * @returns {void}
- */
-
-function construirResumenTrabajadores() {
-  const trabajadores = trabajadoresManager.leer();
-
-  const evidencias = trabajadoresManager.obtenerEvidencias();
-
-  // -------------------------------------------------------
-  // CONTENEDOR
-  // -------------------------------------------------------
-
-  const container = document.getElementById("resumen-trabajadores");
-
-  if (!container) {
-    return;
-  }
-
-  // -------------------------------------------------------
-  // LIMPIAR RESUMEN ANTERIOR
-  // -------------------------------------------------------
-
-  container.innerHTML = "";
-
-  // -------------------------------------------------------
-  // CALCULAR TOTALES
-  // -------------------------------------------------------
-
-  let totalNovedades = 0;
-
-  let trabajadoresConNovedades = 0;
-
-  trabajadores.forEach((trabajador) => {
-    const novedades = trabajador.elementos.filter((elemento) =>
-      esNovedadEpp(elemento.condicion, elemento.uso),
-    );
-
-    if (novedades.length > 0) {
-      trabajadoresConNovedades++;
-    }
-
-    totalNovedades += novedades.length;
-
-    // ---------------------------------------------------
-    // BUSCAR EVIDENCIA
-    // ---------------------------------------------------
-
-    const tieneEvidencia = evidencias.some(
-      (evidencia) => evidencia.trabajadorId === trabajador.trabajadorId,
-    );
-
-    // ---------------------------------------------------
-    // CREAR TARJETA RESUMEN
-    // ---------------------------------------------------
-
-    const card = document.createElement("div");
-
-    card.className = "resumen-trabajador-card";
-
-    card.innerHTML = `
-
-        <div class="resumen-trabajador-header">
-
-          <div>
-
-            <strong>
-              Trabajador ${trabajador.indice + 1}
-            </strong>
-
-            <span class="resumen-trabajador-nombre">
-              ${escaparHtml(trabajador.nombre)}
-            </span>
-
-          </div>
-
-          <span class="resumen-estado">
-            Completo
-          </span>
-
-        </div>
-
-
-        <div class="resumen-trabajador-grid">
-
-          <div>
-            <span class="resumen-label">
-              Código
-            </span>
-
-            <strong>
-              ${escaparHtml(trabajador.codigo)}
-            </strong>
-          </div>
-
-
-          <div>
-            <span class="resumen-label">
-              Labor / Cargo
-            </span>
-
-            <strong>
-              ${escaparHtml(trabajador.cargo)}
-            </strong>
-          </div>
-
-
-          <div>
-            <span class="resumen-label">
-              EPP evaluados
-            </span>
-
-            <strong>
-              ${trabajador.elementos.length}
-            </strong>
-          </div>
-
-
-          <div>
-            <span class="resumen-label">
-              Novedades
-            </span>
-
-            <strong>
-              ${novedades.length}
-            </strong>
-          </div>
-
-
-          <div>
-            <span class="resumen-label">
-              Plan de acción
-            </span>
-
-            <strong>
-              ${trabajador.planAccion ? "Registrado" : "No requerido"}
-            </strong>
-          </div>
-
-
-          <div>
-            <span class="resumen-label">
-              Evidencia
-            </span>
-
-            <strong>
-              ${tieneEvidencia ? "Registrada" : "Sin evidencia"}
-            </strong>
-          </div>
-
-        </div>
-
-      `;
-
-    container.appendChild(card);
-  });
-
-  // -------------------------------------------------------
-  // TOTALES GENERALES
-  // -------------------------------------------------------
-
-  asignarTextoResumen("resumen-total-trabajadores", trabajadores.length);
-
-  asignarTextoResumen("resumen-trabajadores-novedad", trabajadoresConNovedades);
-
-  asignarTextoResumen(
-    "resumen-trabajadores-sin-novedad",
-    trabajadores.length - trabajadoresConNovedades,
-  );
-
-  asignarTextoResumen("resumen-total-novedades", totalNovedades);
-}
-
-function escaparHtml(valor) {
-  return String(valor ?? "")
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
 }
 
 /**
@@ -509,16 +309,6 @@ function obtenerValor(id) {
   }
 
   return elemento.value.trim();
-}
-
-function asignarTextoResumen(id, valor) {
-  const elemento = document.getElementById(id);
-
-  if (!elemento) {
-    return;
-  }
-
-  elemento.textContent = valor || "—";
 }
 
 function inicializarSalida() {
