@@ -44,6 +44,8 @@ import { crearResumenTrabajadorHtml } from "./epp/resumenEpp.template.js";
 
 import { crearResumenInspeccionEpp } from "./epp/controllers/resumenInspeccionEpp.controller.js";
 
+import { crearSalidaInspeccionEppController } from "./epp/controllers/salidaInspeccionEpp.controller.js";
+
 const resumenInspeccion = crearResumenInspeccionEpp({
   documento: document,
 
@@ -66,15 +68,10 @@ const TOTAL_PASOS = 3;
 
 const fecha = document.getElementById("fecha");
 
-const btnSalir = document.getElementById("btn-salir");
-
-const btnLogoInicio = document.getElementById("btn-logo-inicio");
-
-const cancelarModal = document.getElementById("cancelar-modal");
-
-const btnCancelarNo = document.getElementById("btn-cancelar-no");
-
-const btnCancelarSi = document.getElementById("btn-cancelar-si");
+const salidaInspeccion = crearSalidaInspeccionEppController({
+  documento: document,
+  ventana: window,
+});
 
 const trabajadoresManager = createTrabajadoresEppManager({
   container: document.getElementById("trabajadores-container"),
@@ -122,7 +119,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     navegacion.inicializar();
 
-    inicializarSalida();
+    salidaInspeccion.inicializar();
 
     trabajadoresManager.init();
 
@@ -135,8 +132,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
 
     navegacion.actualizarPaso();
-
-    inicializarAccionesModalExito();
   } catch (error) {
     console.error("[EPP] Error inicializando inspección:", error);
 
@@ -159,19 +154,6 @@ function inicializarFecha() {
   // como consecuencia de una acción del usuario.
   fecha.addEventListener("click", () => {
     abrirSelectorFecha(fecha);
-  });
-}
-
-function inicializarAccionesModalExito() {
-  const btnInicio = document.getElementById("btn-modal-inicio");
-  const btnNueva = document.getElementById("btn-modal-nueva");
-
-  btnInicio?.addEventListener("click", () => {
-    window.location.href = "/";
-  });
-
-  btnNueva?.addEventListener("click", () => {
-    window.location.href = "/inspeccion-epp";
   });
 }
 
@@ -274,45 +256,4 @@ function obtenerValor(id) {
   }
 
   return elemento.value.trim();
-}
-
-function inicializarSalida() {
-  // Botón de salida de la esquina superior derecha
-  btnSalir?.addEventListener("click", abrirModalSalida);
-
-  // Logo de Cargoban de la esquina superior izquierda
-  btnLogoInicio?.addEventListener("click", abrirModalSalida);
-
-  // Continuar trabajando
-  btnCancelarNo?.addEventListener("click", cerrarModalSalida);
-
-  // Confirmar salida
-  btnCancelarSi?.addEventListener("click", () => {
-    window.location.href = "/";
-  });
-
-  // Cerrar pulsando fuera del cuadro
-  cancelarModal?.addEventListener("click", (event) => {
-    if (event.target === cancelarModal) {
-      cerrarModalSalida();
-    }
-  });
-
-  // Cerrar con ESC
-  document.addEventListener("keydown", (event) => {
-    if (
-      event.key === "Escape" &&
-      cancelarModal?.classList.contains("visible")
-    ) {
-      cerrarModalSalida();
-    }
-  });
-}
-
-function abrirModalSalida() {
-  cancelarModal?.classList.add("visible");
-}
-
-function cerrarModalSalida() {
-  cancelarModal?.classList.remove("visible");
 }
