@@ -49,6 +49,7 @@ import { optimizarImagen } from "./imageOptimizer.js";
 import { generarInspeccionId } from "./sst/inspeccionSst.id.js";
 import { construirInspeccionSst } from "./sst/inspeccionSst.payload.js";
 import { construirFormDataSst } from "./sst/inspeccionSst.formData.js";
+import { enviarInspeccionSst as enviarInspeccionSstApi } from "./sst/inspeccionSst.api.js";
 
 document.addEventListener("DOMContentLoaded", () => {
   let currentStep = 1;
@@ -550,28 +551,14 @@ document.addEventListener("DOMContentLoaded", () => {
     try {
       const inspeccionId = generarInspeccionId();
 
-      // Guarda la inspección (Neon + evidencias en OneDrive). El Inspector queda
-      // aprobado automáticamente; se devuelven los links de Jefe y COPASST.
-      // El PDF y el correo ya no se envían aquí: se generan solo cuando las 3 aprobaciones están completas.
       const formData = await construirFormData(inspeccionId);
 
-      const respuestaOneDrive = await fetch("/enviar-onedrive-extintor", {
-        method: "POST",
-        body: formData,
+      const datosOneDrive = await enviarInspeccionSstApi(formData, {
+        leerRespuesta,
       });
-      const datosOneDrive = await leerRespuesta(respuestaOneDrive);
-
-      if (!respuestaOneDrive.ok) {
-        const errMsg = Array.isArray(datosOneDrive.errores)
-          ? datosOneDrive.errores.join(" | ")
-          : "Error al guardar la inspección";
-        document.getElementById("envio-error-texto").textContent = errMsg;
-        mostrarModal("error");
-        btnEnviar.disabled = false;
-        return;
-      }
 
       const numInspeccion = datosOneDrive.numInspeccion ?? null;
+
       mostrarModal("exito", inspeccionId, numInspeccion, datosOneDrive.links);
     } catch (err) {
       console.error("===== ERROR COMPLETO =====");
