@@ -50,6 +50,7 @@ import { generarInspeccionId } from "./sst/inspeccionSst.id.js";
 import { construirInspeccionSst } from "./sst/inspeccionSst.payload.js";
 import { construirFormDataSst } from "./sst/inspeccionSst.formData.js";
 import { enviarInspeccionSst as enviarInspeccionSstApi } from "./sst/inspeccionSst.api.js";
+import { crearEnvioInspeccionSstController } from "./sst/controllers/envioInspeccionSst.controller.js";
 
 document.addEventListener("DOMContentLoaded", () => {
   let currentStep = 1;
@@ -518,61 +519,29 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("cancelar-modal").classList.remove("visible");
   }
 
-  /**
-   * Envía la inspección SST al backend.
-   *
-   * Valida el paso final, comprueba que exista al menos un elemento, genera el
-   * identificador, construye el FormData y realiza la solicitud de registro.
-   *
-   * Durante el proceso controla el estado del botón y muestra el modal de carga,
-   * éxito o error. Cuando el registro finaliza correctamente, presenta el número
-   * de inspección y los enlaces de aprobación recibidos.
-   *
-   * @async
-   * @returns {Promise<void>} Finaliza cuando la solicitud ha sido procesada.
-   */
+  const envioInspeccion = crearEnvioInspeccionSstController({
+    documento: document,
 
-  async function enviarOneDrive() {
-    if (!validarPaso(currentStep)) return;
+    obtenerPasoActual() {
+      return currentStep;
+    },
 
-    if (!tieneItemsInspeccion()) {
-      const msg = document.getElementById("msg");
-      if (msg) {
-        msg.textContent =
-          "No puede enviar este informe porque no se ha registrado ningún ítem en la inspección.";
-      }
-      return;
-    }
+    validarPaso,
 
-    const btnEnviar = document.getElementById("btn-onedrive");
-    btnEnviar.disabled = true;
-    mostrarModal("cargando");
+    tieneItemsInspeccion,
 
-    try {
-      const inspeccionId = generarInspeccionId();
+    generarInspeccionId,
 
-      const formData = await construirFormData(inspeccionId);
+    construirFormData,
 
-      const datosOneDrive = await enviarInspeccionSstApi(formData, {
+    enviarInspeccion(formData) {
+      return enviarInspeccionSstApi(formData, {
         leerRespuesta,
       });
+    },
 
-      const numInspeccion = datosOneDrive.numInspeccion ?? null;
-
-      mostrarModal("exito", inspeccionId, numInspeccion, datosOneDrive.links);
-    } catch (err) {
-      console.error("===== ERROR COMPLETO =====");
-      console.error(err);
-      console.error(err.stack);
-
-      document.getElementById("envio-error-texto").textContent =
-        err?.message || "No fue posible completar el envío.";
-
-      mostrarModal("error");
-
-      btnEnviar.disabled = false;
-    }
-  }
+    mostrarModal,
+  });
 
   extintoresManager.agregar();
   camillasManager.agregar();
@@ -630,9 +599,7 @@ document.addEventListener("DOMContentLoaded", () => {
   document
     .getElementById("fecha")
     ?.addEventListener("click", abrirSelectorFecha);
-  document
-    .getElementById("btn-onedrive")
-    .addEventListener("click", enviarOneDrive);
+  envioInspeccion.inicializar();
 
   // Botón "Omitir sección" / "Incluir sección" (toggle, solo visible en sede Urabá).
   SECCIONES_OMITIBLES.forEach((seccion) => {
