@@ -134,7 +134,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       enviarInspeccionEpp,
     });
 
-    navegacion.navegacion.actualizarPaso();
+    navegacion.actualizarPaso();
 
     inicializarAccionesModalExito();
   } catch (error) {
