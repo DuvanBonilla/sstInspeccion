@@ -50,6 +50,11 @@ import {
   crearTrabajador as crearTarjetaTrabajador,
 } from "./epp/controllers/trabajadoresEppUi.controller.js";
 
+import {
+  mostrarEstadoValidacion,
+  presentarResultadoValidacion,
+} from "./epp/controllers/validacionTrabajadoresEppUi.controller.js";
+
 let ELEMENTOS_EPP_PREDETERMINADOS = [];
 let ELEMENTOS_EPP_OTROS = [];
 let ELEMENTOS_EPP = [];
@@ -423,13 +428,7 @@ export function createTrabajadoresEppManager({
   }
 
   function mostrarEstado(mensaje) {
-    if (!estadoElement) {
-      return;
-    }
-
-    estadoElement.textContent = mensaje;
-
-    estadoElement.classList.remove("hidden");
+    mostrarEstadoValidacion(estadoElement, mensaje);
   }
 
   /**
@@ -463,116 +462,14 @@ export function createTrabajadoresEppManager({
       fechaInspeccion: inputFechaInspeccion?.value || "",
     });
 
-    if (resultado.valido) {
-      ocultarEstado();
-
-      return {
-        valido: true,
-        mensaje: "",
-      };
-    }
-
-    if (resultado.campo === "cantidad") {
-      mostrarEstado("Debe generar al menos un trabajador antes de continuar.");
-
-      cantidadInput?.focus();
-
-      return {
-        valido: false,
-        mensaje: resultado.mensaje,
-      };
-    }
-
-    const tarjeta = tarjetas[resultado.trabajadorIndex];
-
-    if (!tarjeta) {
-      mostrarEstado(resultado.mensaje);
-
-      return {
-        valido: false,
-        mensaje: resultado.mensaje,
-      };
-    }
-
-    abrirTarjetaTrabajador(container, tarjeta);
-
-    if (resultado.campo === "elementos") {
-      mostrarEstado(resultado.mensaje);
-
-      return {
-        valido: false,
-        mensaje: resultado.mensaje,
-      };
-    }
-
-    const selectoresTrabajador = {
-      nombre: '[data-role="nombre"]',
-      codigo: '[data-role="codigo"]',
-      cargo: '[data-role="cargo"]',
-      evidencia: '[data-role="evidencia"]',
-    };
-
-    let elemento = null;
-
-    if (selectoresTrabajador[resultado.campo]) {
-      elemento = tarjeta.querySelector(selectoresTrabajador[resultado.campo]);
-    } else {
-      const filasEpp = tarjeta.querySelectorAll("tr[data-elemento]");
-
-      const fila = filasEpp[resultado.elementoIndex];
-
-      if (resultado.campo === "condicion") {
-        elemento = fila?.querySelector('[data-role="condicion"]');
-      }
-
-      if (resultado.campo === "uso") {
-        elemento = fila?.querySelector('[data-role="uso"]');
-      }
-
-      const filaPlan = fila?.nextElementSibling;
-
-      if (resultado.campo === "planAccion") {
-        elemento = filaPlan?.querySelector('[data-role="epp-plan-accion"]');
-      }
-
-      if (resultado.campo === "fechaPlanAccion") {
-        elemento = filaPlan?.querySelector('[data-role="epp-fecha-plan"]');
-      }
-    }
-
-    return marcarError(elemento, resultado.mensaje);
-  }
-
-  function marcarError(elemento, mensaje) {
-    mostrarEstado(mensaje);
-
-    if (elemento) {
-      elemento.classList.add("campo-error");
-
-      elemento.scrollIntoView({
-        behavior: "smooth",
-        block: "center",
-      });
-
-      setTimeout(() => {
-        elemento.focus();
-      }, 300);
-    }
-
-    return {
-      valido: false,
-      mensaje,
-    };
-  }
-
-  function ocultarEstado() {
-    if (!estadoElement) {
-      return;
-    }
-
-    estadoElement.textContent = "";
-
-    estadoElement.classList.add("hidden");
+    return presentarResultadoValidacion({
+      resultado,
+      tarjetas,
+      container,
+      cantidadInput,
+      estadoElement,
+      abrirTrabajador: abrirTarjetaTrabajador,
+    });
   }
 
   /**
