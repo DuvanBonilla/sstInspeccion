@@ -48,6 +48,7 @@ import { createBotiquinesManager } from "/js/botiquines.js";
 import { optimizarImagen } from "./imageOptimizer.js";
 import { generarInspeccionId } from "./sst/inspeccionSst.id.js";
 import { construirInspeccionSst } from "./sst/inspeccionSst.payload.js";
+import { construirFormDataSst } from "./sst/inspeccionSst.formData.js";
 
 document.addEventListener("DOMContentLoaded", () => {
   let currentStep = 1;
@@ -498,136 +499,14 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  /**
-   * Optimiza una imagen y la incorpora al FormData.
-   *
-   * También agrega la fecha de última modificación del archivo optimizado para
-   * que el backend pueda utilizarla cuando la imagen no contenga fecha EXIF.
-   *
-   * @async
-   * @param {FormData} fd FormData que recibirá el archivo.
-   * @param {string} fieldName Nombre del campo de la evidencia.
-   * @param {File} file Imagen original seleccionada por el usuario.
-   * @returns {Promise<void>} Finaliza cuando la imagen y su fecha fueron agregadas.
-   */
-
-  async function anexarArchivoOptimizado(fd, fieldName, file) {
-    const archivo = await optimizarImagen(file);
-
-    fd.append(fieldName, archivo);
-
-    fd.append(`${fieldName}-lastmod`, archivo.lastModified);
-  }
-
-  /**
-   * Optimiza y agrega las evidencias de un elemento al FormData.
-   *
-   * Recorre los campos de archivo asociados a una tarjeta y construye sus nombres
-   * utilizando el tipo de evidencia, índice del elemento e índice de la fotografía.
-   *
-   * @async
-   * @param {FormData} fd FormData que recibirá las evidencias.
-   * @param {HTMLElement} card Tarjeta del elemento inspeccionado.
-   * @param {string} rolePrefix Identificador de los campos de evidencia.
-   * @param {string} fieldPrefix Prefijo enviado al backend.
-   * @param {number} itemIndex Índice del elemento dentro de su sección.
-   * @returns {Promise<void>} Finaliza cuando todas las evidencias fueron agregadas.
-   */
-
-  async function anexarEvidenciasMultiples(
-    fd,
-    card,
-    rolePrefix,
-    fieldPrefix,
-    itemIndex,
-  ) {
-    for (const [photoIndex, input] of card
-      .querySelectorAll(`[data-role="${rolePrefix}-input"]`)
-      .entries()) {
-      const file = input.files[0];
-
-      if (!file) {
-        continue;
-      }
-
-      await anexarArchivoOptimizado(
-        fd,
-        `${fieldPrefix}-${itemIndex}-${photoIndex}`,
-        file,
-      );
-    }
-  }
-
-  /**
-   * Construye el FormData utilizado para enviar la inspección SST.
-   *
-   * Serializa el payload de la inspección y agrega las evidencias optimizadas de
-   * extintores, camillas, señalizaciones, equipos tecnológicos y botiquines.
-   *
-   * @async
-   * @param {string} inspeccionId Identificador único de la inspección.
-   * @param {number|null} [numInspeccion] Número consecutivo de la inspección.
-   * @returns {Promise<FormData>} Datos y evidencias preparados para el backend.
-   */
-
   async function construirFormData(inspeccionId, numInspeccion) {
-    const fd = new FormData();
-
-    const p = payload(inspeccionId);
-
-    if (numInspeccion != null) {
-      p.numInspeccion = numInspeccion;
-    }
-
-    fd.append("payload", JSON.stringify(p));
-
-    const configuraciones = [
-      {
-        selector: "[data-extintor-index]",
-        role: "evidencia",
-        field: "evidencia",
-      },
-      {
-        selector: "[data-camilla-index]",
-        role: "camilla-evidencia",
-        field: "evidencia-camilla",
-      },
-      {
-        selector: "[data-senalizacion-index]",
-        role: "senalizacion-evidencia",
-        field: "evidencia-senalizacion",
-      },
-      {
-        selector: "[data-equipo-tecnologico-index]",
-        role: "equipo-tecnologico-evidencia",
-        field: "equipo-tecnologico-evidencia",
-      },
-      {
-        selector: "[data-botiquin-index]",
-        role: "botiquin-evidencia",
-        field: "botiquin-evidencia",
-      },
-    ];
-
-    for (const configuracion of configuraciones) {
-      const cards = document.querySelectorAll(configuracion.selector);
-
-      let index = 0;
-
-      for (const card of cards) {
-        await anexarEvidenciasMultiples(
-          fd,
-          card,
-          configuracion.role,
-          configuracion.field,
-          index,
-        );
-
-        index++;
-      }
-    }
-
-    return fd;
+    return construirFormDataSst({
+      inspeccionId,
+      numInspeccion,
+      construirPayload: payload,
+      documento: document,
+      optimizarImagen,
+    });
   }
 
   function mostrarModalCancelar() {
