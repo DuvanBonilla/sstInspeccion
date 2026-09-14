@@ -7,7 +7,7 @@
   - Valida cada paso antes de avanzar: marca en rojo los campos vacíos obligatorios
     y muestra un mensaje de error en pantalla.
   - El paso 7 (Finalizar) muestra un resumen de la info general y qué secciones
-    se hicieron o no (renderResumenFinal()), y es donde vive el botón "Enviar".
+    se hicieron o no, y es donde vive el botón "Enviar".
   - Al enviar, recopila todos los datos del DOM en un objeto JSON (función payload())
     y los empaqueta junto con los archivos de evidencia en un FormData.
   - Hace una sola llamada al servidor:
@@ -55,6 +55,7 @@ import { crearNavegacionInspeccionSst } from "./sst/controllers/navegacionInspec
 import { crearValidacionPasosSst } from "./sst/controllers/validacionPasosSst.controller.js";
 import { crearSeccionesOmitidasSstController } from "./sst/controllers/seccionesOmitidasSst.controller.js";
 import { crearResumenInspeccionSstController } from "./sst/controllers/resumenInspeccionSst.controller.js";
+import { crearSalidaInspeccionSstController } from "./sst/controllers/salidaInspeccionSst.controller.js";
 
 document.addEventListener("DOMContentLoaded", () => {
   const totalSteps = 7;
@@ -134,6 +135,11 @@ document.addEventListener("DOMContentLoaded", () => {
     prepararResumen: resumenInspeccion.renderizar,
   });
 
+  const salidaInspeccion = crearSalidaInspeccionSstController({
+    documento: document,
+    ventana: window,
+  });
+
   /**
    * Construye el objeto completo de una inspección SST.
    *
@@ -178,14 +184,6 @@ document.addEventListener("DOMContentLoaded", () => {
       documento: document,
       optimizarImagen,
     });
-  }
-
-  function mostrarModalCancelar() {
-    document.getElementById("cancelar-modal").classList.add("visible");
-  }
-
-  function cerrarModalCancelar() {
-    document.getElementById("cancelar-modal").classList.remove("visible");
   }
 
   const envioInspeccion = crearEnvioInspeccionSstController({
@@ -247,7 +245,7 @@ document.addEventListener("DOMContentLoaded", () => {
     .getElementById("fecha")
     ?.addEventListener("click", abrirSelectorFecha);
   envioInspeccion.inicializar();
-
+  salidaInspeccion.inicializar();
   document
     .getElementById("btn-modal-nueva")
     .addEventListener("click", () => location.reload());
@@ -260,15 +258,5 @@ document.addEventListener("DOMContentLoaded", () => {
 
   document.querySelectorAll(".envio-link-copy").forEach((boton) => {
     boton.addEventListener("click", () => copiarLink(boton));
-  });
-
-  document
-    .getElementById("btn-salir")
-    .addEventListener("click", mostrarModalCancelar);
-  document
-    .getElementById("btn-cancelar-no")
-    .addEventListener("click", cerrarModalCancelar);
-  document.getElementById("btn-cancelar-si").addEventListener("click", () => {
-    location.href = "/";
   });
 });
