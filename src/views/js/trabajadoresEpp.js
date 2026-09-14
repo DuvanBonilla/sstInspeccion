@@ -43,6 +43,13 @@ import { manejarCambioCalificacionEpp as manejarCambioEvaluacionEpp } from "./ep
 
 import { manejarCambioEvidencia as manejarCambioEvidenciaTrabajador } from "./epp/controllers/evidenciasTrabajadorEpp.controller.js";
 
+import {
+  abrirTrabajador as abrirTarjetaTrabajador,
+  actualizarNombreResumen as actualizarResumenTrabajador,
+  actualizarNumeracion as numerarTrabajadores,
+  crearTrabajador as crearTarjetaTrabajador,
+} from "./epp/controllers/trabajadoresEppUi.controller.js";
+
 let ELEMENTOS_EPP_PREDETERMINADOS = [];
 let ELEMENTOS_EPP_OTROS = [];
 let ELEMENTOS_EPP = [];
@@ -200,26 +207,8 @@ export function createTrabajadoresEppManager({
     // =======================================================
 
     if (elemento.matches('[data-role="nombre"]')) {
-      actualizarNombreResumen(elemento);
+      actualizarResumenTrabajador(elemento);
     }
-  }
-
-  function actualizarNombreResumen(input) {
-    const tarjeta = input.closest(".trabajador-card");
-
-    if (!tarjeta) {
-      return;
-    }
-
-    const resumen = tarjeta.querySelector('[data-role="nombreResumen"]');
-
-    if (!resumen) {
-      return;
-    }
-
-    const nombre = input.value.trim();
-
-    resumen.textContent = nombre || "Sin diligenciar";
   }
 
   /**
@@ -288,7 +277,7 @@ export function createTrabajadoresEppManager({
     }
 
     if (tarjeta.classList.contains("trabajador-collapsed")) {
-      abrirTrabajador(tarjeta);
+      abrirTarjetaTrabajador(container, tarjeta);
 
       return;
     }
@@ -351,11 +340,11 @@ export function createTrabajadoresEppManager({
     // ACTUALIZAR NUMERACIÓN
     // -------------------------------------------------------
 
-    actualizarNumeracion();
+    cantidadActual = numerarTrabajadores(container);
 
     const primerTrabajador = container.querySelector(".trabajador-card");
 
-    abrirTrabajador(primerTrabajador);
+    abrirTarjetaTrabajador(container, primerTrabajador);
     // -------------------------------------------------------
     // MOSTRAR ESTADO
     // -------------------------------------------------------
@@ -382,15 +371,21 @@ export function createTrabajadoresEppManager({
 
     const trabajadorId = siguienteTrabajadorId++;
 
-    const trabajador = crearTrabajador(trabajadorId);
+    const trabajador = crearTarjetaTrabajador({
+      documento: document,
+      trabajadorId,
+      elementosPredeterminados: obtenerElementosPredeterminados(),
+      crearFilaEpp,
+      valoresCalificacion: VALORES_CALIFICACION,
+      crearPanelCatalogoEpp,
+      crearContenidoTrabajador,
+    });
 
     container.appendChild(trabajador);
 
-    cantidadActual++;
+    cantidadActual = numerarTrabajadores(container);
 
-    actualizarNumeracion();
-
-    abrirTrabajador(trabajador);
+    abrirTarjetaTrabajador(container, trabajador);
   }
 
   function eliminarTrabajador(tarjeta) {
@@ -410,9 +405,7 @@ export function createTrabajadoresEppManager({
     // Eliminar únicamente esta tarjeta.
     tarjeta.remove();
 
-    cantidadActual--;
-
-    actualizarNumeracion();
+    cantidadActual = numerarTrabajadores(container);
 
     mostrarEstado(
       `${cantidadActual} ${
@@ -421,70 +414,6 @@ export function createTrabajadoresEppManager({
           : "trabajadores registrados"
       }.`,
     );
-  }
-
-  function actualizarNumeracion() {
-    const tarjetas = container.querySelectorAll(".trabajador-card");
-
-    tarjetas.forEach((tarjeta, indice) => {
-      const numero = tarjeta.querySelector('[data-role="numeroTrabajador"]');
-
-      if (numero) {
-        numero.textContent = `Trabajador ${indice + 1}`;
-      }
-    });
-
-    cantidadActual = tarjetas.length;
-  }
-
-  function abrirTrabajador(tarjeta) {
-    if (!tarjeta) {
-      return;
-    }
-
-    const tarjetas = container.querySelectorAll(".trabajador-card");
-
-    tarjetas.forEach((item) => {
-      const icono = item.querySelector('[data-role="toggleIcon"]');
-
-      if (item === tarjeta) {
-        item.classList.remove("trabajador-collapsed");
-
-        if (icono) {
-          icono.textContent = "▼";
-        }
-      } else {
-        item.classList.add("trabajador-collapsed");
-
-        if (icono) {
-          icono.textContent = "▶";
-        }
-      }
-    });
-  }
-
-  function crearTrabajador(trabajadorId) {
-    const card = document.createElement("article");
-
-    card.className = "trabajador-card";
-    card.dataset.trabajadorId = trabajadorId;
-
-    const filasEppHtml = obtenerElementosPredeterminados()
-      .map((elemento, elementoIndex) =>
-        crearFilaEpp(elemento, elementoIndex, VALORES_CALIFICACION),
-      )
-      .join("");
-
-    const panelCatalogoHtml = crearPanelCatalogoEpp();
-
-    card.innerHTML = crearContenidoTrabajador({
-      filasEppHtml,
-      panelCatalogoHtml,
-    });
-
-    card.classList.add("trabajador-collapsed");
-
-    return card;
   }
 
   function obtenerElementosActuales(card) {
@@ -565,7 +494,7 @@ export function createTrabajadoresEppManager({
       };
     }
 
-    abrirTrabajador(tarjeta);
+    abrirTarjetaTrabajador(container, tarjeta);
 
     if (resultado.campo === "elementos") {
       mostrarEstado(resultado.mensaje);
