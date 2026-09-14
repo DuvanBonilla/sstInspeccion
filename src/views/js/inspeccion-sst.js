@@ -52,6 +52,7 @@ import { construirFormDataSst } from "./sst/inspeccionSst.formData.js";
 import { enviarInspeccionSst as enviarInspeccionSstApi } from "./sst/inspeccionSst.api.js";
 import { crearEnvioInspeccionSstController } from "./sst/controllers/envioInspeccionSst.controller.js";
 import { crearNavegacionInspeccionSst } from "./sst/controllers/navegacionInspeccionSst.controller.js";
+import { crearValidacionPasosSst } from "./sst/controllers/validacionPasosSst.controller.js";
 
 document.addEventListener("DOMContentLoaded", () => {
   const totalSteps = 7;
@@ -192,134 +193,19 @@ document.addEventListener("DOMContentLoaded", () => {
     actualizarTextoOmitir(seccion);
   }
 
-  /**
-   * Valida los campos obligatorios del paso actual del formulario.
-   *
-   * Ignora los campos deshabilitados, los configurados como opcionales y las
-   * secciones que fueron omitidas. Cuando encuentra datos incompletos, marca
-   * los campos, muestra un mensaje y dirige la vista al primer error.
-   *
-   * En el paso final también impide enviar una inspección sin elementos.
-   *
-   * @param {number} numeroPaso Número del paso que será validado.
-   * @returns {boolean} `true` cuando el paso puede continuar.
-   */
-
-  function validarPaso(numeroPaso) {
-    const panel = document.querySelector(`[data-step-panel="${numeroPaso}"]`);
-    if (!panel) return true;
-
-    const seccion = SECCIONES_OMITIBLES.find((s) => s.step === numeroPaso);
-    if (seccion && seccionesOmitidas[seccion.key]) {
-      panel
-        .querySelectorAll(".campo-error")
-        .forEach((el) => el.classList.remove("campo-error"));
-      panel.querySelector(".validation-summary")?.remove();
-      return true;
-    }
-
-    panel
-      .querySelectorAll(".campo-error")
-      .forEach((el) => el.classList.remove("campo-error"));
-
-    let valido = true;
-
-    panel
-      .querySelectorAll(
-        'input[type="text"], input[type="number"], input[type="date"], input[type="month"], input[type="file"]',
-      )
-      .forEach((input) => {
-        if (input.disabled) return;
-        if (esCampoOpcional(input)) return;
-        if (!input.value.trim()) {
-          input.classList.add("campo-error");
-          valido = false;
-        }
-      });
-
-    panel.querySelectorAll("select").forEach((select) => {
-      if (select.disabled) return;
-      if (!select.value) {
-        select.classList.add("campo-error");
-        valido = false;
-      }
-    });
-
-    const summaryExistente = panel.querySelector(".validation-summary");
-    if (!valido) {
-      if (!summaryExistente) {
-        const msg = document.createElement("div");
-        msg.className = "validation-summary";
-        msg.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495ZM10 5a.75.75 0 0 1 .75.75v3.5a.75.75 0 0 1-1.5 0v-3.5A.75.75 0 0 1 10 5Zm0 9a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z" clip-rule="evenodd"/></svg><span>Completa los campos marcados en rojo para continuar.</span>`;
-        const stepActions = panel.querySelector(".step-actions");
-        const stepActionsRight = stepActions?.querySelector(
-          ".step-actions-right",
-        );
-        const navPrimary = (stepActionsRight ?? stepActions)?.querySelector(
-          ".nav-primary",
-        );
-        const parent = stepActionsRight ?? stepActions;
-        if (navPrimary && parent) {
-          parent.insertBefore(msg, navPrimary);
-        } else if (stepActions) {
-          stepActions.appendChild(msg);
-        } else {
-          panel.appendChild(msg);
-        }
-      }
-      const primerError = panel.querySelector(".campo-error");
-      if (primerError) {
-        primerError.scrollIntoView({ behavior: "smooth", block: "center" });
-      }
-    } else if (summaryExistente) {
-      summaryExistente.remove();
-    }
-
-    if (numeroPaso === 7 && !tieneItemsInspeccion()) {
-      const msg = document.getElementById("msg");
-      if (msg) {
-        msg.textContent =
-          "No puede enviar este informe porque no se ha registrado ningún ítem en la inspección.";
-      }
-      const btnEnviar = document.getElementById("btn-onedrive");
-      if (btnEnviar) {
-        btnEnviar.disabled = true;
-      }
-      return false;
-    }
-
-    return valido;
-  }
-
-  function actualizarBotonSiguienteGeneral() {
-    const panel = document.querySelector('[data-step-panel="1"]');
-
-    const botonSiguiente = panel?.querySelector('[data-step-target="2"]');
-
-    if (!panel || !botonSiguiente) {
-      return;
-    }
-
-    const camposTexto = panel.querySelectorAll(
-      'input[type="text"], input[type="date"], select',
-    );
-
-    const camposCompletos = Array.from(camposTexto).every((campo) => {
-      if (campo.disabled || esCampoOpcional(campo)) {
-        return true;
-      }
-
-      return String(campo.value || "").trim() !== "";
-    });
-
-    botonSiguiente.disabled = !camposCompletos;
-  }
+  const validacion = crearValidacionPasosSst({
+    documento: document,
+    seccionesOmitibles: SECCIONES_OMITIBLES,
+    seccionesOmitidas,
+    esCampoOpcional,
+    tieneItemsInspeccion,
+  });
 
   const navegacion = crearNavegacionInspeccionSst({
     documento: document,
     ventana: window,
     totalPasos: totalSteps,
-    validarPaso,
+    validarPaso: validacion.validarPaso,
     actualizarVisibilidadOmitir,
     prepararResumen: renderResumenFinal,
   });
@@ -488,7 +374,7 @@ document.addEventListener("DOMContentLoaded", () => {
       return navegacion.obtenerPasoActual();
     },
 
-    validarPaso,
+    validarPaso: validacion.validarPaso,
 
     tieneItemsInspeccion,
 
@@ -517,22 +403,6 @@ document.addEventListener("DOMContentLoaded", () => {
   asignarFechaHoy();
 
   navegacion.inicializar();
-
-  const panelInformacionGeneral = document.querySelector(
-    '[data-step-panel="1"]',
-  );
-
-  panelInformacionGeneral?.addEventListener(
-    "input",
-    actualizarBotonSiguienteGeneral,
-  );
-
-  panelInformacionGeneral?.addEventListener(
-    "change",
-    actualizarBotonSiguienteGeneral,
-  );
-
-  actualizarBotonSiguienteGeneral();
 
   document
     .getElementById("btn-agregar-extintor")
