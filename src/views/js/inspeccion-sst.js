@@ -46,6 +46,7 @@ import { createSenalizacionesManager } from "/js/senalizaciones.js";
 import { createEquiposTecnologicosManager } from "/js/equiposTecnologicos.js";
 import { createBotiquinesManager } from "/js/botiquines.js";
 import { optimizarImagen } from "./imageOptimizer.js";
+import { generarInspeccionId } from "./sst/inspeccionSst.id.js";
 
 document.addEventListener("DOMContentLoaded", () => {
   let currentStep = 1;
@@ -355,20 +356,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     window.scrollTo({ top: 0, behavior: "smooth" });
-  }
-  /**
-   * Genera un identificador único para una inspección.
-   *
-   * Combina el prefijo `INSP`, la fecha actual y un código aleatorio de cuatro
-   * caracteres.
-   *
-   * @returns {string} Identificador con formato `INSP-YYYYMMDD-XXXX`.
-   */
-  function generarInspeccionId() {
-    const hoy = new Date();
-    const fecha = `${hoy.getFullYear()}${String(hoy.getMonth() + 1).padStart(2, "0")}${String(hoy.getDate()).padStart(2, "0")}`;
-    const aleatorio = Math.random().toString(36).slice(2, 6).toUpperCase();
-    return `INSP-${fecha}-${aleatorio}`;
   }
   /**
    * Construye el objeto completo de una inspección SST.
