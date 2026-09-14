@@ -109,10 +109,6 @@ const navegacion = crearNavegacionInspeccionEpp({
 
   prepararResumen() {
     resumenInspeccion.construir();
-
-    verificarInspeccionEpp();
-
-    verificarFormDataEpp();
   },
 });
 
@@ -268,37 +264,6 @@ async function enviarInspeccionEpp() {
 
     throw error;
   }
-}
-
-function verificarFormDataEpp() {
-  const formData = construirFormDataEpp();
-
-  for (const [clave, valor] of formData.entries()) {
-    if (valor instanceof File) {
-      console.log(clave, {
-        nombre: valor.name,
-        tipo: valor.type,
-        tamaño: valor.size,
-        lastModified: valor.lastModified,
-      });
-    } else {
-      console.log(clave, valor);
-    }
-  }
-}
-
-function verificarInspeccionEpp() {
-  const inspeccion = construirInspeccionEpp();
-
-  const evidencias = trabajadoresManager.obtenerEvidencias();
-
-  console.log("======================================");
-
-  console.log("INSPECCIÓN EPP FINAL:", inspeccion);
-
-  console.log("EVIDENCIAS EPP:", evidencias);
-
-  console.log("======================================");
 }
 
 function obtenerValor(id) {
