@@ -53,6 +53,7 @@ import { enviarInspeccionSst as enviarInspeccionSstApi } from "./sst/inspeccionS
 import { crearEnvioInspeccionSstController } from "./sst/controllers/envioInspeccionSst.controller.js";
 import { crearNavegacionInspeccionSst } from "./sst/controllers/navegacionInspeccionSst.controller.js";
 import { crearValidacionPasosSst } from "./sst/controllers/validacionPasosSst.controller.js";
+import { crearSeccionesOmitidasSstController } from "./sst/controllers/seccionesOmitidasSst.controller.js";
 
 document.addEventListener("DOMContentLoaded", () => {
   const totalSteps = 7;
@@ -83,120 +84,16 @@ document.addEventListener("DOMContentLoaded", () => {
     crearOpciones,
   });
 
-  /**
-   * Determina si la sede permite omitir secciones de la inspección.
-   *
-   * Actualmente considera aplicable esta regla para las sedes de Urabá y
-   * Santa Marta.
-   *
-   * @returns {boolean} `true` cuando la sede permite omitir secciones.
-   */
-
-  function esSedeUrabana() {
-    const sede = document.getElementById("sedeOperacion")?.value || "";
-    return ["urab", "santa marta"].some((x) => sede.toLowerCase().includes(x));
-  }
-
-  const SECCIONES_OMITIBLES = [
-    {
-      key: "extintores",
-      step: 2,
-      containerId: "extintores-container",
-      btnOmitirId: "btn-omitir-extintores",
-      mensajeId: "mensaje-omitido-extintores",
-      btnAgregarId: "btn-agregar-extintor",
-      siguientePaso: 3,
-    },
-    {
-      key: "camillas",
-      step: 3,
-      containerId: "camillas-container",
-      btnOmitirId: "btn-omitir-camillas",
-      mensajeId: "mensaje-omitido-camillas",
-      btnAgregarId: "btn-agregar-camilla",
-      siguientePaso: 4,
-    },
-    {
-      key: "senalizaciones",
-      step: 4,
-      containerId: "senalizaciones-container",
-      btnOmitirId: "btn-omitir-senalizaciones",
-      mensajeId: "mensaje-omitido-senalizaciones",
-      btnAgregarId: "btn-agregar-senalizacion",
-      siguientePaso: 5,
-    },
-    {
-      key: "botiquines",
-      step: 5,
-      containerId: "botiquines-container",
-      btnOmitirId: "btn-omitir-botiquines",
-      mensajeId: "mensaje-omitido-botiquines",
-      btnAgregarId: "btn-agregar-botiquin",
-      siguientePaso: 6,
-    },
-    {
-      key: "equiposTecnologicos",
-      step: 6,
-      containerId: "equipos-tecnologicos-container",
-      btnOmitirId: "btn-omitir-equipos",
-      mensajeId: "mensaje-omitido-equipos",
-      btnAgregarId: null,
-      siguientePaso: 7,
-    },
-  ];
-
-  const seccionesOmitidas = {};
-  SECCIONES_OMITIBLES.forEach((s) => {
-    seccionesOmitidas[s.key] = false;
+  const secciones = crearSeccionesOmitidasSstController({
+    documento: document,
   });
 
-  // Muestra/oculta los botones "Omitir" según la sede (solo Urabá). Si la sede
-  // deja de ser Urabá, cancela cualquier omisión pendiente para no enviar
-  // secciones vacías por error en otra sede.
-  function actualizarVisibilidadOmitir() {
-    const urabana = esSedeUrabana();
-    SECCIONES_OMITIBLES.forEach((seccion) => {
-      document
-        .getElementById(seccion.btnOmitirId)
-        ?.classList.toggle("hidden", !urabana);
-      if (!urabana && seccionesOmitidas[seccion.key]) {
-        incluirSeccion(seccion);
-      }
-    });
-  }
-
-  // El botón "Omitir sección" es un toggle: al omitir se convierte en
-  // "Incluir sección" y viceversa. No hay banner ni texto aparte.
-  function actualizarTextoOmitir(seccion) {
-    const btn = document.getElementById(seccion.btnOmitirId);
-    if (btn)
-      btn.textContent = seccionesOmitidas[seccion.key]
-        ? "Incluir sección"
-        : "Omitir sección";
-  }
-
-  function omitirSeccion(seccion) {
-    seccionesOmitidas[seccion.key] = true;
-    document.getElementById(seccion.containerId)?.classList.add("hidden");
-    document.getElementById(seccion.mensajeId)?.classList.remove("hidden");
-    if (seccion.btnAgregarId)
-      document.getElementById(seccion.btnAgregarId)?.classList.add("hidden");
-    actualizarTextoOmitir(seccion);
-  }
-
-  function incluirSeccion(seccion) {
-    seccionesOmitidas[seccion.key] = false;
-    document.getElementById(seccion.containerId)?.classList.remove("hidden");
-    document.getElementById(seccion.mensajeId)?.classList.add("hidden");
-    if (seccion.btnAgregarId)
-      document.getElementById(seccion.btnAgregarId)?.classList.remove("hidden");
-    actualizarTextoOmitir(seccion);
-  }
+  const seccionesOmitidas = secciones.seccionesOmitidas;
 
   const validacion = crearValidacionPasosSst({
     documento: document,
-    seccionesOmitibles: SECCIONES_OMITIBLES,
-    seccionesOmitidas,
+    seccionesOmitibles: secciones.seccionesOmitibles,
+    seccionesOmitidas: secciones.seccionesOmitidas,
     esCampoOpcional,
     tieneItemsInspeccion,
   });
@@ -206,9 +103,10 @@ document.addEventListener("DOMContentLoaded", () => {
     ventana: window,
     totalPasos: totalSteps,
     validarPaso: validacion.validarPaso,
-    actualizarVisibilidadOmitir,
+    actualizarVisibilidadOmitir: secciones.actualizarVisibilidadOmitir,
     prepararResumen: renderResumenFinal,
   });
+
   /**
    * Construye el objeto completo de una inspección SST.
    *
@@ -226,7 +124,7 @@ document.addEventListener("DOMContentLoaded", () => {
       obtenerValor(id) {
         return document.getElementById(id)?.value || "";
       },
-      seccionesOmitidas,
+      seccionesOmitidas: secciones.seccionesOmitidas,
       leerExtintores() {
         return extintoresManager.leer();
       },
@@ -402,7 +300,13 @@ document.addEventListener("DOMContentLoaded", () => {
   activarSoloNumeros();
   asignarFechaHoy();
 
+  validacion.inicializar();
+
   navegacion.inicializar();
+
+  secciones.inicializar({
+    navegarAlPaso: navegacion.irPaso,
+  });
 
   document
     .getElementById("btn-agregar-extintor")
@@ -420,29 +324,6 @@ document.addEventListener("DOMContentLoaded", () => {
     .getElementById("fecha")
     ?.addEventListener("click", abrirSelectorFecha);
   envioInspeccion.inicializar();
-
-  // Botón "Omitir sección" / "Incluir sección" (toggle, solo visible en sede Urabá).
-  SECCIONES_OMITIBLES.forEach((seccion) => {
-    document
-      .getElementById(seccion.btnOmitirId)
-      ?.addEventListener("click", () => {
-        if (seccionesOmitidas[seccion.key]) {
-          incluirSeccion(seccion);
-        } else {
-          omitirSeccion(seccion);
-          if (seccion.siguientePaso) {
-            navegacion.irPaso(seccion.siguientePaso);
-          }
-        }
-      });
-  });
-  document
-    .getElementById("sedeOperacion")
-    ?.addEventListener("input", actualizarVisibilidadOmitir);
-  document
-    .getElementById("sedeOperacion")
-    ?.addEventListener("change", actualizarVisibilidadOmitir);
-  actualizarVisibilidadOmitir();
 
   document
     .getElementById("btn-modal-nueva")
