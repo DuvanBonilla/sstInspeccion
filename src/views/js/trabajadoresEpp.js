@@ -45,7 +45,6 @@ import { manejarCambioEvidencia as manejarCambioEvidenciaTrabajador } from "./ep
 
 import {
   abrirTrabajador as abrirTarjetaTrabajador,
-  actualizarNombreResumen as actualizarResumenTrabajador,
   actualizarNumeracion as numerarTrabajadores,
   crearTrabajador as crearTarjetaTrabajador,
   manejarAccionTrabajador,
@@ -181,20 +180,7 @@ export function createTrabajadoresEppManager({
     });
   }
 
-  /**
-   * Procesa la evidencia fotográfica seleccionada para un trabajador.
-   *
-   * Optimiza la imagen, almacena el archivo resultante asociado con el
-   * identificador interno del trabajador y actualiza el estado visual de
-   * la evidencia.
-   *
-   * Si el archivo se elimina o no puede procesarse, también elimina la
-   * evidencia previamente almacenada para el trabajador.
-   *
-   * @async
-   * @param {Event} event - Evento de cambio generado por el campo de evidencia.
-   * @returns {Promise<void>}
-   */
+
 
   function manejarAccionesTrabajador(event) {
     const accionCatalogoManejada = manejarAccionCatalogoEpp(event, {
