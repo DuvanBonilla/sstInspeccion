@@ -159,3 +159,131 @@ export function crearTrabajador({
 
   return card;
 }
+
+/**
+ * Normaliza los campos editados y limpia sus errores visuales.
+ *
+ * @param {Event} event Evento delegado desde el contenedor.
+ * @returns {boolean} Indica si se procesó un control del formulario.
+ */
+export function manejarEntradaTrabajador(event) {
+  const elemento = event.target;
+
+  if (
+    elemento.matches(
+      '[data-role="codigo"]',
+    )
+  ) {
+    elemento.value = elemento.value
+      .replace(/\D/g, "")
+      .slice(0, 6);
+  }
+
+  if (
+    elemento.matches(
+      '[data-role="nombre"]',
+    )
+  ) {
+    elemento.value = elemento.value
+      .replace(/[0-9]/g, "")
+      .slice(0, 100);
+  }
+
+  const esCampo = elemento.matches(
+    "input, select, textarea",
+  );
+
+  if (esCampo) {
+    elemento.classList.remove(
+      "campo-error",
+    );
+  }
+
+  if (
+    elemento.matches(
+      '[data-role="nombre"]',
+    )
+  ) {
+    actualizarNombreResumen(elemento);
+  }
+
+  return esCampo;
+}
+
+/**
+ * Atiende las acciones visuales propias de una tarjeta de trabajador.
+ *
+ * @param {Event} event Evento delegado desde el contenedor.
+ * @param {Object} dependencias Dependencias de la acción.
+ * @param {HTMLElement} dependencias.container Contenedor de trabajadores.
+ * @param {Function} dependencias.eliminarTrabajador Elimina una tarjeta.
+ * @returns {boolean} Indica si la acción pertenecía a un trabajador.
+ */
+export function manejarAccionTrabajador(
+  event,
+  {
+    container,
+    eliminarTrabajador,
+  },
+) {
+  const botonEliminar = event.target.closest(
+    '[data-action="eliminar-trabajador"]',
+  );
+
+  if (botonEliminar) {
+    event.stopPropagation();
+
+    const tarjeta = botonEliminar.closest(
+      ".trabajador-card",
+    );
+
+    if (tarjeta) {
+      eliminarTrabajador(tarjeta);
+    }
+
+    return true;
+  }
+
+  const header = event.target.closest(
+    '[data-action="toggle-trabajador"]',
+  );
+
+  if (!header) {
+    return false;
+  }
+
+  const tarjeta = header.closest(
+    ".trabajador-card",
+  );
+
+  if (!tarjeta) {
+    return true;
+  }
+
+  if (
+    tarjeta.classList.contains(
+      "trabajador-collapsed",
+    )
+  ) {
+    abrirTrabajador(
+      container,
+      tarjeta,
+    );
+
+    return true;
+  }
+
+  tarjeta.classList.add(
+    "trabajador-collapsed",
+  );
+
+  const icono = tarjeta.querySelector(
+    '[data-role="toggleIcon"]',
+  );
+
+  if (icono) {
+    icono.textContent = "▶";
+  }
+
+  return true;
+}

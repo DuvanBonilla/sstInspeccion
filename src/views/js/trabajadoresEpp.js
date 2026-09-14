@@ -48,6 +48,8 @@ import {
   actualizarNombreResumen as actualizarResumenTrabajador,
   actualizarNumeracion as numerarTrabajadores,
   crearTrabajador as crearTarjetaTrabajador,
+  manejarAccionTrabajador,
+  manejarEntradaTrabajador,
 } from "./epp/controllers/trabajadoresEppUi.controller.js";
 
 import {
@@ -138,9 +140,9 @@ export function createTrabajadoresEppManager({
 
     agregarButton?.addEventListener("click", agregarTrabajador);
 
-    container?.addEventListener("input", limpiarErrorCampo);
+    container?.addEventListener("input", manejarEntradaTrabajador);
 
-    container?.addEventListener("change", limpiarErrorCampo);
+    container?.addEventListener("change", manejarEntradaTrabajador);
 
     container?.addEventListener("change", (event) => {
       manejarCambioEvidenciaTrabajador(event, {
@@ -179,43 +181,6 @@ export function createTrabajadoresEppManager({
     });
   }
 
-  function limpiarErrorCampo(event) {
-    const elemento = event.target;
-
-    // =======================================================
-    // CÓDIGO DEL TRABAJADOR
-    // Solo números y máximo 6 dígitos
-    // =======================================================
-
-    if (elemento.matches('[data-role="codigo"]')) {
-      elemento.value = elemento.value.replace(/\D/g, "").slice(0, 6);
-    }
-
-    // =======================================================
-    // NOMBRE DEL TRABAJADOR
-    // No permitir números
-    // =======================================================
-
-    if (elemento.matches('[data-role="nombre"]')) {
-      elemento.value = elemento.value.replace(/[0-9]/g, "").slice(0, 100);
-    }
-    // =======================================================
-    // LIMPIAR ERROR VISUAL
-    // =======================================================
-
-    if (elemento.matches("input, select, textarea")) {
-      elemento.classList.remove("campo-error");
-    }
-
-    // =======================================================
-    // ACTUALIZAR NOMBRE DEL ACORDEÓN
-    // =======================================================
-
-    if (elemento.matches('[data-role="nombre"]')) {
-      actualizarResumenTrabajador(elemento);
-    }
-  }
-
   /**
    * Procesa la evidencia fotográfica seleccionada para un trabajador.
    *
@@ -243,57 +208,10 @@ export function createTrabajadoresEppManager({
       return;
     }
 
-    // -------------------------------------------------------
-    // ELIMINAR TRABAJADOR
-    // -------------------------------------------------------
-
-    const botonEliminar = event.target.closest(
-      '[data-action="eliminar-trabajador"]',
-    );
-
-    if (botonEliminar) {
-      event.stopPropagation();
-
-      const tarjeta = botonEliminar.closest(".trabajador-card");
-
-      if (!tarjeta) {
-        return;
-      }
-
-      eliminarTrabajador(tarjeta);
-
-      return;
-    }
-
-    // -------------------------------------------------------
-    // ABRIR / MINIMIZAR TRABAJADOR
-    // -------------------------------------------------------
-
-    const header = event.target.closest('[data-action="toggle-trabajador"]');
-
-    if (!header) {
-      return;
-    }
-
-    const tarjeta = header.closest(".trabajador-card");
-
-    if (!tarjeta) {
-      return;
-    }
-
-    if (tarjeta.classList.contains("trabajador-collapsed")) {
-      abrirTarjetaTrabajador(container, tarjeta);
-
-      return;
-    }
-
-    tarjeta.classList.add("trabajador-collapsed");
-
-    const icono = tarjeta.querySelector('[data-role="toggleIcon"]');
-
-    if (icono) {
-      icono.textContent = "▶";
-    }
+    manejarAccionTrabajador(event, {
+      container,
+      eliminarTrabajador,
+    });
   }
 
   function generarDesdeInput() {
@@ -419,12 +337,6 @@ export function createTrabajadoresEppManager({
           : "trabajadores registrados"
       }.`,
     );
-  }
-
-  function obtenerElementosActuales(card) {
-    return Array.from(
-      card.querySelectorAll(".epp-table tbody tr[data-elemento]"),
-    ).map((fila) => fila.dataset.elemento);
   }
 
   function mostrarEstado(mensaje) {
