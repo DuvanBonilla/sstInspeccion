@@ -54,6 +54,7 @@ import { crearEnvioInspeccionSstController } from "./sst/controllers/envioInspec
 import { crearNavegacionInspeccionSst } from "./sst/controllers/navegacionInspeccionSst.controller.js";
 import { crearValidacionPasosSst } from "./sst/controllers/validacionPasosSst.controller.js";
 import { crearSeccionesOmitidasSstController } from "./sst/controllers/seccionesOmitidasSst.controller.js";
+import { crearResumenInspeccionSstController } from "./sst/controllers/resumenInspeccionSst.controller.js";
 
 document.addEventListener("DOMContentLoaded", () => {
   const totalSteps = 7;
@@ -90,12 +91,38 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const seccionesOmitidas = secciones.seccionesOmitidas;
 
+  const resumenInspeccion = crearResumenInspeccionSstController({
+    documento: document,
+
+    seccionesOmitidas,
+
+    leerExtintores() {
+      return extintoresManager.leer();
+    },
+
+    leerCamillas() {
+      return camillasManager.leer();
+    },
+
+    leerSenalizaciones() {
+      return senalizacionesManager.leer();
+    },
+
+    leerBotiquines() {
+      return botiquinesManager.leer();
+    },
+
+    leerEquiposTecnologicos() {
+      return equiposTecnologicosManager.leer();
+    },
+  });
+
   const validacion = crearValidacionPasosSst({
     documento: document,
     seccionesOmitibles: secciones.seccionesOmitibles,
     seccionesOmitidas: secciones.seccionesOmitidas,
     esCampoOpcional,
-    tieneItemsInspeccion,
+    tieneItemsInspeccion: resumenInspeccion.tieneItemsInspeccion,
   });
 
   const navegacion = crearNavegacionInspeccionSst({
@@ -104,7 +131,7 @@ document.addEventListener("DOMContentLoaded", () => {
     totalPasos: totalSteps,
     validarPaso: validacion.validarPaso,
     actualizarVisibilidadOmitir: secciones.actualizarVisibilidadOmitir,
-    prepararResumen: renderResumenFinal,
+    prepararResumen: resumenInspeccion.renderizar,
   });
 
   /**
@@ -143,110 +170,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  function contarItemsInspeccion() {
-    return (
-      (seccionesOmitidas.extintores ? 0 : extintoresManager.leer().length) +
-      (seccionesOmitidas.camillas ? 0 : camillasManager.leer().length) +
-      (seccionesOmitidas.senalizaciones
-        ? 0
-        : senalizacionesManager.leer().length) +
-      (seccionesOmitidas.botiquines ? 0 : botiquinesManager.leer().length) +
-      (seccionesOmitidas.equiposTecnologicos
-        ? 0
-        : equiposTecnologicosManager.leer().length)
-    );
-  }
-
-  function tieneItemsInspeccion() {
-    return contarItemsInspeccion() > 0;
-  }
-
-  /**
-   * Muestra el resumen final de la inspección SST.
-   *
-   * Presenta la información general y la cantidad de elementos registrados en
-   * cada sección. También deshabilita el envío cuando la inspección no contiene
-   * ningún elemento.
-   *
-   * @returns {void}
-   */
-
-  function renderResumenFinal() {
-    document.getElementById("resumen-fecha").textContent =
-      document.getElementById("fecha").value || "-";
-    document.getElementById("resumen-sede").textContent =
-      document.getElementById("sedeOperacion").value || "-";
-    document.getElementById("resumen-area").textContent =
-      document.getElementById("areaTrabajo").value || "-";
-    document.getElementById("resumen-jefe").textContent =
-      document.getElementById("jefeResponsable").value || "-";
-    document.getElementById("resumen-cargo-jefe").textContent =
-      document.getElementById("cargoJefe").value || "-";
-    document.getElementById("resumen-responsable").textContent =
-      document.getElementById("responsableInspeccion").value || "-";
-    document.getElementById("resumen-cargo-responsable").textContent =
-      document.getElementById("cargoResponsable").value || "-";
-
-    const conteos = [
-      {
-        label: "Extintores",
-        n: seccionesOmitidas.extintores ? 0 : extintoresManager.leer().length,
-      },
-      {
-        label: "Camillas",
-        n: seccionesOmitidas.camillas ? 0 : camillasManager.leer().length,
-      },
-      {
-        label: "Señalización",
-        n: seccionesOmitidas.senalizaciones
-          ? 0
-          : senalizacionesManager.leer().length,
-      },
-      {
-        label: "Botiquín",
-        n: seccionesOmitidas.botiquines ? 0 : botiquinesManager.leer().length,
-      },
-      {
-        label: "Equipos Tecnológicos",
-        n: seccionesOmitidas.equiposTecnologicos
-          ? 0
-          : equiposTecnologicosManager.leer().length,
-      },
-    ];
-
-    document.getElementById("resumen-secciones").innerHTML = conteos
-      .map(
-        ({ label, n }) => `
-      <div class="resumen-seccion-item ${n > 0 ? "resumen-seccion-item--ok" : "resumen-seccion-item--no"}">
-        <span>${label}</span>
-        <span>${n > 0 ? `Hecho (${n})` : "No se hizo"}</span>
-      </div>
-    `,
-      )
-      .join("");
-
-    const totalItems = contarItemsInspeccion();
-    const msg = document.getElementById("msg");
-    const btnEnviar = document.getElementById("btn-onedrive");
-
-    if (totalItems === 0) {
-      if (msg) {
-        msg.textContent =
-          "No puede enviar este informe porque no se ha registrado ningún ítem en la inspección.";
-      }
-      if (btnEnviar) {
-        btnEnviar.disabled = true;
-      }
-    } else {
-      if (msg) {
-        msg.textContent = "";
-      }
-      if (btnEnviar) {
-        btnEnviar.disabled = false;
-      }
-    }
-  }
-
   async function construirFormData(inspeccionId, numInspeccion) {
     return construirFormDataSst({
       inspeccionId,
@@ -274,7 +197,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     validarPaso: validacion.validarPaso,
 
-    tieneItemsInspeccion,
+    tieneItemsInspeccion: resumenInspeccion.tieneItemsInspeccion,
 
     generarInspeccionId,
 
