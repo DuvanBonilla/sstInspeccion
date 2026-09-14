@@ -38,6 +38,8 @@ import { inicializarEnvioEpp } from "./epp/controllers/envioInspeccionEpp.contro
 
 import { crearNavegacionInspeccionEpp } from "./epp/controllers/navegacionInspeccionEpp.controller.js";
 
+import { crearValidacionInformacionGeneralEpp } from "./epp/controllers/validacionInformacionGeneralEpp.controller.js";
+
 const TOTAL_PASOS = 3;
 
 const fecha = document.getElementById("fecha");
@@ -66,40 +68,33 @@ const trabajadoresManager = createTrabajadoresEppManager({
   accionesElement: document.getElementById("acciones-trabajadores"),
 });
 
-const camposInformacionGeneral = [
-  "fecha",
-  "sedeOperacion",
-  "areaTrabajo",
-  "jefeResponsable",
-  "cargoJefe",
-  "responsableInspeccion",
-  "cargoResponsable",
-];
+const validacionInformacionGeneral = crearValidacionInformacionGeneralEpp({
+  documento: document,
+});
 
-const navegacion =
-  crearNavegacionInspeccionEpp({
-    documento: document,
+const navegacion = crearNavegacionInspeccionEpp({
+  documento: document,
 
-    ventana: window,
+  ventana: window,
 
-    totalPasos: TOTAL_PASOS,
+  totalPasos: TOTAL_PASOS,
 
-    validarInformacionGeneral,
+  validarInformacionGeneral: validacionInformacionGeneral.validar,
 
-    validarTrabajadores() {
-      return trabajadoresManager.validar().valido;
-    },
+  validarTrabajadores() {
+    return trabajadoresManager.validar().valido;
+  },
 
-    prepararResumen() {
-      construirResumenGeneral();
+  prepararResumen() {
+    construirResumenGeneral();
 
-      construirResumenTrabajadores();
+    construirResumenTrabajadores();
 
-      verificarInspeccionEpp();
+    verificarInspeccionEpp();
 
-      verificarFormDataEpp();
-    },
-  });
+    verificarFormDataEpp();
+  },
+});
 
 document.addEventListener("DOMContentLoaded", async () => {
   try {
@@ -107,7 +102,9 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     inicializarFecha();
 
-    navegacion.inicializar();;
+    validacionInformacionGeneral.inicializar();
+
+    navegacion.inicializar();
 
     inicializarSalida();
 
@@ -171,83 +168,6 @@ function inicializarAccionesModalExito() {
  * @returns {boolean} `true` si todos los campos requeridos tienen información;
  * de lo contrario, `false`.
  */
-
-function validarInformacionGeneral() {
-  let valido = true;
-
-  let primerCampoInvalido = null;
-
-  camposInformacionGeneral.forEach((id) => {
-    const campo = document.getElementById(id);
-
-    if (!campo) {
-      return;
-    }
-
-    const valor = campo.value.trim();
-
-    if (!valor) {
-      valido = false;
-
-      campo.classList.add("campo-error");
-
-      if (!primerCampoInvalido) {
-        primerCampoInvalido = campo;
-      }
-    } else {
-      campo.classList.remove("campo-error");
-    }
-  });
-
-  if (primerCampoInvalido) {
-    primerCampoInvalido.focus();
-  }
-
-  return valido;
-}
-
-function actualizarBotonSiguienteGeneral() {
-  const botonSiguiente = document.querySelector(
-    '[data-step-panel="1"] [data-step-target="2"]',
-  );
-
-  if (!botonSiguiente) {
-    return;
-  }
-
-  const camposCompletos = camposInformacionGeneral.every((id) => {
-    const campo = document.getElementById(id);
-
-    if (!campo || campo.disabled) {
-      return true;
-    }
-
-    return String(campo.value || "").trim() !== "";
-  });
-
-  botonSiguiente.disabled = !camposCompletos;
-}
-
-camposInformacionGeneral.forEach((id) => {
-  const campo = document.getElementById(id);
-
-  if (!campo) {
-    return;
-  }
-
-  const actualizarCampo = () => {
-    if (campo.value.trim()) {
-      campo.classList.remove("campo-error");
-    }
-
-    actualizarBotonSiguienteGeneral();
-  };
-
-  campo.addEventListener("input", actualizarCampo);
-  campo.addEventListener("change", actualizarCampo);
-});
-
-actualizarBotonSiguienteGeneral();
 
 function construirResumenGeneral() {
   asignarTextoResumen("resumen-fecha", obtenerValor("fecha"));
