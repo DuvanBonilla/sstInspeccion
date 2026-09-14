@@ -34,6 +34,8 @@ import { construirFormDataEpp as construirContenidoFormDataEpp } from "./epp/ins
 
 import { enviarInspeccionEpp as enviarInspeccionEppApi } from "./epp/inspeccionEpp.api.js";
 
+import { inicializarEnvioEpp } from "./epp/controllers/envioInspeccionEpp.controller.js";
+
 let pasoActual = 1;
 
 const TOTAL_PASOS = 3;
@@ -86,7 +88,13 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     trabajadoresManager.init();
 
-    inicializarEnvioEpp();
+    inicializarEnvioEpp({
+      documento: document,
+
+      ventana: window,
+
+      enviarInspeccionEpp,
+    });
 
     actualizarPaso();
 
@@ -606,112 +614,6 @@ async function enviarInspeccionEpp() {
 
     throw error;
   }
-}
-
-/**
- * Construye los enlaces de aprobación de una inspección EPP.
- *
- * Utiliza el origen actual de la aplicación y los tokens entregados por el
- * backend para generar los enlaces del jefe responsable y de COPASST.
- *
- * @param {Object|null} tokens - Tokens de aprobación generados por el backend.
- * @param {string} [tokens.jefe] - Token asignado al jefe responsable.
- * @param {string} [tokens.copasst] - Token asignado a COPASST.
- * @returns {{jefe: string|null, copasst: string|null}|null}
- * Enlaces de aprobación disponibles, o `null` si no se reciben tokens.
- */
-
-function construirLinksAprobacionEpp(tokens) {
-  if (!tokens) {
-    return null;
-  }
-
-  const baseUrl = window.location.origin;
-
-  return {
-    jefe: tokens.jefe ? `${baseUrl}/aprobar/${tokens.jefe}` : null,
-
-    copasst: tokens.copasst ? `${baseUrl}/aprobar/${tokens.copasst}` : null,
-  };
-}
-
-/**
- * Inicializa el proceso de envío de la inspección EPP.
- *
- * Registra el evento del botón de envío, controla su estado durante la
- * solicitud y muestra los modales correspondientes al resultado de la
- * operación. Cuando el registro finaliza correctamente, construye los
- * enlaces de aprobación recibidos desde el backend.
- *
- * @returns {void}
- */
-
-function inicializarEnvioEpp() {
-  const btnEnviar = document.getElementById("btn-enviar-inspeccion-epp");
-
-  if (!btnEnviar) {
-    return;
-  }
-
-  btnEnviar.addEventListener("click", async () => {
-    try {
-      // ---------------------------------------------------
-      // BLOQUEAR BOTÓN
-      // ---------------------------------------------------
-
-      btnEnviar.disabled = true;
-      btnEnviar.textContent = "Enviando...";
-
-      // ---------------------------------------------------
-      // MOSTRAR MODAL DE CARGA
-      // ---------------------------------------------------
-
-      if (typeof window.mostrarModal === "function") {
-        window.mostrarModal("cargando");
-      }
-
-      // ---------------------------------------------------
-      // ENVIAR INSPECCIÓN
-      // ---------------------------------------------------
-
-      const resultado = await enviarInspeccionEpp();
-
-      // ---------------------------------------------------
-      // CONSTRUIR LINKS DE APROBACIÓN
-      // ---------------------------------------------------
-
-      const links = construirLinksAprobacionEpp(resultado.tokens);
-
-      // ---------------------------------------------------
-      // MOSTRAR MODAL DE ÉXITO
-      // ---------------------------------------------------
-
-      if (typeof window.mostrarModal === "function") {
-        window.mostrarModal(
-          "exito",
-          resultado.inspeccionId,
-          resultado.numInspeccion,
-          links,
-          "crear",
-        );
-      }
-
-      btnEnviar.textContent = "Inspección enviada";
-    } catch (error) {
-      console.error("❌ No fue posible completar el envío EPP:", error);
-
-      // ---------------------------------------------------
-      // MODAL ERROR
-      // ---------------------------------------------------
-
-      if (typeof window.mostrarModal === "function") {
-        window.mostrarModal("error");
-      }
-
-      btnEnviar.disabled = false;
-      btnEnviar.textContent = "Enviar inspección";
-    }
-  });
 }
 
 function verificarFormDataEpp() {
