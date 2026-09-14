@@ -47,6 +47,7 @@ import { createEquiposTecnologicosManager } from "/js/equiposTecnologicos.js";
 import { createBotiquinesManager } from "/js/botiquines.js";
 import { optimizarImagen } from "./imageOptimizer.js";
 import { generarInspeccionId } from "./sst/inspeccionSst.id.js";
+import { construirInspeccionSst } from "./sst/inspeccionSst.payload.js";
 
 document.addEventListener("DOMContentLoaded", () => {
   let currentStep = 1;
@@ -368,45 +369,29 @@ document.addEventListener("DOMContentLoaded", () => {
    * @returns {Object} Información general y secciones de la inspección SST.
    */
   function payload(inspeccionId) {
-    // Las secciones omitidas (solo posible en sede Urabá) se envían vacías,
-    // sin importar lo que haya quedado en el DOM.
-    const extintores = seccionesOmitidas.extintores
-      ? []
-      : extintoresManager.leer();
-    const camillas = seccionesOmitidas.camillas ? [] : camillasManager.leer();
-    const senalizaciones = seccionesOmitidas.senalizaciones
-      ? []
-      : senalizacionesManager.leer();
-    const equiposTecnologicosData = seccionesOmitidas.equiposTecnologicos
-      ? []
-      : equiposTecnologicosManager.leer();
-    const botiquinesData = seccionesOmitidas.botiquines
-      ? []
-      : botiquinesManager.leer();
-
-    return {
-      inspeccionId: inspeccionId || generarInspeccionId(),
-      fecha: document.getElementById("fecha").value,
-      sedeOperacion: document.getElementById("sedeOperacion").value,
-      areaTrabajo: document.getElementById("areaTrabajo").value,
-      jefeResponsable: document.getElementById("jefeResponsable").value,
-      cargoJefe: document.getElementById("cargoJefe").value,
-      responsableInspeccion: document.getElementById("responsableInspeccion")
-        .value,
-      cargoResponsable: document.getElementById("cargoResponsable").value,
-      camillas,
-      camilla: camillas[0] || null,
-      senalizaciones,
-      senalizacion: senalizaciones[0] || null,
-      equiposTecnologicos: equiposTecnologicosData,
-      equipoTecnologico: equiposTecnologicosData[0] || null,
-      observacionesEquipos:
-        document.getElementById("observacionesEquipos")?.value || "",
-      botiquines: botiquinesData,
-      botiquin: botiquinesData[0] || null,
-      extintores,
-      extintor: extintores[0] || null,
-    };
+    return construirInspeccionSst({
+      inspeccionId,
+      generarInspeccionId,
+      obtenerValor(id) {
+        return document.getElementById(id)?.value || "";
+      },
+      seccionesOmitidas,
+      leerExtintores() {
+        return extintoresManager.leer();
+      },
+      leerCamillas() {
+        return camillasManager.leer();
+      },
+      leerSenalizaciones() {
+        return senalizacionesManager.leer();
+      },
+      leerEquiposTecnologicos() {
+        return equiposTecnologicosManager.leer();
+      },
+      leerBotiquines() {
+        return botiquinesManager.leer();
+      },
+    });
   }
 
   function contarItemsInspeccion() {
