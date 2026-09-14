@@ -41,6 +41,8 @@ import {
 
 import { manejarCambioCalificacionEpp as manejarCambioEvaluacionEpp } from "./epp/controllers/evaluacionEppUi.controller.js";
 
+import { manejarCambioEvidencia as manejarCambioEvidenciaTrabajador } from "./epp/controllers/evidenciasTrabajadorEpp.controller.js";
+
 let ELEMENTOS_EPP_PREDETERMINADOS = [];
 let ELEMENTOS_EPP_OTROS = [];
 let ELEMENTOS_EPP = [];
@@ -128,7 +130,15 @@ export function createTrabajadoresEppManager({
 
     container?.addEventListener("change", limpiarErrorCampo);
 
-    container?.addEventListener("change", manejarCambioEvidencia);
+    container?.addEventListener("change", (event) => {
+      manejarCambioEvidenciaTrabajador(event, {
+        container,
+        evidencias,
+        validarEvidenciaEpp,
+        optimizarImagen,
+        formatearPesoArchivo,
+      });
+    });
 
     container?.addEventListener("click", manejarAccionesTrabajador);
 
@@ -226,102 +236,6 @@ export function createTrabajadoresEppManager({
    * @param {Event} event - Evento de cambio generado por el campo de evidencia.
    * @returns {Promise<void>}
    */
-
-  async function manejarCambioEvidencia(event) {
-    const input = event.target;
-
-    if (!input.matches('[data-role="evidencia"]')) {
-      return;
-    }
-
-    const tarjeta = input.closest(".trabajador-card");
-
-    if (!tarjeta) {
-      return;
-    }
-
-    const trabajadorId = Number(tarjeta.dataset.trabajadorId);
-
-    const estado = tarjeta.querySelector('[data-role="evidenciaEstado"]');
-
-    const archivo = input.files?.[0];
-
-    // Limpiar la apariencia de errores anteriores
-    estado?.classList.remove("evidencia-estado--error");
-
-    // Si no existe un archivo seleccionado
-    if (!archivo) {
-      evidencias.delete(trabajadorId);
-
-      if (estado) {
-        estado.textContent = "Sin evidencia";
-      }
-
-      return;
-    }
-
-    const validacion = validarEvidenciaEpp(archivo);
-
-    if (!validacion.valido) {
-      evidencias.delete(trabajadorId);
-      input.value = "";
-
-      if (estado) {
-        estado.textContent = validacion.mensaje;
-        estado.classList.add("evidencia-estado--error");
-      }
-
-      return;
-    }
-    // Bloquear el campo mientras se procesa la imagen
-    input.disabled = true;
-
-    if (estado) {
-      estado.textContent = "Optimizando imagen...";
-    }
-
-    try {
-      // Optimizar la imagen seleccionada
-      const archivoOptimizado = await optimizarImagen(archivo);
-
-      // Guardar la evidencia optimizada
-      evidencias.set(trabajadorId, archivoOptimizado);
-
-      if (estado) {
-        estado.classList.remove("evidencia-estado--error");
-
-        estado.textContent = `Evidencia lista · ${formatearPesoArchivo(
-          archivoOptimizado.size,
-        )}`;
-      }
-
-      const numeroVisual =
-        Array.from(container.querySelectorAll(".trabajador-card")).indexOf(
-          tarjeta,
-        ) + 1;
-
-      console.log(`Evidencia trabajador ${numeroVisual}:`, {
-        trabajadorId,
-        original: archivo.size,
-        optimizado: archivoOptimizado.size,
-        archivo: archivoOptimizado,
-      });
-    } catch (error) {
-      console.error("Error procesando evidencia EPP:", error);
-
-      evidencias.delete(trabajadorId);
-      input.value = "";
-
-      if (estado) {
-        estado.textContent =
-          "⚠ No fue posible procesar la imagen seleccionada.";
-
-        estado.classList.add("evidencia-estado--error");
-      }
-    } finally {
-      input.disabled = false;
-    }
-  }
 
   function manejarAccionesTrabajador(event) {
     const accionCatalogoManejada = manejarAccionCatalogoEpp(event, {
