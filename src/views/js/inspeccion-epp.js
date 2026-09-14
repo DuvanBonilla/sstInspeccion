@@ -28,6 +28,8 @@ import {
 
 import { esNovedadEpp } from "./epp/reglasEpp.js";
 
+import { construirInspeccionEpp as construirPayloadInspeccionEpp } from "./epp/inspeccionEpp.payload.js";
+
 let pasoActual = 1;
 
 const TOTAL_PASOS = 3;
@@ -546,33 +548,13 @@ function generarInspeccionId() {
  */
 
 function construirInspeccionEpp(inspeccionId = null) {
-  const trabajadores = trabajadoresManager.leer();
+  return construirPayloadInspeccionEpp({
+    inspeccionId,
 
-  const informacionGeneral = {
-    fecha: obtenerValor("fecha"),
+    obtenerValor,
 
-    sede: obtenerValor("sedeOperacion"),
-
-    area: obtenerValor("areaTrabajo"),
-
-    jefeArea: obtenerValor("jefeResponsable"),
-
-    cargoJefe: obtenerValor("cargoJefe"),
-
-    responsableInspeccion: obtenerValor("responsableInspeccion"),
-
-    cargoResponsable: obtenerValor("cargoResponsable"),
-  };
-
-  return {
-    tipoInspeccion: "EPP",
-
-    inspeccionId: inspeccionId,
-
-    informacionGeneral,
-
-    trabajadores,
-  };
+    trabajadores: trabajadoresManager.leer(),
+  });
 }
 
 /**
