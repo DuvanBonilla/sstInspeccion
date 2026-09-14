@@ -51,9 +51,9 @@ import { construirInspeccionSst } from "./sst/inspeccionSst.payload.js";
 import { construirFormDataSst } from "./sst/inspeccionSst.formData.js";
 import { enviarInspeccionSst as enviarInspeccionSstApi } from "./sst/inspeccionSst.api.js";
 import { crearEnvioInspeccionSstController } from "./sst/controllers/envioInspeccionSst.controller.js";
+import { crearNavegacionInspeccionSst } from "./sst/controllers/navegacionInspeccionSst.controller.js";
 
 document.addEventListener("DOMContentLoaded", () => {
-  let currentStep = 1;
   const totalSteps = 7;
 
   const extintoresManager = createExtintoresManager({
@@ -314,53 +314,15 @@ document.addEventListener("DOMContentLoaded", () => {
 
     botonSiguiente.disabled = !camposCompletos;
   }
-  /**
-   * Cambia el paso visible del formulario SST.
-   *
-   * Antes de avanzar valida el paso actual. También actualiza los paneles,
-   * indicadores de progreso y, al llegar al último paso, genera el resumen
-   * final de la inspección.
-   *
-   * @param {number} step Número del paso de destino.
-   * @returns {void}
-   */
-  function irPaso(step) {
-    if (step < 1 || step > totalSteps) return;
-    if (step > currentStep && !validarPaso(currentStep)) return;
 
-    const panelSaliente = document.querySelector(
-      `[data-step-panel="${currentStep}"]`,
-    );
-    panelSaliente?.querySelector(".validation-summary")?.remove();
-    panelSaliente
-      ?.querySelectorAll(".campo-error")
-      .forEach((el) => el.classList.remove("campo-error"));
-
-    currentStep = step;
-    actualizarVisibilidadOmitir();
-
-    if (currentStep === 7) renderResumenFinal();
-
-    document.querySelectorAll("[data-step-panel]").forEach((panel) => {
-      const panelStep = Number(panel.getAttribute("data-step-panel"));
-      panel.classList.toggle("hidden", panelStep !== currentStep);
-    });
-
-    document.querySelectorAll("[data-step-indicator]").forEach((indicator) => {
-      const indicatorStep = Number(
-        indicator.getAttribute("data-step-indicator"),
-      );
-      indicator.classList.remove("active", "done");
-
-      if (indicatorStep < currentStep) {
-        indicator.classList.add("done");
-      } else if (indicatorStep === currentStep) {
-        indicator.classList.add("active");
-      }
-    });
-
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  }
+  const navegacion = crearNavegacionInspeccionSst({
+    documento: document,
+    ventana: window,
+    totalPasos: totalSteps,
+    validarPaso,
+    actualizarVisibilidadOmitir,
+    prepararResumen: renderResumenFinal,
+  });
   /**
    * Construye el objeto completo de una inspección SST.
    *
@@ -523,7 +485,7 @@ document.addEventListener("DOMContentLoaded", () => {
     documento: document,
 
     obtenerPasoActual() {
-      return currentStep;
+      return navegacion.obtenerPasoActual();
     },
 
     validarPaso,
@@ -554,19 +516,7 @@ document.addEventListener("DOMContentLoaded", () => {
   activarSoloNumeros();
   asignarFechaHoy();
 
-  document.querySelectorAll("[data-step-target]").forEach((button) => {
-    button.addEventListener("click", () => {
-      irPaso(Number(button.getAttribute("data-step-target")));
-    });
-  });
-
-  document.querySelectorAll("[data-step-indicator]").forEach((indicator) => {
-    indicator.addEventListener("click", () => {
-      irPaso(Number(indicator.getAttribute("data-step-indicator")));
-    });
-  });
-
-  irPaso(1);
+  navegacion.inicializar();
 
   const panelInformacionGeneral = document.querySelector(
     '[data-step-panel="1"]',
@@ -610,7 +560,9 @@ document.addEventListener("DOMContentLoaded", () => {
           incluirSeccion(seccion);
         } else {
           omitirSeccion(seccion);
-          if (seccion.siguientePaso) irPaso(seccion.siguientePaso);
+          if (seccion.siguientePaso) {
+            navegacion.irPaso(seccion.siguientePaso);
+          }
         }
       });
   });
