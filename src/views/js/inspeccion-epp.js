@@ -32,6 +32,8 @@ import { construirInspeccionEpp as construirPayloadInspeccionEpp } from "./epp/i
 
 import { construirFormDataEpp as construirContenidoFormDataEpp } from "./epp/inspeccionEpp.formData.js";
 
+import { enviarInspeccionEpp as enviarInspeccionEppApi } from "./epp/inspeccionEpp.api.js";
+
 let pasoActual = 1;
 
 const TOTAL_PASOS = 3;
@@ -594,26 +596,11 @@ function construirFormDataEpp(inspeccionId = null) {
 
 async function enviarInspeccionEpp() {
   try {
-    // Generar el ID una sola vez para este envío
     const inspeccionId = generarInspeccionId();
 
-    // Construir todo el FormData utilizando el mismo ID
     const formData = construirFormDataEpp(inspeccionId);
 
-    const respuesta = await fetch("/enviar-inspeccion-epp", {
-      method: "POST",
-      body: formData,
-    });
-
-    const data = await respuesta.json();
-
-    if (!respuesta.ok || !data.ok) {
-      throw new Error(
-        data.mensaje || "No fue posible registrar la inspección EPP.",
-      );
-    }
-
-    return data;
+    return await enviarInspeccionEppApi(formData);
   } catch (error) {
     console.error("❌ Error enviando inspección EPP:", error);
 
