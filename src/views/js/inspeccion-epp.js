@@ -21,31 +21,25 @@ import {
 } from "./trabajadoresEpp.js";
 
 import { esNovedadEpp } from "./epp/reglasEpp.js";
-
 import { construirInspeccionEpp as construirPayloadInspeccionEpp } from "./epp/inspeccionEpp.payload.js";
-
 import { construirFormDataEpp as construirContenidoFormDataEpp } from "./epp/inspeccionEpp.formData.js";
-
 import { enviarInspeccionEpp as enviarInspeccionEppApi } from "./epp/inspeccionEpp.api.js";
-
 import { inicializarEnvioEpp } from "./epp/controllers/envioInspeccionEpp.controller.js";
-
 import { crearNavegacionInspeccionEpp } from "./epp/controllers/navegacionInspeccionEpp.controller.js";
-
 import { crearValidacionInformacionGeneralEpp } from "./epp/controllers/validacionInformacionGeneralEpp.controller.js";
-
 import { crearResumenTrabajadorHtml } from "./epp/resumenEpp.template.js";
-
 import { crearResumenInspeccionEpp } from "./epp/controllers/resumenInspeccionEpp.controller.js";
-
 import { crearSalidaInspeccionEppController } from "./epp/controllers/salidaInspeccionEpp.controller.js";
-
 import { generarInspeccionId } from "./epp/inspeccionEpp.id.js";
+import { crearContactosAprobacionController } from "./shared/controllers/contactosAprobacion.controller.js";
 
 const TOTAL_PASOS = 3;
 
 const fecha = document.getElementById("fecha");
 
+const contactosAprobacion = crearContactosAprobacionController({
+  documento: document,
+});
 /*
  * 1. Administrador de trabajadores
  */
@@ -139,6 +133,27 @@ document.addEventListener("DOMContentLoaded", async () => {
     inicializarFecha();
 
     validacionInformacionGeneral.inicializar();
+
+    contactosAprobacion.inicializar();
+
+    inicializarEnvioEpp({
+      documento: document,
+
+      ventana: window,
+
+      enviarInspeccionEpp,
+
+      validarContactos: contactosAprobacion.validar,
+
+      prepararAccionesAprobacion(datos) {
+        contactosAprobacion.configurarAcciones({
+          ...datos,
+          tipoInspeccion: "EPP",
+          sede: obtenerValor("sedeOperacion"),
+          area: obtenerValor("areaTrabajo"),
+        });
+      },
+    });
 
     navegacion.inicializar();
 

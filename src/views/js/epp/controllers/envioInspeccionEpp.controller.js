@@ -34,6 +34,8 @@ export function construirLinksAprobacionEpp(
  * @param {Document} [dependencias.documento=document] Documento actual.
  * @param {Window} [dependencias.ventana=window] Ventana actual.
  * @param {Function} dependencias.enviarInspeccionEpp Operación de envío.
+ * @param {Function} [dependencias.validarContactos] Valida los destinatarios.
+ * @param {Function} [dependencias.prepararAccionesAprobacion] Configura las acciones del modal.
  * @param {Function} [dependencias.registrarError=console.error] Registro de errores.
  * @returns {void}
  */
@@ -41,6 +43,8 @@ export function inicializarEnvioEpp({
   documento = document,
   ventana = window,
   enviarInspeccionEpp,
+  validarContactos = () => true,
+  prepararAccionesAprobacion = () => {},
   registrarError = console.error,
 } = {}) {
   const btnEnviar = documento.getElementById(
@@ -54,6 +58,10 @@ export function inicializarEnvioEpp({
   btnEnviar.addEventListener(
     "click",
     async () => {
+      if (!validarContactos()) {
+        return;
+      }
+
       try {
         btnEnviar.disabled = true;
         btnEnviar.textContent = "Enviando...";
@@ -73,6 +81,12 @@ export function inicializarEnvioEpp({
             resultado.tokens,
             ventana.location.origin,
           );
+
+        prepararAccionesAprobacion({
+          links,
+          inspeccionId: resultado.inspeccionId,
+          numInspeccion: resultado.numInspeccion ?? null,
+        });
 
         if (
           typeof ventana.mostrarModal ===

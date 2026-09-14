@@ -56,6 +56,7 @@ import { crearValidacionPasosSst } from "./sst/controllers/validacionPasosSst.co
 import { crearSeccionesOmitidasSstController } from "./sst/controllers/seccionesOmitidasSst.controller.js";
 import { crearResumenInspeccionSstController } from "./sst/controllers/resumenInspeccionSst.controller.js";
 import { crearSalidaInspeccionSstController } from "./sst/controllers/salidaInspeccionSst.controller.js";
+import { crearContactosAprobacionController } from "./shared/controllers/contactosAprobacion.controller.js";
 
 document.addEventListener("DOMContentLoaded", () => {
   const totalSteps = 7;
@@ -186,6 +187,12 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+  const contactosAprobacion = crearContactosAprobacionController({
+    documento: document,
+  });
+
+  contactosAprobacion.inicializar();
+
   const envioInspeccion = crearEnvioInspeccionSstController({
     documento: document,
 
@@ -196,6 +203,17 @@ document.addEventListener("DOMContentLoaded", () => {
     validarPaso: validacion.validarPaso,
 
     tieneItemsInspeccion: resumenInspeccion.tieneItemsInspeccion,
+
+    validarContactos: contactosAprobacion.validar,
+
+    prepararAccionesAprobacion(datos) {
+      contactosAprobacion.configurarAcciones({
+        ...datos,
+        tipoInspeccion: "SST",
+        sede: document.getElementById("sedeOperacion")?.value.trim() || "",
+        area: document.getElementById("areaTrabajo")?.value.trim() || "",
+      });
+    },
 
     generarInspeccionId,
 

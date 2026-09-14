@@ -9,6 +9,8 @@ export function crearEnvioInspeccionSstController({
   obtenerPasoActual,
   validarPaso,
   tieneItemsInspeccion,
+  validarContactos = () => true,
+  prepararAccionesAprobacion = () => {},
   generarInspeccionId,
   construirFormData,
   enviarInspeccion,
@@ -30,9 +32,12 @@ export function crearEnvioInspeccionSstController({
 
       return;
     }
+    
+    if (!validarContactos()) {
+      return;
+    }
 
-    const botonEnviar =
-      documento.getElementById("btn-onedrive");
+    const botonEnviar = documento.getElementById("btn-onedrive");
 
     if (!botonEnviar) {
       return;
@@ -45,37 +50,27 @@ export function crearEnvioInspeccionSstController({
     try {
       const inspeccionId = generarInspeccionId();
 
-      const formData = await construirFormData(
-        inspeccionId,
-      );
+      const formData = await construirFormData(inspeccionId);
 
-      const resultado = await enviarInspeccion(
-        formData,
-      );
+      const resultado = await enviarInspeccion(formData);
 
-      const numInspeccion =
-        resultado.numInspeccion ?? null;
+      const numInspeccion = resultado.numInspeccion ?? null;
 
-      mostrarModal(
-        "exito",
+      prepararAccionesAprobacion({
+        links: resultado.links,
         inspeccionId,
         numInspeccion,
-        resultado.links,
-      );
-    } catch (error) {
-      consola.error(
-        "[SST] Error enviando inspección:",
-        error,
-      );
+      });
 
-      const mensajeError = documento.getElementById(
-        "envio-error-texto",
-      );
+      mostrarModal("exito", inspeccionId, numInspeccion, resultado.links);
+    } catch (error) {
+      consola.error("[SST] Error enviando inspección:", error);
+
+      const mensajeError = documento.getElementById("envio-error-texto");
 
       if (mensajeError) {
         mensajeError.textContent =
-          error?.message ||
-          "No fue posible completar el envío.";
+          error?.message || "No fue posible completar el envío.";
       }
 
       mostrarModal("error");
@@ -85,13 +80,9 @@ export function crearEnvioInspeccionSstController({
   }
 
   function inicializar() {
-    const botonEnviar =
-      documento.getElementById("btn-onedrive");
+    const botonEnviar = documento.getElementById("btn-onedrive");
 
-    botonEnviar?.addEventListener(
-      "click",
-      enviar,
-    );
+    botonEnviar?.addEventListener("click", enviar);
   }
 
   return {
