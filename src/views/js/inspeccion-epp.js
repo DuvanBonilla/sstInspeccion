@@ -30,6 +30,8 @@ import { esNovedadEpp } from "./epp/reglasEpp.js";
 
 import { construirInspeccionEpp as construirPayloadInspeccionEpp } from "./epp/inspeccionEpp.payload.js";
 
+import { construirFormDataEpp as construirContenidoFormDataEpp } from "./epp/inspeccionEpp.formData.js";
+
 let pasoActual = 1;
 
 const TOTAL_PASOS = 3;
@@ -572,52 +574,11 @@ function construirInspeccionEpp(inspeccionId = null) {
  */
 
 function construirFormDataEpp(inspeccionId = null) {
-  const inspeccion = construirInspeccionEpp(inspeccionId);
+  return construirContenidoFormDataEpp({
+    inspeccion: construirInspeccionEpp(inspeccionId),
 
-  const evidencias = trabajadoresManager.obtenerEvidencias();
-
-  const formData = new FormData();
-
-  // -------------------------------------------------------
-  // PAYLOAD JSON
-  // -------------------------------------------------------
-
-  formData.append("payload", JSON.stringify(inspeccion));
-
-  // -------------------------------------------------------
-  // EVIDENCIAS DE TRABAJADORES
-  // -------------------------------------------------------
-
-  evidencias.forEach((evidencia) => {
-    /*
-      El backend trabaja con la posición actual del trabajador:
-
-      evidencia_trabajador_0
-      evidencia_trabajador_1
-      evidencia_trabajador_2
-      ...
-    */
-
-    const indice = evidencia.indice;
-
-    const archivo = evidencia.archivo;
-
-    if (!archivo) {
-      return;
-    }
-
-    const nombreCampo = `evidencia_trabajador_${indice}`;
-
-    formData.append(nombreCampo, archivo, archivo.name);
-
-    // Fecha original/modificación como respaldo del EXIF.
-    formData.append(
-      `${nombreCampo}_lastmod`,
-      String(archivo.lastModified || ""),
-    );
+    evidencias: trabajadoresManager.obtenerEvidencias(),
   });
-
-  return formData;
 }
 
 /**
