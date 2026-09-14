@@ -1,22 +1,16 @@
 /**
  * inspeccion-epp.js
  *
- * Controlador principal del formulario de Inspección EPP.
+ * Orquestador principal del formulario de Inspección EPP.
  *
- * Responsabilidades actuales:
- * - Inicializar la fecha de inspección.
- * - Controlar la navegación entre pasos.
- * - Validar Información General.
- * - Actualizar la barra de progreso.
- * - Construir el resumen de Información General.
- * - Controlar la salida del formulario.
+ * Responsabilidades:
+ * - Cargar el catálogo de elementos EPP.
+ * - Crear y conectar los controladores de la interfaz.
+ * - Inicializar el flujo principal del formulario.
+ * - Coordinar trabajadores, payload, evidencias y envío.
  *
- * Posteriormente:
- * - Gestión dinámica de trabajadores.
- * - Evaluación de elementos EPP.
- * - Evidencias.
- * - Construcción del payload.
- * - Envío al backend.
+ * Las reglas, plantillas, validaciones y operaciones específicas
+ * se encuentran separadas en los módulos del dominio EPP.
  */
 
 import { asignarFechaHoy, abrirSelectorFecha } from "/js/shared.js";
@@ -130,7 +124,18 @@ const salidaInspeccion = crearSalidaInspeccionEppController({
 document.addEventListener("DOMContentLoaded", async () => {
   try {
     await cargarCatalogoEpp();
+  } catch (error) {
+    console.error("[EPP] Error cargando catálogo:", error);
 
+    alert(
+      "No fue posible cargar el catálogo de elementos EPP. " +
+        "Recarga la página e intenta nuevamente.",
+    );
+
+    return;
+  }
+
+  try {
     inicializarFecha();
 
     validacionInformacionGeneral.inicializar();
@@ -151,10 +156,10 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     navegacion.actualizarPaso();
   } catch (error) {
-    console.error("[EPP] Error inicializando inspección:", error);
+    console.error("[EPP] Error inicializando formulario:", error);
 
     alert(
-      "No fue posible cargar el catálogo de elementos EPP. " +
+      "No fue posible inicializar el formulario de inspección EPP. " +
         "Recarga la página e intenta nuevamente.",
     );
   }
