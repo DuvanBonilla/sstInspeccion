@@ -10,6 +10,7 @@ const {
   obtenerResumenAprobacion,
   registrarAprobacion,
   previsualizarAprobacion,
+  reiniciarAprobaciones,
 } = require("../controllers/aprobaciones.controller");
 
 const router = Router();
@@ -27,6 +28,11 @@ router.get(
 router.post(
   "/api/aprobaciones/:token",
   registrarAprobacion,
+);
+
+router.post(
+  "/api/inspecciones/:id/reiniciar-aprobaciones",
+  reiniciarAprobaciones,
 );
 
 module.exports = router;

@@ -154,8 +154,35 @@ async function marcarInspeccionEnviada(inspeccionId, pdfUrl) {
   await query(`UPDATE inspecciones SET estado = 'enviada', pdf_url = $1 WHERE inspeccion_id = $2`, [pdfUrl, inspeccionId]);
 }
 
+/**
+ * Reinicia las aprobaciones de Jefe de Área y COPASST.
+ * Conserva la aprobación original del inspector y mantiene
+ * los mismos tokens/enlaces de aprobación.
+ *
+ * Solo permite la acción mientras la inspección esté pendiente.
+ *
+ * @param {string} inspeccionId
+ * @returns {Promise<Object|null>}
+ */
+async function reiniciarAprobacionesPendientes(inspeccionId) {
+  const { rows } = await query(
+    `UPDATE inspecciones
+     SET aprobacion_jefe_nombre = NULL,
+         aprobacion_jefe_at = NULL,
+         aprobacion_copasst_nombre = NULL,
+         aprobacion_copasst_at = NULL
+     WHERE inspeccion_id = $1
+       AND estado = 'pendiente_aprobacion'
+     RETURNING inspeccion_id, inspecciones_id, estado`,
+    [inspeccionId],
+  );
+
+  return rows[0] || null;
+}
+
 module.exports = {
   obtenerContextoAprobacion,
   guardarAprobacion,
-  marcarInspeccionEnviada
+  marcarInspeccionEnviada,
+  reiniciarAprobacionesPendientes,
 };

@@ -27,7 +27,10 @@ const {
   obtenerContextoAprobacion,
   guardarAprobacion,
   marcarInspeccionEnviada,
+  reiniciarAprobacionesPendientes,
 } = require("../models/aprobaciones.model");
+
+const crypto = require("node:crypto");
 const { obtenerInspeccionCompleta } = require("../models/inspeccion.model");
 const {
   subirPdfAOneDrive,
@@ -703,8 +706,73 @@ async function finalizarInspeccion(inspeccionId) {
   }
 }
 
+/**
+ * Reinicia las aprobaciones de Jefe de Área y COPASST.
+ * La firma del inspector se conserva.
+ *
+ * Solo permite la acción si:
+ * - El código administrativo es correcto.
+ * - La inspección sigue en estado pendiente_aprobacion.
+ */
+async function reiniciarAprobaciones(req, res) {
+  const codigoConfigurado = String(
+    process.env.CODIGO_REINICIO_APROBACIONES || "",
+  );
+
+  const codigoRecibido = String(req.body?.codigo || "");
+
+  if (!codigoConfigurado) {
+    return res.status(503).json({
+      ok: false,
+      mensaje: "El código de reinicio no está configurado en el servidor.",
+    });
+  }
+
+  const recibido = Buffer.from(codigoRecibido);
+  const configurado = Buffer.from(codigoConfigurado);
+
+  const codigoValido =
+    recibido.length === configurado.length &&
+    crypto.timingSafeEqual(recibido, configurado);
+
+  if (!codigoValido) {
+    return res.status(403).json({
+      ok: false,
+      mensaje: "Código de validación incorrecto.",
+    });
+  }
+
+  try {
+    const inspeccion = await reiniciarAprobacionesPendientes(req.params.id);
+
+    if (!inspeccion) {
+      return res.status(409).json({
+        ok: false,
+        mensaje:
+          "Solo es posible reiniciar una inspección pendiente de aprobación.",
+      });
+    }
+
+    return res.json({
+      ok: true,
+      mensaje:
+        "Se borraron las aprobaciones de Jefe de Área y COPASST. Los enlaces existentes pueden usarse nuevamente.",
+      inspeccionId: inspeccion.inspeccion_id,
+      numInspeccion: Number(inspeccion.inspecciones_id),
+    });
+  } catch (error) {
+    console.error("[aprobaciones] Error reiniciando aprobaciones:", error);
+
+    return res.status(500).json({
+      ok: false,
+      mensaje: "No fue posible reiniciar las aprobaciones.",
+    });
+  }
+}
+
 module.exports = {
   obtenerResumenAprobacion,
   previsualizarAprobacion,
   registrarAprobacion,
+  reiniciarAprobaciones,
 };

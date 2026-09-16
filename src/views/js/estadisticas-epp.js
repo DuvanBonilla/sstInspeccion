@@ -23,6 +23,14 @@
 
   const columnasOrdenables = document.querySelectorAll("th[data-sort]");
 
+  const reinicioModal = document.getElementById("reinicio-modal");
+  const reinicioForm = document.getElementById("reinicio-form");
+  const reinicioCodigo = document.getElementById("reinicio-codigo");
+  const reinicioError = document.getElementById("reinicio-error");
+  const btnReinicioCancelar = document.getElementById("reinicio-cancelar");
+
+  let botonReinicioSeleccionado = null;
+
   // =====================================================
   // KPIS
   // =====================================================
@@ -257,6 +265,30 @@
             </button>
           `;
 
+        const reiniciarAprobacionesBtn = `
+  <button
+    type="button"
+    class="btn-reiniciar-aprobaciones accion-btn"
+    data-inspeccion-id="${it.inspeccion_id}"
+    title="Reiniciar aprobaciones"
+    aria-label="Reiniciar aprobaciones de Jefe de Área y COPASST"
+    ${it.estado === "pendiente_aprobacion" ? "" : "disabled"}>
+
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke-width="2"
+      stroke="currentColor">
+
+      <path
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.992 0 3.181 3.183a8.25 8.25 0 0013.803-3.7M4.929 4.929A8.25 8.25 0 0118.77 8.12l3.181-3.182m0 0v4.992" />
+    </svg>
+  </button>
+`;
+
         // =============================================
         // FILA
         // =============================================
@@ -303,6 +335,8 @@
                   ${recuperarBtn}
 
                   ${verPdfBtn}
+
+                  ${reiniciarAprobacionesBtn}
 
                 </div>
 
@@ -521,6 +555,106 @@
 
     if (btnPdf) {
       verPdf(btnPdf);
+    }
+
+    const btnReiniciar = e.target.closest(".btn-reiniciar-aprobaciones");
+
+    if (btnReiniciar) {
+      abrirModalReinicio(btnReiniciar);
+    }
+  });
+
+  function abrirModalReinicio(boton) {
+    botonReinicioSeleccionado = boton;
+
+    reinicioForm.reset();
+
+    reinicioError.textContent = "";
+    reinicioError.classList.add("hidden");
+
+    reinicioModal.classList.remove("hidden");
+
+    reinicioCodigo.focus();
+  }
+
+  function cerrarModalReinicio() {
+    reinicioModal.classList.add("hidden");
+
+    reinicioForm.reset();
+
+    reinicioError.textContent = "";
+    reinicioError.classList.add("hidden");
+
+    botonReinicioSeleccionado = null;
+  }
+
+  btnReinicioCancelar.addEventListener("click", cerrarModalReinicio);
+
+  reinicioForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+
+    if (!botonReinicioSeleccionado) {
+      return;
+    }
+
+    const codigo = reinicioCodigo.value.trim();
+
+    if (!codigo) {
+      reinicioError.textContent = "Ingresa el código de validación.";
+      reinicioError.classList.remove("hidden");
+      reinicioCodigo.focus();
+      return;
+    }
+
+    const botonConfirmar = reinicioForm.querySelector('button[type="submit"]');
+
+    botonConfirmar.disabled = true;
+
+    reinicioError.textContent = "";
+    reinicioError.classList.add("hidden");
+
+    try {
+      const inspeccionId = botonReinicioSeleccionado.dataset.inspeccionId;
+
+      const respuesta = await fetch(
+        `/api/inspecciones/${encodeURIComponent(
+          inspeccionId,
+        )}/reiniciar-aprobaciones`,
+        {
+          method: "POST",
+
+          headers: {
+            "Content-Type": "application/json",
+          },
+
+          body: JSON.stringify({
+            codigo,
+          }),
+        },
+      );
+
+      const data = await respuesta.json();
+
+      if (!respuesta.ok || !data.ok) {
+        throw new Error(
+          data.mensaje || "No fue posible reiniciar las aprobaciones.",
+        );
+      }
+
+      cerrarModalReinicio();
+
+      window.alert(data.mensaje);
+
+      await cargarTodo();
+    } catch (error) {
+      console.error("Error reiniciando aprobaciones:", error);
+
+      reinicioError.textContent =
+        error.message || "No fue posible reiniciar las aprobaciones.";
+
+      reinicioError.classList.remove("hidden");
+    } finally {
+      botonConfirmar.disabled = false;
     }
   });
   /**

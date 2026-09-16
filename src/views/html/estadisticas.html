@@ -279,6 +279,50 @@
         </button>
       </div>
     </section>
+    
+    <div
+      id="reinicio-modal"
+      class="reinicio-modal hidden"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="reinicio-modal-titulo">
+
+      <form id="reinicio-form" class="reinicio-modal-box">
+        <h2 id="reinicio-modal-titulo">
+          Reiniciar aprobaciones
+        </h2>
+
+        <p>
+          Se conservará la firma del inspector y se borrarán únicamente las
+          aprobaciones de Jefe de Área y COPASST.
+        </p>
+
+        <label for="reinicio-codigo">
+          Código de validación
+        </label>
+
+        <input
+          id="reinicio-codigo"
+          type="password"
+          autocomplete="off"
+          required />
+
+        <p id="reinicio-error" class="reinicio-error hidden"></p>
+
+        <div class="reinicio-modal-acciones">
+          <button
+            id="reinicio-cancelar"
+            type="button"
+            class="btn btn-light">
+            Cancelar
+          </button>
+
+          <button type="submit" class="btn btn-primary">
+            Confirmar reinicio
+          </button>
+        </div>
+      </form>
+    </div>
     <!-- Modal de envío -->
     <div id="envio-modal" class="envio-modal" aria-modal="true" role="dialog">
       <div class="envio-modal-box cancelar-modal-box">
@@ -376,6 +420,7 @@
 
         </div>
       </div>
+    </div>
   </main>
 
   <script src="/flatpickr/flatpickr.min.js"></script>
