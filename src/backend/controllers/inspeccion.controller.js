@@ -58,6 +58,20 @@ async function enviarExtintorOneDrive(req, res) {
     });
   }
 
+  let contactosAprobacion;
+
+  try {
+    contactosAprobacion = leerContactosAprobacion(
+      req.body?.contactosAprobacion,
+    );
+  } catch (error) {
+    return res.status(400).json({
+      ok: false,
+      mensaje: error.message,
+      errores: [error.message],
+    });
+  }
+
   // Si llegamos aquí, la validación fue exitosa y podemos proceder a subir evidencias y guardar en Neon.
   try {
     const files = Array.isArray(req.files) ? req.files : [];
@@ -180,8 +194,8 @@ async function enviarExtintorOneDrive(req, res) {
     // El Inspector ya quedó aprobado automáticamente (guardarInspeccionEnDB, con
     // los datos de la info general): solo hace falta enviar link a Jefe y COPASST.
     const baseUrl =
-  process.env.APP_URL?.replace(/\/+$/, "") ||
-  `${req.protocol}://${req.get("host")}`;
+      process.env.APP_URL?.replace(/\/+$/, "") ||
+      `${req.protocol}://${req.get("host")}`;
     const links = {
       jefe: `${baseUrl}/aprobar/${resultado.tokens.jefe}`,
       copasst: `${baseUrl}/aprobar/${resultado.tokens.copasst}`,
