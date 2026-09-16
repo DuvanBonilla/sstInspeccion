@@ -384,6 +384,12 @@ async function registrarAprobacion(req, res) {
         .status(400)
         .json({ ok: false, errores: ["El nombre es obligatorio"] });
     }
+    if (/\d/.test(String(nombre))) {
+      return res.status(400).json({
+        ok: false,
+        errores: ["El nombre no puede contener números."],
+      });
+    }
     const resultado = await guardarAprobacion(req.params.token, { nombre });
 
     if (!resultado.ok) {

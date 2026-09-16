@@ -15,16 +15,13 @@
   </head>
 
   <body>
-
     <!-- =====================================================
          HEADER
     ====================================================== -->
 
     <header class="aprobar-header">
       <div class="aprobar-header-inner">
-
         <div class="aprobar-brand">
-
           <div class="aprobar-logo-wrap">
             <img
               src="/img/Cargo.png"
@@ -36,87 +33,57 @@
           <span class="aprobar-header-sep"></span>
 
           <div class="aprobar-header-copy">
+            <p class="aprobar-header-label">Portal seguro</p>
 
-            <p class="aprobar-header-label">
-              Portal seguro
-            </p>
-
-            <p
-              id="aprobar-header-title"
-              class="aprobar-header-title"
-            >
+            <p id="aprobar-header-title" class="aprobar-header-title">
               Aprobación de inspección
             </p>
-
           </div>
-
         </div>
-
       </div>
     </header>
-
 
     <!-- =====================================================
          CONTENIDO PRINCIPAL
     ====================================================== -->
 
     <main class="aprobar-main">
-
-
       <!-- ===================================================
            ESTADO: CARGANDO
       ==================================================== -->
 
       <div id="estado-cargando" class="aprobar-card">
-
-        <p class="aprobar-loading">
-          Cargando información de la inspección…
-        </p>
-
+        <p class="aprobar-loading">Cargando información de la inspección…</p>
       </div>
-
 
       <!-- ===================================================
            ESTADO: ERROR
       ==================================================== -->
 
       <div id="estado-error" class="aprobar-card hidden">
-
-        <h1 class="aprobar-title aprobar-title--error">
-          Enlace no válido
-        </h1>
+        <h1 class="aprobar-title aprobar-title--error">Enlace no válido</h1>
 
         <p class="aprobar-texto">
-          Este enlace de aprobación no existe o ya no está disponible.
-          Verifica que lo hayas copiado completo.
+          Este enlace de aprobación no existe o ya no está disponible. Verifica
+          que lo hayas copiado completo.
         </p>
-
       </div>
-
 
       <!-- ===================================================
            ESTADO: YA APROBADO
       ==================================================== -->
 
       <div id="estado-ya-aprobado" class="aprobar-card hidden">
-
-        <h1 class="aprobar-title">
-          Ya aprobaste esta inspección
-        </h1>
+        <h1 class="aprobar-title">Ya aprobaste esta inspección</h1>
 
         <p class="aprobar-texto">
-
           Registrado como
 
-          <strong id="ya-aprobado-nombre"></strong>.
-
-          No es necesario volver a confirmar.
-
+          <strong id="ya-aprobado-nombre"></strong>. No es necesario volver a
+          confirmar.
         </p>
 
-
         <div class="aprobar-campo aprobar-campo--center">
-
           <button
             type="button"
             id="btn-ver-informe-ya"
@@ -124,51 +91,29 @@
           >
             Ver informe
           </button>
-
         </div>
-
       </div>
-
 
       <!-- ===================================================
            ESTADO: APROBACIÓN EXITOSA
       ==================================================== -->
 
       <div id="estado-exito" class="aprobar-card hidden">
+        <h1 class="aprobar-title">Aprobación registrada</h1>
 
-        <h1 class="aprobar-title">
-          Aprobación registrada
-        </h1>
-
-        <p
-          class="aprobar-texto"
-          id="exito-mensaje"
-        ></p>
-
+        <p class="aprobar-texto" id="exito-mensaje"></p>
       </div>
-
 
       <!-- ===================================================
            FORMULARIO DE APROBACIÓN
       ==================================================== -->
 
-      <div
-        id="estado-formulario"
-        class="aprobar-card hidden"
-      >
-
+      <div id="estado-formulario" class="aprobar-card hidden">
         <!-- Rol del aprobador -->
 
-        <p
-          class="aprobar-rol"
-          id="rol-label"
-        ></p>
+        <p class="aprobar-rol" id="rol-label"></p>
 
-
-        <h1 class="aprobar-title">
-          Aprobar inspección
-        </h1>
-
+        <h1 class="aprobar-title">Aprobar inspección</h1>
 
         <!-- =================================================
              INFORMACIÓN GENERAL
@@ -176,44 +121,36 @@
         ================================================== -->
 
         <dl class="aprobar-resumen">
-
           <div>
             <dt>Inspección</dt>
             <dd id="resumen-id"></dd>
           </div>
-
 
           <div>
             <dt>Fecha</dt>
             <dd id="resumen-fecha"></dd>
           </div>
 
-
           <div>
             <dt>Sede</dt>
             <dd id="resumen-sede"></dd>
           </div>
-
 
           <div>
             <dt>Área de trabajo</dt>
             <dd id="resumen-area"></dd>
           </div>
 
-
           <div>
             <dt>Jefe de área</dt>
             <dd id="resumen-jefe"></dd>
           </div>
 
-
           <div>
             <dt>Responsable de la inspección</dt>
             <dd id="resumen-responsable"></dd>
           </div>
-
         </dl>
-
 
         <!-- =================================================
              PANEL SST
@@ -222,27 +159,16 @@
              tipoInspeccion === "SST"
         ================================================== -->
 
-        <div
-          id="panel-sst"
-          class="panel-tipo-inspeccion hidden"
-        >
-
-          <div class="aprobar-seccion-titulo">
-            Resumen de inspección SST
-          </div>
-
+        <div id="panel-sst" class="panel-tipo-inspeccion hidden">
+          <div class="aprobar-seccion-titulo">Resumen de inspección SST</div>
 
           <dl class="aprobar-resumen">
-
             <div>
               <dt>Ítems inspeccionados</dt>
               <dd id="resumen-conteos"></dd>
             </div>
-
           </dl>
-
         </div>
-
 
         <!-- =================================================
              PANEL EPP
@@ -251,78 +177,51 @@
              tipoInspeccion === "EPP"
         ================================================== -->
 
-        <div
-          id="panel-epp"
-          class="panel-tipo-inspeccion hidden"
-        >
-
-          <div class="aprobar-seccion-titulo">
-            Resumen de inspección EPP
-          </div>
-
+        <div id="panel-epp" class="panel-tipo-inspeccion hidden">
+          <div class="aprobar-seccion-titulo">Resumen de inspección EPP</div>
 
           <dl class="aprobar-resumen">
-
-
             <!-- Trabajadores -->
 
             <div>
               <dt>Trabajadores inspeccionados</dt>
 
-              <dd id="epp-total-trabajadores">
-                0
-              </dd>
+              <dd id="epp-total-trabajadores">0</dd>
             </div>
-
 
             <!-- Evaluaciones -->
 
             <div>
               <dt>EPP evaluados</dt>
 
-              <dd id="epp-total-evaluaciones">
-                0
-              </dd>
+              <dd id="epp-total-evaluaciones">0</dd>
             </div>
-
 
             <!-- Novedades -->
 
             <div>
               <dt>Novedades encontradas</dt>
 
-              <dd id="epp-total-novedades">
-                0
-              </dd>
+              <dd id="epp-total-novedades">0</dd>
             </div>
-
 
             <!-- Trabajadores con novedades -->
 
             <div>
               <dt>Trabajadores con novedades</dt>
 
-              <dd id="epp-trabajadores-novedades">
-                0
-              </dd>
+              <dd id="epp-trabajadores-novedades">0</dd>
             </div>
-
 
             <!-- Trabajadores sin novedades -->
 
             <div>
               <dt>Trabajadores sin novedades</dt>
 
-              <dd id="epp-trabajadores-sin-novedades">
-                0
-              </dd>
+              <dd id="epp-trabajadores-sin-novedades">0</dd>
             </div>
-
-
           </dl>
-
         </div>
-
 
         <!-- =================================================
              NOTA DE APROBACIÓN
@@ -330,21 +229,15 @@
         ================================================== -->
 
         <p class="aprobar-nota">
-
-          No se solicita firma manuscrita.
-
-          Al confirmar con tu nombre, declaras que revisaste
-          y apruebas esta inspección.
-
+          No se solicita firma manuscrita. Al confirmar con tu nombre, declaras
+          que revisaste y apruebas esta inspección.
         </p>
-
 
         <!-- =================================================
              VER INFORME
         ================================================== -->
 
         <div class="aprobar-campo">
-
           <button
             type="button"
             id="btn-ver-informe"
@@ -352,20 +245,14 @@
           >
             Ver informe
           </button>
-
         </div>
-
 
         <!-- =================================================
              NOMBRE DEL APROBADOR
         ================================================== -->
 
         <div class="aprobar-campo">
-
-          <label for="input-nombre">
-            Tu nombre completo
-          </label>
-
+          <label for="input-nombre"> Tu nombre completo </label>
 
           <input
             type="text"
@@ -373,56 +260,81 @@
             placeholder="Nombre y apellido"
             autocomplete="name"
           />
-
         </div>
-
 
         <!-- =================================================
              ERROR DEL FORMULARIO
         ================================================== -->
 
-        <p
-          id="form-error"
-          class="aprobar-error hidden"
-        ></p>
-
+        <p id="form-error" class="aprobar-error hidden"></p>
 
         <!-- =================================================
              CONFIRMAR APROBACIÓN
         ================================================== -->
 
-        <button
-          type="button"
-          id="btn-aprobar"
-          class="aprobar-btn-primario"
-        >
+        <button type="button" id="btn-aprobar" class="aprobar-btn-primario">
           Confirmar aprobación
         </button>
-
-
       </div>
-
     </main>
+    <!-- =====================================================
+     CONFIRMACIÓN FINAL DE APROBACIÓN
+===================================================== -->
 
+    <div
+      id="confirmacion-aprobacion-modal"
+      class="confirmacion-aprobacion-modal hidden"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="confirmacion-aprobacion-titulo"
+    >
+      <div class="confirmacion-aprobacion-box">
+        <h2 id="confirmacion-aprobacion-titulo">Confirmar aprobación</h2>
+
+        <p>Estás a punto de firmar esta inspección como:</p>
+
+        <p
+          id="confirmacion-aprobacion-rol"
+          class="confirmacion-aprobacion-rol"
+        ></p>
+
+        <p>
+          Esta acción registra tu nombre y no podrá deshacerse. ¿Seguro que
+          deseas continuar?
+        </p>
+
+        <div class="confirmacion-aprobacion-acciones">
+          <button
+            id="btn-cancelar-confirmacion"
+            type="button"
+            class="aprobar-btn-secundario"
+          >
+            Revisar nuevamente
+          </button>
+
+          <button
+            id="btn-confirmar-firma"
+            type="button"
+            class="aprobar-btn-primario"
+          >
+            Sí, firmar aprobación
+          </button>
+        </div>
+      </div>
+    </div>
 
     <!-- =====================================================
          FOOTER
     ====================================================== -->
 
     <footer class="aprobar-footer">
-
-      <p>
-        Cargoban Operador Logístico y Portuario S.A.S
-      </p>
-
+      <p>Cargoban Operador Logístico y Portuario S.A.S</p>
     </footer>
-
 
     <!-- =====================================================
          JAVASCRIPT
     ====================================================== -->
 
     <script src="../js/aprobar.js"></script>
-
   </body>
 </html>
