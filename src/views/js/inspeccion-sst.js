@@ -178,15 +178,21 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   async function construirFormData(inspeccionId, numInspeccion) {
-    return construirFormDataSst({
+    const formData = await construirFormDataSst({
       inspeccionId,
       numInspeccion,
       construirPayload: payload,
       documento: document,
       optimizarImagen,
     });
-  }
 
+    formData.append(
+      "contactosAprobacion",
+      JSON.stringify(contactosAprobacion.obtenerContactos()),
+    );
+
+    return formData;
+  }
   const contactosAprobacion = crearContactosAprobacionController({
     documento: document,
   });

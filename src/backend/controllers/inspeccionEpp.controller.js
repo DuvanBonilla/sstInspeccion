@@ -11,6 +11,11 @@ const { uploadEvidenceToOneDrive } = require("../services/evidencia.service");
 
 const { resolverFechaEvidencia } = require("../utils/fechaEvidencia");
 
+const {
+  leerContactosAprobacion,
+  enviarSolicitudesAprobacion,
+} = require("../services/correoAprobacion.service");
+
 /**
  * Obtiene los archivos adjuntos recibidos en la solicitud.
  *
@@ -60,10 +65,7 @@ function obtenerArchivos(req) {
 
 async function enviarInspeccionEpp(req, res) {
   try {
-
-
     const payload = leerPayload(req);
-
 
     const validacion = validarInspeccionEpp(payload);
 
@@ -77,17 +79,26 @@ async function enviarInspeccionEpp(req, res) {
       });
     }
 
-    const { general, trabajadores } = validacion.data;
+    let contactosAprobacion;
 
+    try {
+      contactosAprobacion = leerContactosAprobacion(
+        req.body?.contactosAprobacion,
+      );
+    } catch (error) {
+      return res.status(400).json({
+        ok: false,
+        mensaje: error.message,
+        errores: [error.message],
+      });
+    }
+
+    const { general, trabajadores } = validacion.data;
 
     const archivos = obtenerArchivos(req);
 
-
-
     for (let i = 0; i < trabajadores.length; i++) {
       const trabajador = trabajadores[i];
-
-
 
       const nombreCampo = `evidencia_trabajador_${i}`;
 
@@ -105,10 +116,7 @@ async function enviarInspeccionEpp(req, res) {
 
       const archivoValidado = validacionEvidencia.data;
 
-
       const lastModified = req.body?.[`${nombreCampo}_lastmod`];
-
-
 
       const evidenciaOneDrive = await uploadEvidenceToOneDrive(
         archivo,
@@ -120,14 +128,10 @@ async function enviarInspeccionEpp(req, res) {
       const evidenciaRuta = evidenciaOneDrive.ruta || "";
       const evidenciaUrl = evidenciaOneDrive.webUrl || "";
 
-
-
       const evidenciaFecha = await resolverFechaEvidencia(
         archivo,
         lastModified,
       );
-
-
 
       trabajador.evidenciaRuta = evidenciaRuta || "";
 
@@ -140,26 +144,41 @@ async function enviarInspeccionEpp(req, res) {
       trabajador.evidenciaFecha = evidenciaFecha;
     }
 
-
-
     const resultado = await guardarInspeccionEppEnDB({
       general,
       trabajadores,
     });
 
+    const baseUrl =
+  process.env.APP_URL?.replace(/\/+$/, "") ||
+  `${req.protocol}://${req.get("host")}`;
 
+    const links = {
+      jefe: `${baseUrl}/aprobar/${resultado.tokens.jefe}`,
+      copasst: `${baseUrl}/aprobar/${resultado.tokens.copasst}`,
+    };
+
+    const estadoEnvioAprobacion = await enviarSolicitudesAprobacion({
+      contactos: contactosAprobacion,
+      links,
+      tipoInspeccion: "EPP",
+      numInspeccion: resultado.numInspeccion,
+      inspeccionId: resultado.inspeccionId,
+      fecha: general.fecha,
+      sede: general.sedeOperacion ?? general.sede,
+      area: general.areaTrabajo ?? general.area,
+    });
 
     return res.status(201).json({
       ok: true,
-
       mensaje: "Inspección EPP registrada correctamente.",
-
       inspeccionId: resultado.inspeccionId,
-
       numInspeccion: resultado.numInspeccion,
-
       tokens: resultado.tokens,
+      links,
+      estadoEnvioAprobacion,
     });
+
   } catch (error) {
     console.error("❌ Error enviando inspección EPP:", error);
 
@@ -171,7 +190,6 @@ async function enviarInspeccionEpp(req, res) {
     });
   }
 }
-
 
 module.exports = {
   enviarInspeccionEpp,

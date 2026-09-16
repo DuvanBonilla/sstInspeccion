@@ -1,3 +1,4 @@
+import { mostrarEstadoEnvioAprobacion } from "../../shared/estadoEnvioAprobacion.js";
 /**
  * Construye los enlaces de aprobación de una inspección EPP.
  *
@@ -5,22 +6,15 @@
  * @param {string} baseUrl Origen de la aplicación.
  * @returns {{jefe: string|null, copasst: string|null}|null}
  */
-export function construirLinksAprobacionEpp(
-  tokens,
-  baseUrl,
-) {
+export function construirLinksAprobacionEpp(tokens, baseUrl) {
   if (!tokens) {
     return null;
   }
 
   return {
-    jefe: tokens.jefe
-      ? `${baseUrl}/aprobar/${tokens.jefe}`
-      : null,
+    jefe: tokens.jefe ? `${baseUrl}/aprobar/${tokens.jefe}` : null,
 
-    copasst: tokens.copasst
-      ? `${baseUrl}/aprobar/${tokens.copasst}`
-      : null,
+    copasst: tokens.copasst ? `${baseUrl}/aprobar/${tokens.copasst}` : null,
   };
 }
 
@@ -47,79 +41,59 @@ export function inicializarEnvioEpp({
   prepararAccionesAprobacion = () => {},
   registrarError = console.error,
 } = {}) {
-  const btnEnviar = documento.getElementById(
-    "btn-enviar-inspeccion-epp",
-  );
+  const btnEnviar = documento.getElementById("btn-enviar-inspeccion-epp");
 
   if (!btnEnviar) {
     return;
   }
 
-  btnEnviar.addEventListener(
-    "click",
-    async () => {
-      if (!validarContactos()) {
-        return;
+  btnEnviar.addEventListener("click", async () => {
+    if (!validarContactos()) {
+      return;
+    }
+
+    try {
+      btnEnviar.disabled = true;
+      btnEnviar.textContent = "Enviando...";
+
+      if (typeof ventana.mostrarModal === "function") {
+        ventana.mostrarModal("cargando");
       }
 
-      try {
-        btnEnviar.disabled = true;
-        btnEnviar.textContent = "Enviando...";
+      const resultado = await enviarInspeccionEpp();
 
-        if (
-          typeof ventana.mostrarModal ===
-          "function"
-        ) {
-          ventana.mostrarModal("cargando");
-        }
+      const links =
+        resultado.links ||
+        construirLinksAprobacionEpp(resultado.tokens, ventana.location.origin);
 
-        const resultado =
-          await enviarInspeccionEpp();
+      prepararAccionesAprobacion({
+        links,
+        inspeccionId: resultado.inspeccionId,
+        numInspeccion: resultado.numInspeccion ?? null,
+      });
 
-        const links =
-          construirLinksAprobacionEpp(
-            resultado.tokens,
-            ventana.location.origin,
-          );
-
-        prepararAccionesAprobacion({
+      if (typeof ventana.mostrarModal === "function") {
+        ventana.mostrarModal(
+          "exito",
+          resultado.inspeccionId,
+          resultado.numInspeccion,
           links,
-          inspeccionId: resultado.inspeccionId,
-          numInspeccion: resultado.numInspeccion ?? null,
-        });
-
-        if (
-          typeof ventana.mostrarModal ===
-          "function"
-        ) {
-          ventana.mostrarModal(
-            "exito",
-            resultado.inspeccionId,
-            resultado.numInspeccion,
-            links,
-            "crear",
-          );
-        }
-
-        btnEnviar.textContent =
-          "Inspección enviada";
-      } catch (error) {
-        registrarError(
-          "❌ No fue posible completar el envío EPP:",
-          error,
+          "crear",
         );
-
-        if (
-          typeof ventana.mostrarModal ===
-          "function"
-        ) {
-          ventana.mostrarModal("error");
-        }
-
-        btnEnviar.disabled = false;
-        btnEnviar.textContent =
-          "Enviar inspección";
       }
-    },
-  );
+
+      mostrarEstadoEnvioAprobacion(documento, resultado.estadoEnvioAprobacion);
+
+      btnEnviar.textContent = "Inspección enviada";
+    } catch (error) {
+      registrarError("❌ No fue posible completar el envío EPP:", error);
+
+      if (typeof ventana.mostrarModal === "function") {
+        ventana.mostrarModal("error");
+      }
+
+      btnEnviar.disabled = false;
+      btnEnviar.textContent = "Enviar inspección";
+    }
+  });
 }

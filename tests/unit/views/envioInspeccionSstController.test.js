@@ -3,18 +3,29 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const rutaModulo = path.resolve(
+function crearUrlModulo(codigo) {
+  return `data:text/javascript;base64,${Buffer.from(codigo).toString(
+    "base64",
+  )}`;
+}
+
+const rutaEstadoEnvio = path.resolve(
+  __dirname,
+  "../../../src/views/js/shared/estadoEnvioAprobacion.js",
+);
+
+const rutaControlador = path.resolve(
   __dirname,
   "../../../src/views/js/sst/controllers/envioInspeccionSst.controller.js",
 );
 
-const codigoModulo = fs.readFileSync(rutaModulo, "utf8");
+const urlEstadoEnvio = crearUrlModulo(fs.readFileSync(rutaEstadoEnvio, "utf8"));
 
-const moduloPromise = import(
-  `data:text/javascript;base64,${
-    Buffer.from(codigoModulo).toString("base64")
-  }`
-);
+const codigoControlador = fs
+  .readFileSync(rutaControlador, "utf8")
+  .replace("../../shared/estadoEnvioAprobacion.js", urlEstadoEnvio);
+
+const moduloPromise = import(crearUrlModulo(codigoControlador));
 
 function crearEscenario({
   pasoValido = true,
@@ -84,10 +95,7 @@ function crearEscenario({
     },
 
     async construirFormData(inspeccionId) {
-      assert.equal(
-        inspeccionId,
-        "INSP-20260914-ABCD",
-      );
+      assert.equal(inspeccionId, "INSP-20260914-ABCD");
 
       formDataConstruido = true;
 
@@ -133,59 +141,41 @@ function crearEscenario({
 }
 
 test("inicializar registra el evento del botón de envío", async () => {
-  const { crearEnvioInspeccionSstController } =
-    await moduloPromise;
+  const { crearEnvioInspeccionSstController } = await moduloPromise;
 
   const escenario = crearEscenario();
 
-  const controlador =
-    crearEnvioInspeccionSstController(
-      escenario.dependencias,
-    );
+  const controlador = crearEnvioInspeccionSstController(escenario.dependencias);
 
   controlador.inicializar();
 
-  assert.equal(
-    typeof escenario.eventos.click,
-    "function",
-  );
+  assert.equal(typeof escenario.eventos.click, "function");
 });
 
 test("enviar se detiene cuando el paso es inválido", async () => {
-  const { crearEnvioInspeccionSstController } =
-    await moduloPromise;
+  const { crearEnvioInspeccionSstController } = await moduloPromise;
 
   const escenario = crearEscenario({
     pasoValido: false,
   });
 
-  const controlador =
-    crearEnvioInspeccionSstController(
-      escenario.dependencias,
-    );
+  const controlador = crearEnvioInspeccionSstController(escenario.dependencias);
 
   await controlador.enviar();
 
-  assert.equal(
-    escenario.obtenerEstado().formDataConstruido,
-    false,
-  );
+  assert.equal(escenario.obtenerEstado().formDataConstruido, false);
 
   assert.deepEqual(escenario.modales, []);
 });
 
 test("enviar exige al menos un elemento registrado", async () => {
-  const { crearEnvioInspeccionSstController } =
-    await moduloPromise;
+  const { crearEnvioInspeccionSstController } = await moduloPromise;
 
   const escenario = crearEscenario({
     tieneItems: false,
   });
 
-  const controlador =
-    crearEnvioInspeccionSstController(
-      escenario.dependencias,
-    );
+  const controlador = crearEnvioInspeccionSstController(escenario.dependencias);
 
   await controlador.enviar();
 
@@ -194,22 +184,15 @@ test("enviar exige al menos un elemento registrado", async () => {
     "No puede enviar este informe porque no se ha registrado ningún ítem en la inspección.",
   );
 
-  assert.equal(
-    escenario.obtenerEstado().formDataConstruido,
-    false,
-  );
+  assert.equal(escenario.obtenerEstado().formDataConstruido, false);
 });
 
 test("enviar construye y registra la inspección", async () => {
-  const { crearEnvioInspeccionSstController } =
-    await moduloPromise;
+  const { crearEnvioInspeccionSstController } = await moduloPromise;
 
   const escenario = crearEscenario();
 
-  const controlador =
-    crearEnvioInspeccionSstController(
-      escenario.dependencias,
-    );
+  const controlador = crearEnvioInspeccionSstController(escenario.dependencias);
 
   await controlador.enviar();
 
@@ -228,38 +211,25 @@ test("enviar construye y registra la inspección", async () => {
     ],
   ]);
 
-  assert.deepEqual(
-    escenario.obtenerEstado().formDataEnviado,
-    {
-      inspeccionId: "INSP-20260914-ABCD",
-    },
-  );
+  assert.deepEqual(escenario.obtenerEstado().formDataEnviado, {
+    inspeccionId: "INSP-20260914-ABCD",
+  });
 });
 
 test("enviar muestra el error y reactiva el botón", async () => {
-  const { crearEnvioInspeccionSstController } =
-    await moduloPromise;
+  const { crearEnvioInspeccionSstController } = await moduloPromise;
 
   const escenario = crearEscenario({
     error: new Error("No fue posible guardar"),
   });
 
-  const controlador =
-    crearEnvioInspeccionSstController(
-      escenario.dependencias,
-    );
+  const controlador = crearEnvioInspeccionSstController(escenario.dependencias);
 
   await controlador.enviar();
 
   assert.equal(escenario.boton.disabled, false);
 
-  assert.equal(
-    escenario.mensajeError.textContent,
-    "No fue posible guardar",
-  );
+  assert.equal(escenario.mensajeError.textContent, "No fue posible guardar");
 
-  assert.deepEqual(escenario.modales, [
-    ["cargando"],
-    ["error"],
-  ]);
+  assert.deepEqual(escenario.modales, [["cargando"], ["error"]]);
 });

@@ -1,3 +1,4 @@
+import { mostrarEstadoEnvioAprobacion } from "../../shared/estadoEnvioAprobacion.js";
 /**
  * Crea el controlador encargado del envío de una inspección SST.
  *
@@ -32,7 +33,7 @@ export function crearEnvioInspeccionSstController({
 
       return;
     }
-    
+
     if (!validarContactos()) {
       return;
     }
@@ -63,6 +64,7 @@ export function crearEnvioInspeccionSstController({
       });
 
       mostrarModal("exito", inspeccionId, numInspeccion, resultado.links);
+      mostrarEstadoEnvioAprobacion(documento, resultado.estadoEnvioAprobacion);
     } catch (error) {
       consola.error("[SST] Error enviando inspección:", error);
 

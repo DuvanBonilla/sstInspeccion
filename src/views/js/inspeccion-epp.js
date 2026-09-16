@@ -161,14 +161,6 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     trabajadoresManager.init();
 
-    inicializarEnvioEpp({
-      documento: document,
-
-      ventana: window,
-
-      enviarInspeccionEpp,
-    });
-
     navegacion.actualizarPaso();
   } catch (error) {
     console.error("[EPP] Error inicializando formulario:", error);
@@ -215,11 +207,17 @@ function construirInspeccionEpp(inspeccionId = null) {
  * @returns {FormData} Contenido multipart.
  */
 function construirFormDataEpp(inspeccionId = null) {
-  return construirContenidoFormDataEpp({
+  const formData = construirContenidoFormDataEpp({
     inspeccion: construirInspeccionEpp(inspeccionId),
-
     evidencias: trabajadoresManager.obtenerEvidencias(),
   });
+
+  formData.append(
+    "contactosAprobacion",
+    JSON.stringify(contactosAprobacion.obtenerContactos()),
+  );
+
+  return formData;
 }
 
 /**

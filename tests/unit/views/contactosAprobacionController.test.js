@@ -374,3 +374,54 @@ test("configurarAcciones oculta el botón cuando falta el enlace", async () => {
   assert.equal(boton.href, "#");
   assert.equal(boton.classList.contains("hidden"), true);
 });
+
+test("exige medio para COPASST aunque Jefe esté completo", async () => {
+  const { crearContactosAprobacionController } = await moduloPromise;
+  const escenario = crearEscenario();
+
+  escenario.elementos["metodo-aprobacion-jefe"].value = "whatsapp";
+  escenario.elementos["destino-aprobacion-jefe"].value = "3001234567";
+
+  const controlador = crearContactosAprobacionController({
+    documento: escenario.documento,
+  });
+
+  assert.equal(controlador.validar(), false);
+  assert.equal(
+    escenario.elementos["metodo-aprobacion-copasst"].enfocado,
+    true,
+  );
+});
+
+test("cambiar de WhatsApp a correo no acepta el teléfono como destino", async () => {
+  const { crearContactosAprobacionController } = await moduloPromise;
+  const escenario = crearEscenario();
+
+  const metodoJefe = escenario.elementos["metodo-aprobacion-jefe"];
+  const destinoJefe = escenario.elementos["destino-aprobacion-jefe"];
+
+  escenario.elementos["metodo-aprobacion-copasst"].value = "whatsapp";
+  escenario.elementos["destino-aprobacion-copasst"].value = "3001234567";
+
+  const controlador = crearContactosAprobacionController({
+    documento: escenario.documento,
+  });
+
+  controlador.inicializar();
+
+  metodoJefe.value = "whatsapp";
+  metodoJefe.emitir("change");
+  destinoJefe.value = "3012345678";
+
+  assert.equal(controlador.validar(), true);
+
+  metodoJefe.value = "correo";
+  metodoJefe.emitir("change");
+
+  assert.equal(destinoJefe.type, "email");
+  assert.equal(controlador.validar(), false);
+  assert.equal(destinoJefe.enfocado, true);
+
+  destinoJefe.value = "jefe@gmail.com";
+  assert.equal(controlador.validar(), true);
+});
