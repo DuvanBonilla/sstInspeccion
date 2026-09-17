@@ -23,6 +23,7 @@ const DESTINATARIOS_PREDETERMINADOS = [
     clave: "jefe",
     metodoId: "metodo-aprobacion-jefe",
     destinoId: "destino-aprobacion-jefe",
+    etiquetaId: "label-destino-aprobacion-jefe",
     errorId: "error-aprobacion-jefe",
     botonId: "btn-compartir-aprobacion-jefe",
     rol: "Jefe de Área",
@@ -31,6 +32,7 @@ const DESTINATARIOS_PREDETERMINADOS = [
     clave: "copasst",
     metodoId: "metodo-aprobacion-copasst",
     destinoId: "destino-aprobacion-copasst",
+    etiquetaId: "label-destino-aprobacion-copasst",
     errorId: "error-aprobacion-copasst",
     botonId: "btn-compartir-aprobacion-copasst",
     rol: "COPASST",
@@ -54,6 +56,7 @@ export function crearContactosAprobacionController({
     return {
       metodo: documento.getElementById(configuracion.metodoId),
       destino: documento.getElementById(configuracion.destinoId),
+      etiqueta: documento.getElementById(configuracion.etiquetaId),
       error: documento.getElementById(configuracion.errorId),
     };
   }
@@ -71,27 +74,43 @@ export function crearContactosAprobacionController({
   }
 
   function actualizarCampo(configuracion) {
-    const { metodo, destino, error } = obtenerElementos(configuracion);
+    const { metodo, destino, etiqueta, error } =
+      obtenerElementos(configuracion);
 
     if (!metodo || !destino) {
       return;
     }
 
     if (metodo.value === "whatsapp") {
+      if (etiqueta) {
+        etiqueta.textContent = "Número de teléfono";
+      }
+
       destino.type = "tel";
       destino.placeholder = "Ejemplo: 3001234567";
-      destino.inputMode = "tel";
+      destino.inputMode = "numeric";
       destino.autocomplete = "tel";
+      destino.maxLength = 10;
     } else if (metodo.value === "correo") {
+      if (etiqueta) {
+        etiqueta.textContent = "Correo electrónico";
+      }
+
       destino.type = "email";
       destino.placeholder = "Ejemplo: nombre@empresa.com";
       destino.inputMode = "email";
       destino.autocomplete = "email";
+      destino.removeAttribute("maxLength");
     } else {
+      if (etiqueta) {
+        etiqueta.textContent = "Teléfono o correo";
+      }
+
       destino.type = "text";
       destino.placeholder = "Seleccione primero el medio de envío";
       destino.inputMode = "text";
       destino.autocomplete = "off";
+      destino.removeAttribute("maxLength");
     }
 
     destino.disabled = !metodo.value;
@@ -273,6 +292,12 @@ export function crearContactosAprobacionController({
 
     if (!configuracion) {
       return;
+    }
+
+    const { metodo, destino } = obtenerElementos(configuracion);
+
+    if (metodo?.value === "whatsapp" && destino) {
+      destino.value = destino.value.replace(/\D/g, "").slice(0, 10);
     }
 
     validarContacto(configuracion);

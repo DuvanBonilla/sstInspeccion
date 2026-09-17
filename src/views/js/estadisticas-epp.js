@@ -214,6 +214,7 @@
               class="btn-recuperar accion-btn accion-btn-links"
               data-inspeccion-id="${it.inspeccion_id}"
               data-num-inspeccion="${it.inspecciones_id}"
+              title="Recuperar enlaces"
               ${it.estado === "pendiente_aprobacion" ? "" : "disabled"}>
 
               <svg
@@ -241,7 +242,9 @@
             <button
               type="button"
               class="btn-ver-pdf accion-btn accion-btn-pdf"
-              data-inspeccion-id="${it.inspeccion_id}">
+              data-inspeccion-id="${it.inspeccion_id}"
+              title="Ver PDf">
+              
 
               <svg
                 xmlns="http://www.w3.org/2000/svg"
