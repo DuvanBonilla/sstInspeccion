@@ -1,6 +1,6 @@
 const { enviarCorreoPorGraph } = require("./correo.service");
 
-const CORREO_DESTINATARIO_REINICIO = "Juanmix201@gmail.com";
+const CORREO_DESTINATARIO_REINICIO = "s.ocupacional@cargoban.com.co";
 const LOGO_URL = "https://sstinspeccion.onrender.com/img/Cargo.png";
 
 function escaparHtml(valor) {
