@@ -5,11 +5,14 @@ const {
   obtenerLinksInspeccion,
 } = require("../models/inspeccion.model");
 
-const {
-  subirEvidenciasMultiples,
-} = require("../services/evidencia.service");
+const { subirEvidenciasMultiples } = require("../services/evidencia.service");
 
 const { validarInspeccion } = require("../validators/inspeccion.validator");
+
+const {
+  leerContactosAprobacion,
+  enviarSolicitudesAprobacion,
+} = require("../services/correoAprobacion.service");
 
 /**
  * Registra una inspección SST con sus elementos y evidencias.
@@ -52,6 +55,20 @@ async function enviarExtintorOneDrive(req, res) {
     return res.status(400).json({
       ok: false,
       errores: validacion.errores,
+    });
+  }
+
+  let contactosAprobacion;
+
+  try {
+    contactosAprobacion = leerContactosAprobacion(
+      req.body?.contactosAprobacion,
+    );
+  } catch (error) {
+    return res.status(400).json({
+      ok: false,
+      mensaje: error.message,
+      errores: [error.message],
     });
   }
 
@@ -176,11 +193,24 @@ async function enviarExtintorOneDrive(req, res) {
 
     // El Inspector ya quedó aprobado automáticamente (guardarInspeccionEnDB, con
     // los datos de la info general): solo hace falta enviar link a Jefe y COPASST.
-    const baseUrl = `${req.protocol}://${req.get("host")}`;
+    const baseUrl =
+      process.env.APP_URL?.replace(/\/+$/, "") ||
+      `${req.protocol}://${req.get("host")}`;
     const links = {
       jefe: `${baseUrl}/aprobar/${resultado.tokens.jefe}`,
       copasst: `${baseUrl}/aprobar/${resultado.tokens.copasst}`,
     };
+
+    const estadoEnvioAprobacion = await enviarSolicitudesAprobacion({
+      contactos: contactosAprobacion,
+      links,
+      tipoInspeccion: "SST",
+      numInspeccion: resultado.numInspeccion,
+      inspeccionId: resultado.inspeccionId,
+      fecha: general.fecha,
+      sede: general.sedeOperacion,
+      area: general.areaTrabajo,
+    });
 
     // Respuesta exitosa
     return res.status(201).json({
@@ -190,6 +220,7 @@ async function enviarExtintorOneDrive(req, res) {
       inspeccionId: resultado.inspeccionId,
       numInspeccion: resultado.numInspeccion,
       links,
+      estadoEnvioAprobacion,
     });
   } catch (error) {
     console.error("Error enviando inspección SST:", error);

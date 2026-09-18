@@ -27,8 +27,32 @@ const {
   obtenerContextoAprobacion,
   guardarAprobacion,
   marcarInspeccionEnviada,
+  reiniciarAprobacionesPendientes,
+  obtenerInspeccionPendienteParaReinicio,
+  invalidarCodigosReinicioActivos,
+  crearCodigoReinicio,
+  obtenerCodigoReinicioActivo,
+  registrarIntentoCodigoReinicio,
+  marcarCodigoReinicioUsado,
 } = require("../models/aprobaciones.model");
+
+const {
+  generarCodigoReinicio,
+  crearHashCodigoReinicio,
+  calcularVencimientoCodigo,
+  validarCodigoReinicio,
+} = require("../services/codigoReinicioAprobaciones.service");
+
+const {
+  enviarCodigoReinicioAprobaciones,
+} = require("../services/correoReinicioAprobaciones.service");
+
+const crypto = require("node:crypto");
+
 const { obtenerInspeccionCompleta } = require("../models/inspeccion.model");
+
+const { pool } = require("../db/pool");
+
 const {
   subirPdfAOneDrive,
   construirEvidenciasDesdeOneDrive,
@@ -381,6 +405,12 @@ async function registrarAprobacion(req, res) {
         .status(400)
         .json({ ok: false, errores: ["El nombre es obligatorio"] });
     }
+    if (/\d/.test(String(nombre))) {
+      return res.status(400).json({
+        ok: false,
+        errores: ["El nombre no puede contener números."],
+      });
+    }
     const resultado = await guardarAprobacion(req.params.token, { nombre });
 
     if (!resultado.ok) {
@@ -703,8 +733,308 @@ async function finalizarInspeccion(inspeccionId) {
   }
 }
 
+/**
+ * Reinicia las aprobaciones de Jefe de Área y COPASST.
+ * La firma del inspector se conserva.
+ *
+ * Solo permite la acción si:
+ * - El código administrativo es correcto.
+ * - La inspección sigue en estado pendiente_aprobacion.
+ */
+async function reiniciarAprobaciones(req, res) {
+  const codigoConfigurado = String(
+    process.env.CODIGO_REINICIO_APROBACIONES || "",
+  );
+
+  const codigoRecibido = String(req.body?.codigo || "");
+
+  if (!codigoConfigurado) {
+    return res.status(503).json({
+      ok: false,
+      mensaje: "El código de reinicio no está configurado en el servidor.",
+    });
+  }
+
+  const recibido = Buffer.from(codigoRecibido);
+  const configurado = Buffer.from(codigoConfigurado);
+
+  const codigoValido =
+    recibido.length === configurado.length &&
+    crypto.timingSafeEqual(recibido, configurado);
+
+  if (!codigoValido) {
+    return res.status(403).json({
+      ok: false,
+      mensaje: "Código de validación incorrecto.",
+    });
+  }
+
+  try {
+    const inspeccion = await reiniciarAprobacionesPendientes(req.params.id);
+
+    if (!inspeccion) {
+      return res.status(409).json({
+        ok: false,
+        mensaje:
+          "Solo es posible reiniciar una inspección pendiente de aprobación.",
+      });
+    }
+
+    return res.json({
+      ok: true,
+      mensaje:
+        "Se borraron las aprobaciones de Jefe de Área y COPASST. Los enlaces existentes pueden usarse nuevamente.",
+      inspeccionId: inspeccion.inspeccion_id,
+      numInspeccion: Number(inspeccion.inspecciones_id),
+    });
+  } catch (error) {
+    console.error("[aprobaciones] Error reiniciando aprobaciones:", error);
+
+    return res.status(500).json({
+      ok: false,
+      mensaje: "No fue posible reiniciar las aprobaciones.",
+    });
+  }
+}
+
+async function solicitarCodigoReinicioAprobaciones(req, res) {
+  const inspeccionId = String(req.params.id || "").trim();
+
+  try {
+    const inspeccion =
+      await obtenerInspeccionPendienteParaReinicio(inspeccionId);
+
+    if (!inspeccion) {
+      return res.status(409).json({
+        ok: false,
+        mensaje:
+          "La inspección no existe o ya no está pendiente de aprobación.",
+      });
+    }
+
+    const codigo = generarCodigoReinicio();
+    const { hash, salt } = crearHashCodigoReinicio(codigo);
+    const venceEn = calcularVencimientoCodigo();
+
+    // Un código nuevo invalida cualquier código anterior aún activo.
+    await invalidarCodigosReinicioActivos(
+      inspeccion.inspecciones_id,
+      inspeccion.tipo_inspeccion,
+    );
+
+    await crearCodigoReinicio({
+      inspeccionesId: inspeccion.inspecciones_id,
+      tipoInspeccion: inspeccion.tipo_inspeccion,
+      codigoHash: hash,
+      codigoSalt: salt,
+      venceEn,
+    });
+
+    try {
+      await enviarCodigoReinicioAprobaciones({
+        inspeccion,
+        codigo,
+        venceEn,
+      });
+    } catch (error) {
+      // Si Graph falla, ningún código queda habilitado.
+      await invalidarCodigosReinicioActivos(
+        inspeccion.inspecciones_id,
+        inspeccion.tipo_inspeccion,
+      );
+
+      console.error(
+        "No fue posible enviar el correo de reinicio de aprobaciones:",
+        error.message,
+      );
+
+      return res.status(502).json({
+        ok: false,
+        mensaje:
+          "No fue posible enviar el código de autorización. Inténtelo nuevamente.",
+      });
+    }
+
+    return res.status(201).json({
+      ok: true,
+      mensaje:
+        "El código de autorización fue enviado al correo de trazabilidad.",
+      venceEn: venceEn.toISOString(),
+    });
+  } catch (error) {
+    console.error(
+      "Error al solicitar código para reiniciar aprobaciones:",
+      error,
+    );
+
+    return res.status(500).json({
+      ok: false,
+      mensaje: "No fue posible solicitar el código de autorización.",
+    });
+  }
+}
+
+async function confirmarReinicioAprobaciones(req, res) {
+  const inspeccionId = String(req.params.id || "").trim();
+  const codigo = String(req.body?.codigo || "").trim();
+
+  if (!/^\d{6}$/.test(codigo)) {
+    return res.status(400).json({
+      ok: false,
+      mensaje: "Ingrese un código válido de seis dígitos.",
+    });
+  }
+
+  const cliente = await pool.connect();
+  let transaccionIniciada = false;
+
+  try {
+    await cliente.query("BEGIN");
+    transaccionIniciada = true;
+
+    const ejecutarConsulta = cliente.query.bind(cliente);
+
+    const inspeccion = await obtenerInspeccionPendienteParaReinicio(
+      inspeccionId,
+      ejecutarConsulta,
+    );
+
+    if (!inspeccion) {
+      await cliente.query("ROLLBACK");
+      transaccionIniciada = false;
+
+      return res.status(409).json({
+        ok: false,
+        mensaje:
+          "La inspección no existe o ya no está pendiente de aprobación.",
+      });
+    }
+
+    const registroCodigo = await obtenerCodigoReinicioActivo(
+      inspeccion.inspecciones_id,
+      inspeccion.tipo_inspeccion,
+      ejecutarConsulta,
+    );
+
+    if (!registroCodigo) {
+      await cliente.query("ROLLBACK");
+      transaccionIniciada = false;
+
+      return res.status(404).json({
+        ok: false,
+        mensaje:
+          "No hay un código de autorización activo para esta inspección.",
+      });
+    }
+
+    const validacion = validarCodigoReinicio({
+      codigo,
+      hash: registroCodigo.codigo_hash,
+      salt: registroCodigo.codigo_salt,
+      venceEn: registroCodigo.vence_en,
+      intentos: registroCodigo.intentos,
+      usadoEn: registroCodigo.usado_en,
+    });
+
+    if (!validacion.valido) {
+      if (validacion.motivo === "INCORRECTO") {
+        const intento = await registrarIntentoCodigoReinicio(
+          registroCodigo.codigo_reinicio_id,
+          ejecutarConsulta,
+        );
+
+        await cliente.query("COMMIT");
+        transaccionIniciada = false;
+
+        const agotado = intento?.intentos >= 5;
+
+        return res.status(400).json({
+          ok: false,
+          mensaje: agotado
+            ? "Código incorrecto. Se agotaron los intentos permitidos."
+            : "El código ingresado es incorrecto.",
+          intentosRestantes: agotado ? 0 : 5 - (intento?.intentos || 0),
+        });
+      }
+
+      await cliente.query("ROLLBACK");
+      transaccionIniciada = false;
+
+      const mensajes = {
+        EXPIRADO: "El código de autorización ha vencido.",
+        BLOQUEADO:
+          "Se agotaron los intentos permitidos. Solicite un nuevo código.",
+        UTILIZADO: "El código de autorización ya fue utilizado.",
+      };
+
+      return res.status(409).json({
+        ok: false,
+        mensaje:
+          mensajes[validacion.motivo] ||
+          "El código de autorización no es válido.",
+      });
+    }
+
+    const codigoUsado = await marcarCodigoReinicioUsado(
+      registroCodigo.codigo_reinicio_id,
+      ejecutarConsulta,
+    );
+
+    if (!codigoUsado) {
+      await cliente.query("ROLLBACK");
+      transaccionIniciada = false;
+
+      return res.status(409).json({
+        ok: false,
+        mensaje: "El código ya no está disponible. Solicite uno nuevo.",
+      });
+    }
+
+    const inspeccionReiniciada = await reiniciarAprobacionesPendientes(
+      inspeccionId,
+      ejecutarConsulta,
+    );
+
+    if (!inspeccionReiniciada) {
+      await cliente.query("ROLLBACK");
+      transaccionIniciada = false;
+
+      return res.status(409).json({
+        ok: false,
+        mensaje:
+          "La inspección ya no está pendiente de aprobación y no puede reiniciarse.",
+      });
+    }
+
+    await cliente.query("COMMIT");
+    transaccionIniciada = false;
+
+    return res.status(200).json({
+      ok: true,
+      mensaje: "Las aprobaciones fueron reiniciadas correctamente.",
+      inspeccion: inspeccionReiniciada,
+    });
+  } catch (error) {
+    if (transaccionIniciada) {
+      await cliente.query("ROLLBACK");
+    }
+
+    console.error("Error al confirmar reinicio de aprobaciones:", error);
+
+    return res.status(500).json({
+      ok: false,
+      mensaje: "No fue posible confirmar el reinicio de aprobaciones.",
+    });
+  } finally {
+    cliente.release();
+  }
+}
+
 module.exports = {
   obtenerResumenAprobacion,
   previsualizarAprobacion,
   registrarAprobacion,
+  reiniciarAprobaciones,
+  solicitarCodigoReinicioAprobaciones,
+  confirmarReinicioAprobaciones,
 };

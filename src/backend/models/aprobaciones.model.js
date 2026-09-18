@@ -23,9 +23,27 @@
 const { query } = require("../db/pool");
 
 const ROLES = {
-  inspector: { tokenCol: "token_inspector", cedulaCol: "aprobacion_inspector_cedula", nombreCol: "aprobacion_inspector_nombre", atCol: "aprobacion_inspector_at", label: "Inspector" },
-  jefe: { tokenCol: "token_jefe", cedulaCol: "aprobacion_jefe_cedula", nombreCol: "aprobacion_jefe_nombre", atCol: "aprobacion_jefe_at", label: "Jefe de Área" },
-  copasst: { tokenCol: "token_copasst", cedulaCol: "aprobacion_copasst_cedula", nombreCol: "aprobacion_copasst_nombre", atCol: "aprobacion_copasst_at", label: "COPASST" }
+  inspector: {
+    tokenCol: "token_inspector",
+    cedulaCol: "aprobacion_inspector_cedula",
+    nombreCol: "aprobacion_inspector_nombre",
+    atCol: "aprobacion_inspector_at",
+    label: "Inspector",
+  },
+  jefe: {
+    tokenCol: "token_jefe",
+    cedulaCol: "aprobacion_jefe_cedula",
+    nombreCol: "aprobacion_jefe_nombre",
+    atCol: "aprobacion_jefe_at",
+    label: "Jefe de Área",
+  },
+  copasst: {
+    tokenCol: "token_copasst",
+    cedulaCol: "aprobacion_copasst_cedula",
+    nombreCol: "aprobacion_copasst_nombre",
+    atCol: "aprobacion_copasst_at",
+    label: "COPASST",
+  },
 };
 /**
  * Busca una inspección y determina el rol asociado a un token.
@@ -43,12 +61,17 @@ const ROLES = {
 async function buscarPorToken(token) {
   const { rows } = await query(
     `SELECT * FROM inspecciones WHERE token_inspector = $1 OR token_jefe = $1 OR token_copasst = $1 LIMIT 1`,
-    [token]
+    [token],
   );
   const row = rows[0];
   if (!row) return null;
 
-  const rol = row.token_inspector === token ? "inspector" : row.token_jefe === token ? "jefe" : "copasst";
+  const rol =
+    row.token_inspector === token
+      ? "inspector"
+      : row.token_jefe === token
+        ? "jefe"
+        : "copasst";
   return { row, rol };
 }
 
@@ -79,7 +102,7 @@ async function obtenerContextoAprobacion(token) {
     rolLabel: cfg.label,
     yaAprobado: Boolean(row[cfg.nombreCol]),
     nombreAprobador: row[cfg.nombreCol] || null,
-    row
+    row,
   };
 }
 
@@ -118,7 +141,7 @@ async function guardarAprobacion(token, { nombre }) {
      SET ${cfg.nombreCol} = $1, ${cfg.atCol} = now()
      WHERE inspeccion_id = $2 AND ${cfg.nombreCol} IS NULL
      RETURNING *`,
-    [String(nombre).trim(), row.inspeccion_id]
+    [String(nombre).trim(), row.inspeccion_id],
   );
 
   if (rowCount === 0) return { ok: false, motivo: "ya_aprobado" };
@@ -127,11 +150,14 @@ async function guardarAprobacion(token, { nombre }) {
   const completas = Boolean(
     actualizado.aprobacion_inspector_nombre &&
     actualizado.aprobacion_jefe_nombre &&
-    actualizado.aprobacion_copasst_nombre
+    actualizado.aprobacion_copasst_nombre,
   );
 
   if (completas && actualizado.estado === "pendiente_aprobacion") {
-    await query(`UPDATE inspecciones SET estado = 'aprobada' WHERE inspeccion_id = $1`, [actualizado.inspeccion_id]);
+    await query(
+      `UPDATE inspecciones SET estado = 'aprobada' WHERE inspeccion_id = $1`,
+      [actualizado.inspeccion_id],
+    );
   }
 
   return { ok: true, rol, inspeccionId: actualizado.inspeccion_id, completas };
@@ -151,11 +177,182 @@ async function guardarAprobacion(token, { nombre }) {
  */
 
 async function marcarInspeccionEnviada(inspeccionId, pdfUrl) {
-  await query(`UPDATE inspecciones SET estado = 'enviada', pdf_url = $1 WHERE inspeccion_id = $2`, [pdfUrl, inspeccionId]);
+  await query(
+    `UPDATE inspecciones SET estado = 'enviada', pdf_url = $1 WHERE inspeccion_id = $2`,
+    [pdfUrl, inspeccionId],
+  );
+}
+
+/**
+ * Reinicia las aprobaciones de Jefe de Área y COPASST.
+ * Conserva la aprobación original del inspector y mantiene
+ * los mismos tokens/enlaces de aprobación.
+ *
+ * Solo permite la acción mientras la inspección esté pendiente.
+ *
+ * @param {string} inspeccionId
+ * @returns {Promise<Object|null>}
+ */
+async function reiniciarAprobacionesPendientes(
+  inspeccionId,
+  ejecutarConsulta = query,
+) {
+  const { rows } = await ejecutarConsulta(
+    `UPDATE inspecciones
+     SET aprobacion_jefe_nombre = NULL,
+         aprobacion_jefe_at = NULL,
+         aprobacion_copasst_nombre = NULL,
+         aprobacion_copasst_at = NULL
+     WHERE inspeccion_id = $1
+       AND estado = 'pendiente_aprobacion'
+     RETURNING inspeccion_id, inspecciones_id, estado`,
+    [inspeccionId],
+  );
+
+  return rows[0] || null;
+}
+
+async function obtenerInspeccionPendienteParaReinicio(
+  inspeccionId,
+  ejecutarConsulta = query,
+) {
+  const { rows } = await ejecutarConsulta(
+    `SELECT
+       inspecciones_id,
+       inspeccion_id,
+       tipo_inspeccion,
+       fecha,
+       sede_operacion,
+       area_trabajo,
+       estado
+     FROM inspecciones
+     WHERE inspeccion_id = $1
+       AND estado = 'pendiente_aprobacion'
+     LIMIT 1`,
+    [inspeccionId],
+  );
+
+  return rows[0] || null;
+}
+
+async function obtenerCodigoReinicioActivo(
+  inspeccionesId,
+  tipoInspeccion,
+  ejecutarConsulta = query,
+) {
+  const { rows } = await ejecutarConsulta(
+    `SELECT
+       codigo_reinicio_id,
+       inspecciones_id,
+       tipo_inspeccion,
+       codigo_hash,
+       codigo_salt,
+       vence_en,
+       intentos,
+       usado_en,
+       invalidado_en,
+       creado_en
+     FROM codigos_reinicio_aprobaciones
+     WHERE inspecciones_id = $1
+       AND tipo_inspeccion = $2
+       AND usado_en IS NULL
+       AND invalidado_en IS NULL
+     ORDER BY creado_en DESC
+     LIMIT 1
+     FOR UPDATE`,
+    [inspeccionesId, tipoInspeccion],
+  );
+
+  return rows[0] || null;
+}
+
+async function registrarIntentoCodigoReinicio(
+  codigoReinicioId,
+  ejecutarConsulta = query,
+) {
+  const { rows } = await ejecutarConsulta(
+    `UPDATE codigos_reinicio_aprobaciones
+     SET intentos = intentos + 1
+     WHERE codigo_reinicio_id = $1
+       AND usado_en IS NULL
+       AND invalidado_en IS NULL
+       AND intentos < 5
+     RETURNING codigo_reinicio_id, intentos`,
+    [codigoReinicioId],
+  );
+
+  return rows[0] || null;
+}
+
+async function marcarCodigoReinicioUsado(
+  codigoReinicioId,
+  ejecutarConsulta = query,
+) {
+  const { rows } = await ejecutarConsulta(
+    `UPDATE codigos_reinicio_aprobaciones
+     SET usado_en = now()
+     WHERE codigo_reinicio_id = $1
+       AND usado_en IS NULL
+       AND invalidado_en IS NULL
+     RETURNING codigo_reinicio_id, usado_en`,
+    [codigoReinicioId],
+  );
+
+  return rows[0] || null;
+}
+
+async function invalidarCodigosReinicioActivos(
+  inspeccionesId,
+  tipoInspeccion,
+) {
+  await query(
+    `UPDATE codigos_reinicio_aprobaciones
+     SET invalidado_en = now()
+     WHERE inspecciones_id = $1
+       AND tipo_inspeccion = $2
+       AND usado_en IS NULL
+       AND invalidado_en IS NULL`,
+    [inspeccionesId, tipoInspeccion],
+  );
+}
+
+async function crearCodigoReinicio({
+  inspeccionesId,
+  tipoInspeccion,
+  codigoHash,
+  codigoSalt,
+  venceEn,
+}) {
+  const { rows } = await query(
+    `INSERT INTO codigos_reinicio_aprobaciones (
+       inspecciones_id,
+       tipo_inspeccion,
+       codigo_hash,
+       codigo_salt,
+       vence_en
+     )
+     VALUES ($1, $2, $3, $4, $5)
+     RETURNING
+       codigo_reinicio_id,
+       inspecciones_id,
+       tipo_inspeccion,
+       vence_en,
+       creado_en`,
+    [inspeccionesId, tipoInspeccion, codigoHash, codigoSalt, venceEn],
+  );
+
+  return rows[0];
 }
 
 module.exports = {
   obtenerContextoAprobacion,
   guardarAprobacion,
-  marcarInspeccionEnviada
+  marcarInspeccionEnviada,
+  reiniciarAprobacionesPendientes,
+  obtenerInspeccionPendienteParaReinicio,
+  invalidarCodigosReinicioActivos,
+  crearCodigoReinicio,
+  obtenerCodigoReinicioActivo,
+  registrarIntentoCodigoReinicio,
+  marcarCodigoReinicioUsado,
 };

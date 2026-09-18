@@ -524,6 +524,130 @@
         </div>
       </section>
 
+      <!-- Modal de reinicio de aprobaciones -->
+      <div
+        id="reinicio-modal"
+        class="reinicio-modal hidden"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="reinicio-modal-titulo"
+      >
+        <form id="reinicio-form" class="reinicio-modal-box">
+          <button
+            id="reinicio-cancelar"
+            type="button"
+            class="reinicio-modal-cerrar"
+            aria-label="Cerrar modal"
+            title="Cerrar"
+          >
+            ×
+          </button>
+          <h2 id="reinicio-modal-titulo" class="reinicio-modal-titulo">Reiniciar aprobaciones</h2>
+
+          <p>
+            La firma del inspector se conservará. Solo se eliminarán las aprobaciones del Jefe de Área y COPASST.
+          </p>
+
+          <div id="reinicio-paso-solicitud">
+            <label
+              class="reinicio-confirmacion-label"
+              for="reinicio-confirmacion"
+            >
+              <input
+                id="reinicio-confirmacion"
+                class="reinicio-confirmacion-checkbox"
+                type="checkbox"
+              />
+              <span>
+                Confirmo que deseo reiniciar las aprobaciones de esta
+                inspección.
+              </span>
+            </label>
+
+            <button
+              id="reinicio-solicitar-codigo"
+              type="button"
+              class="btn btn-primary reinicio-solicitar-codigo"
+              disabled
+            >
+              Solicitar código
+            </button>
+          </div>
+
+          <div id="reinicio-paso-codigo" class="hidden">
+            <p>
+              Ingresa el código de seis dígitos enviado al correo de
+              "s.ocupacional@cargoban.com.co" para confirmar.
+            </p>
+
+            <label class="auth-code">Código de autorización</label>
+
+            <div
+              id="reinicio-codigo-digitos"
+              class="reinicio-codigo-digitos"
+              aria-label="Código de autorización"
+            >
+              <input
+                class="reinicio-codigo-digito"
+                type="text"
+                inputmode="numeric"
+                maxlength="1"
+                aria-label="Dígito 1"
+              />
+              <input
+                class="reinicio-codigo-digito"
+                type="text"
+                inputmode="numeric"
+                maxlength="1"
+                aria-label="Dígito 2"
+              />
+              <input
+                class="reinicio-codigo-digito"
+                type="text"
+                inputmode="numeric"
+                maxlength="1"
+                aria-label="Dígito 3"
+              />
+              <input
+                class="reinicio-codigo-digito"
+                type="text"
+                inputmode="numeric"
+                maxlength="1"
+                aria-label="Dígito 4"
+              />
+              <input
+                class="reinicio-codigo-digito"
+                type="text"
+                inputmode="numeric"
+                maxlength="1"
+                aria-label="Dígito 5"
+              />
+              <input
+                class="reinicio-codigo-digito"
+                type="text"
+                inputmode="numeric"
+                maxlength="1"
+                aria-label="Dígito 6"
+              />
+            </div>
+
+            <p id="reinicio-contador" class="reinicio-contador"></p>
+
+            <button
+              id="reinicio-confirmar"
+              type="submit"
+              class="btn btn-primary reinicio-confirmar"
+            >
+              Confirmar reinicio
+            </button>
+          </div>
+
+          <p id="reinicio-error" class="reinicio-error hidden"></p>
+
+          <div class="reinicio-modal-acciones">
+          </div>
+        </form>
+      </div>
       <!-- ===================================================
          MODAL DE ENLACES / APROBACIONES
     ==================================================== -->

@@ -1,208 +1,32 @@
 <!doctype html>
 <html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Estadísticas de Inspecciones SST</title>
+    <link rel="icon" type="image/x-icon" href="/img/favicon.ico" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/css/estadisticas.css" />
+    <link rel="stylesheet" href="/flatpickr/flatpickr.min.css" />
+  </head>
 
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Estadísticas de Inspecciones SST</title>
-  <link rel="icon" type="image/x-icon" href="/img/favicon.ico" />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/css/estadisticas.css" />
-  <link rel="stylesheet" href="/flatpickr/flatpickr.min.css">
-
-</head>
-
-<body>
-  <header class="stats-header">
-    <div class="stats-header-inner">
-      <a href="/" class="stats-brand" aria-label="Volver al inicio">
-        <img src="/img/Cargo.png" alt="Logo Cargoban" class="stats-logo" />
-      </a>
-      <span class="stats-header-sep"></span>
-      <span class="stats-header-label">Sistema de Gestión SST</span>
-      <a href="/" class="stats-back-btn btn btn-light" aria-label="Regresar al panel de inicio">
-        <svg class="btn-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2"
-          stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
-        </svg>
-        Regresar
-      </a>
-    </div>
-  </header>
-
-  <section class="stats-stage">
-
-    <h1 class="stats-title">Estadísticas de inspecciones</h1>
-  </section>
-
-  <main class="stats-main">
-    <section class="stats-filtros card">
-      <div class="card-header">
-        <div class="card-title-group">
-          <svg class="card-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2"
-            stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round"
-              d="M10.5 6h9.75M10.5 6a1.5 1.5 0 1 1-3 0m3 0a1.5 1.5 0 1 0-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-9.75 0h9.75" />
-          </svg>
-          <h2>Filtros de búsqueda</h2>
-        </div>
-      </div>
-      <form id="filtros-form" class="filtros-grid">
-        <label class="filtro-field">
-          <span>Rango de fechas</span>
-
-          <input id="rangoFechas" type="text" placeholder="Seleccione un rango" readonly>
-
-          <input type="hidden" id="fechaDesde" name="fechaDesde">
-          <input type="hidden" id="fechaHasta" name="fechaHasta">
-
-          <div id="rangoResumen" class="rango-resumen oculto">
-            <div class="rango-info">
-              <span><strong>Desde:</strong> <span id="textoDesde"></span></span>
-              <span><strong>Hasta:</strong> <span id="textoHasta"></span></span>
-            </div>
-
-            <button type="button" id="limpiarRango" class="btn-limpiar-rango">
-              ✕
-            </button>
-          </div>
-        </label>
-        <label class="filtro-field">
-          <span>Sede</span>
-
-          <select name="sedeOperacion">
-            <option value="">Seleccione una sede</option>
-            <option value="">Todas</option>
-            <option value="Urabá">Urabá</option>
-            <option value="Santa Marta">Smt</option>
-          </select>
-        </label>
-        <label class="filtro-field">
-          <span>Estado</span>
-
-          <select name="estado">
-            <option value="">Seleccione un estado</option>
-            <option value="">Todos los estados</option>
-            <option value="pendiente_aprobacion">Pendiente aprobación</option>
-            <option value="aprobada">Aprobada</option>
-            <option value="enviada">Enviada</option>
-          </select>
-        </label>
-        <label class="filtro-field filtro-q">
-          <span>Búsqueda general</span>
-          <div class="search-input-wrapper">
-            <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2"
-              stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round"
-                d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.603 10.602Z" />
-            </svg>
-            <input type="text" name="q" placeholder="Código, responsable, jefe o área..." />
-          </div>
-        </label>
-
-      </form>
-    </section>
-
-    <section class="stats-kpis">
-      <article class="kpi card kpi--total">
-        <div class="kpi-header">
-          <p class="kpi-label">Total inspecciones</p>
-          <div class="kpi-icon-wrapper">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2"
-              stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round"
-                d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 0 0 2.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 0 0-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 0 0 .75-.75 2.25 2.25 0 0 0-.1-.664m-5.8 0A2.251 2.251 0 0 1 13.5 2.25H15c1.03 0 1.9.732 2.1 1.714m-7.4 17.188A2.25 2.25 0 0 1 7.5 19.5V6.24m0 13.26A2.249 2.249 0 0 0 7.5 19.5V6.24m0 13.26C5.624 19.185 4.5 17.47 4.5 15.5V6.108c0-1.135.845-2.098 1.976-2.192a48.424 48.424 0 0 1 1.123-.08" />
-            </svg>
-          </div>
-        </div>
-        <p class="kpi-value" id="kpi-total">0</p>
-      </article>
-      <article class="kpi card kpi--pendiente">
-        <div class="kpi-header">
-          <p class="kpi-label">Pendientes</p>
-          <div class="kpi-icon-wrapper">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2"
-              stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round"
-                d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-            </svg>
-          </div>
-        </div>
-        <p class="kpi-value" id="kpi-pendientes">0</p>
-      </article>
-      <article class="kpi card kpi--aprobada">
-        <div class="kpi-header">
-          <p class="kpi-label">Aprobadas</p>
-          <div class="kpi-icon-wrapper">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2"
-              stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round"
-                d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-            </svg>
-          </div>
-        </div>
-        <p class="kpi-value" id="kpi-aprobadas">0</p>
-      </article>
-      <article class="kpi card kpi--enviada">
-        <div class="kpi-header">
-          <p class="kpi-label">Enviadas</p>
-          <div class="kpi-icon-wrapper">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2"
-              stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round"
-                d="M6 12 3.269 3.125A59.769 59.769 0 0 1 21.485 12 59.768 59.768 0 0 1 3.27 20.875L5.999 12Zm0 0h7.5" />
-            </svg>
-          </div>
-        </div>
-        <p class="kpi-value" id="kpi-enviadas">0</p>
-      </article>
-      <article class="kpi card kpi--mes">
-        <div class="kpi-header">
-          <p class="kpi-label">Este mes</p>
-          <div class="kpi-icon-wrapper">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2"
-              stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round"
-                d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5" />
-            </svg>
-          </div>
-        </div>
-        <p class="kpi-value" id="kpi-mes">0</p>
-      </article>
-    </section>
-
-    <section class="stats-sedes card card--topline">
-      <div class="card-title-group">
-        <svg class="card-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2"
-          stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
-          <path stroke-linecap="round" stroke-linejoin="round"
-            d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z" />
-        </svg>
-        <h2>Distribución por sede</h2>
-      </div>
-      <div id="sedes-lista" class="sedes-lista"></div>
-    </section>
-
-    <section class="stats-tabla card card--topline">
-      <div class="tabla-head">
-        <div class="card-title-group">
-          <svg class="card-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2"
-            stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round"
-              d="M8.25 6.75h12M8.25 12h12m-12 5.25h12M3.75 6.75h.007v.008H3.75V6.75Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0ZM3.75 12h.007v.008H3.75V12Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm-3.75 5.25h.007v.008H3.75v-.008Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z" />
-          </svg>
-          <h2>Inspecciones registradas</h2>
-
-        </div>
-
-        <button
-          id="btn-actualizar-excel-sst"
-          class="btn btn-exportar-excel"
-          type="button"
-          title="Actualizar el seguimiento SST en OneDrive"
+  <body>
+    <header class="stats-header">
+      <div class="stats-header-inner">
+        <a href="/" class="stats-brand" aria-label="Volver al inicio">
+          <img src="/img/Cargo.png" alt="Logo Cargoban" class="stats-logo" />
+        </a>
+        <span class="stats-header-sep"></span>
+        <span class="stats-header-label">Sistema de Gestión SST</span>
+        <a
+          href="/"
+          class="stats-back-btn btn btn-light"
+          aria-label="Regresar al panel de inicio"
         >
           <svg
             class="btn-icon"
@@ -215,174 +39,617 @@
             <path
               stroke-linecap="round"
               stroke-linejoin="round"
-              d="M16.023 9.348h4.992V4.356m-.582 11.83a8.25 8.25 0 0 1-13.201 2.174L3 14.25m0 0h4.992M3 14.25v4.992m17.418-9.428a8.25 8.25 0 0 0-13.201-2.174L3 11.75"
+              d="M15.75 19.5 8.25 12l7.5-7.5"
             />
           </svg>
-
-          <span>Actualizar Excel</span>
-        </button>
-        
-        <div class="estados-leyenda">
-
-          <span class="leyenda-item">
-            <span class="estado-dot estado-pendiente_aprobacion"></span>
-            Pendiente aprobación
-          </span>
-
-          <span class="leyenda-item">
-            <span class="estado-dot estado-aprobada"></span>
-            Aprobada
-          </span>
-
-          <span class="leyenda-item">
-            <span class="estado-dot estado-enviada"></span>
-            Enviada
-          </span>
-
-        </div>
-
-        <p id="tabla-meta" class="tabla-meta"></p>
+          Regresar
+        </a>
       </div>
-      <div class="tabla-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th data-sort="numero">N°</th>
-              <th data-sort="codigo">Código</th>
-              <th data-sort="registro">Registro</th>
-              <th data-sort="sedeOperacion">Sede</th>
-              <th data-sort="area">Área</th>
-              <th data-sort="responsable">Responsable</th>
-              <th data-sort="estado">Estado</th>
-              <th data-sort="items">Ítems</th>
-              <th>Acciones</th>
-            </tr>
-          </thead>
-          <tbody id="tabla-body"></tbody>
-        </table>
-      </div>
-      <div class="tabla-actions">
-        <button id="btn-prev" class="btn btn-light" type="button">
-          <svg class="btn-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2"
-            stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
-          </svg>
-          Anterior
-        </button>
-        <span id="page-info">Página 1</span>
-        <button id="btn-next" class="btn btn-light" type="button">
-          Siguiente
-          <svg class="btn-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2"
-            stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
-          </svg>
-        </button>
-      </div>
+    </header>
+
+    <section class="stats-stage">
+      <h1 class="stats-title">Estadísticas de inspecciones</h1>
     </section>
-    <!-- Modal de envío -->
-    <div id="envio-modal" class="envio-modal" aria-modal="true" role="dialog">
-      <div class="envio-modal-box cancelar-modal-box">
 
-        <!-- Estado de carga -->
-        <div id="envio-estado-cargando" class="envio-estado">
-          <div class="envio-spinner"></div>
-          <p class="envio-titulo">Enviando inspección...</p>
-          <p class="envio-sub">Guardando la inspección</p>
-        </div>
-
-        <!-- Estado de éxito -->
-        <div id="envio-estado-exito" class="envio-estado hidden">
-          <div class="exito-icono-wrap">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-              stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M20 6L9 17l-5-5" />
+    <main class="stats-main">
+      <section class="stats-filtros card">
+        <div class="card-header">
+          <div class="card-title-group">
+            <svg
+              class="card-icon"
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke-width="2"
+              stroke="currentColor"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="M10.5 6h9.75M10.5 6a1.5 1.5 0 1 1-3 0m3 0a1.5 1.5 0 1 0-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-9.75 0h9.75"
+              />
             </svg>
+            <h2>Filtros de búsqueda</h2>
           </div>
-          <p class="exito-titulo">¡Inspección guardada!</p>
-          <p id="envio-num-inspeccion" class="envio-num-inspeccion hidden"></p>
-          <p id="envio-inspeccion-id" class="envio-id-chip"></p>
-          <p class="exito-sub">El inspector (quien diligenció el formulario) ya quedó aprobado automáticamente. Comparte
-            estos enlaces con el Jefe de Área y el COPASST para que aprueben. El correo con el PDF se envía
-            automáticamente
-            cuando
-            las 3 aprobaciones estén completas.</p>
+        </div>
+        <form id="filtros-form" class="filtros-grid">
+          <label class="filtro-field">
+            <span>Rango de fechas</span>
 
-          <div id="envio-links" class="envio-links">
+            <input
+              id="rangoFechas"
+              type="text"
+              placeholder="Seleccione un rango"
+              readonly
+            />
 
-            <!-- JEFE -->
-            <div id="bloque-jefe" class="envio-link-item">
+            <input type="hidden" id="fechaDesde" name="fechaDesde" />
+            <input type="hidden" id="fechaHasta" name="fechaHasta" />
 
-              <span class="envio-link-label">
-                Jefe de Área
-              </span>
-
-              <div class="envio-link-row">
-
-                <input id="link-jefe" class="envio-link-input" readonly>
-
-                <button type="button" class="envio-link-copy" data-copy-target="link-jefe">
-                  Copiar
-                </button>
-
+            <div id="rangoResumen" class="rango-resumen oculto">
+              <div class="rango-info">
+                <span
+                  ><strong>Desde:</strong> <span id="textoDesde"></span
+                ></span>
+                <span
+                  ><strong>Hasta:</strong> <span id="textoHasta"></span
+                ></span>
               </div>
 
+              <button type="button" id="limpiarRango" class="btn-limpiar-rango">
+                ✕
+              </button>
             </div>
+          </label>
+          <label class="filtro-field">
+            <span>Sede</span>
 
-            <!-- BRIGADISTA -->
-            <div id="bloque-copasst" class="envio-link-item">
+            <select name="sedeOperacion">
+              <option value="">Seleccione una sede</option>
+              <option value="">Todas</option>
+              <option value="Urabá">Urabá</option>
+              <option value="Santa Marta">Smt</option>
+            </select>
+          </label>
+          <label class="filtro-field">
+            <span>Estado</span>
 
-              <span class="envio-link-label">
-                Brigadista
-              </span>
-
-              <div class="envio-link-row">
-
-                <input id="link-copasst" class="envio-link-input" readonly>
-
-                <button type="button" class="envio-link-copy" data-copy-target="link-copasst">
-                  Copiar
-                </button>
-
-              </div>
-
+            <select name="estado">
+              <option value="">Seleccione un estado</option>
+              <option value="">Todos los estados</option>
+              <option value="pendiente_aprobacion">Pendiente aprobación</option>
+              <option value="aprobada">Aprobada</option>
+              <option value="enviada">Enviada</option>
+            </select>
+          </label>
+          <label class="filtro-field filtro-q">
+            <span>Búsqueda general</span>
+            <div class="search-input-wrapper">
+              <svg
+                class="search-icon"
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke-width="2"
+                stroke="currentColor"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.603 10.602Z"
+                />
+              </svg>
+              <input
+                type="text"
+                name="q"
+                placeholder="Código, responsable, jefe o área..."
+              />
             </div>
+          </label>
+        </form>
+      </section>
 
+      <section class="stats-kpis">
+        <article class="kpi card kpi--total">
+          <div class="kpi-header">
+            <p class="kpi-label">Total inspecciones</p>
+            <div class="kpi-icon-wrapper">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke-width="2"
+                stroke="currentColor"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 0 0 2.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 0 0-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 0 0 .75-.75 2.25 2.25 0 0 0-.1-.664m-5.8 0A2.251 2.251 0 0 1 13.5 2.25H15c1.03 0 1.9.732 2.1 1.714m-7.4 17.188A2.25 2.25 0 0 1 7.5 19.5V6.24m0 13.26A2.249 2.249 0 0 0 7.5 19.5V6.24m0 13.26C5.624 19.185 4.5 17.47 4.5 15.5V6.108c0-1.135.845-2.098 1.976-2.192a48.424 48.424 0 0 1 1.123-.08"
+                />
+              </svg>
+            </div>
           </div>
-          <button id="btn-modal-cerrar" type="button" class="modal-close" onclick="cerrarModal()" aria-label="Cerrar"
-            title="Cerrar">
-            ✕
+          <p class="kpi-value" id="kpi-total">0</p>
+        </article>
+        <article class="kpi card kpi--pendiente">
+          <div class="kpi-header">
+            <p class="kpi-label">Pendientes</p>
+            <div class="kpi-icon-wrapper">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke-width="2"
+                stroke="currentColor"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
+                />
+              </svg>
+            </div>
+          </div>
+          <p class="kpi-value" id="kpi-pendientes">0</p>
+        </article>
+        <article class="kpi card kpi--aprobada">
+          <div class="kpi-header">
+            <p class="kpi-label">Aprobadas</p>
+            <div class="kpi-icon-wrapper">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke-width="2"
+                stroke="currentColor"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
+                />
+              </svg>
+            </div>
+          </div>
+          <p class="kpi-value" id="kpi-aprobadas">0</p>
+        </article>
+        <article class="kpi card kpi--enviada">
+          <div class="kpi-header">
+            <p class="kpi-label">Enviadas</p>
+            <div class="kpi-icon-wrapper">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke-width="2"
+                stroke="currentColor"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M6 12 3.269 3.125A59.769 59.769 0 0 1 21.485 12 59.768 59.768 0 0 1 3.27 20.875L5.999 12Zm0 0h7.5"
+                />
+              </svg>
+            </div>
+          </div>
+          <p class="kpi-value" id="kpi-enviadas">0</p>
+        </article>
+        <article class="kpi card kpi--mes">
+          <div class="kpi-header">
+            <p class="kpi-label">Este mes</p>
+            <div class="kpi-icon-wrapper">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke-width="2"
+                stroke="currentColor"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5"
+                />
+              </svg>
+            </div>
+          </div>
+          <p class="kpi-value" id="kpi-mes">0</p>
+        </article>
+      </section>
+
+      <section class="stats-sedes card card--topline">
+        <div class="card-title-group">
+          <svg
+            class="card-icon"
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke-width="2"
+            stroke="currentColor"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"
+            />
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z"
+            />
+          </svg>
+          <h2>Distribución por sede</h2>
+        </div>
+        <div id="sedes-lista" class="sedes-lista"></div>
+      </section>
+
+      <section class="stats-tabla card card--topline">
+        <div class="tabla-head">
+          <div class="card-title-group">
+            <svg
+              class="card-icon"
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke-width="2"
+              stroke="currentColor"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="M8.25 6.75h12M8.25 12h12m-12 5.25h12M3.75 6.75h.007v.008H3.75V6.75Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0ZM3.75 12h.007v.008H3.75V12Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm-3.75 5.25h.007v.008H3.75v-.008Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z"
+              />
+            </svg>
+            <h2>Inspecciones registradas</h2>
+          </div>
+
+          <button
+            id="btn-actualizar-excel-sst"
+            class="btn btn-exportar-excel"
+            type="button"
+            title="Actualizar el seguimiento SST en OneDrive"
+          >
+            <svg
+              class="btn-icon"
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke-width="2"
+              stroke="currentColor"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="M16.023 9.348h4.992V4.356m-.582 11.83a8.25 8.25 0 0 1-13.201 2.174L3 14.25m0 0h4.992M3 14.25v4.992m17.418-9.428a8.25 8.25 0 0 0-13.201-2.174L3 11.75"
+              />
+            </svg>
+
+            <span>Actualizar Excel</span>
+          </button>
+
+          <div class="estados-leyenda">
+            <span class="leyenda-item">
+              <span class="estado-dot estado-pendiente_aprobacion"></span>
+              Pendiente aprobación
+            </span>
+
+            <span class="leyenda-item">
+              <span class="estado-dot estado-aprobada"></span>
+              Aprobada
+            </span>
+
+            <span class="leyenda-item">
+              <span class="estado-dot estado-enviada"></span>
+              Enviada
+            </span>
+          </div>
+
+          <p id="tabla-meta" class="tabla-meta"></p>
+        </div>
+        <div class="tabla-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th data-sort="numero">N°</th>
+                <th data-sort="codigo">Código</th>
+                <th data-sort="registro">Registro</th>
+                <th data-sort="sedeOperacion">Sede</th>
+                <th data-sort="area">Área</th>
+                <th data-sort="responsable">Responsable</th>
+                <th data-sort="estado">Estado</th>
+                <th data-sort="items">Ítems</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="tabla-body"></tbody>
+          </table>
+        </div>
+        <div class="tabla-actions">
+          <button id="btn-prev" class="btn btn-light" type="button">
+            <svg
+              class="btn-icon"
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke-width="2"
+              stroke="currentColor"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="M15.75 19.5 8.25 12l7.5-7.5"
+              />
+            </svg>
+            Anterior
+          </button>
+          <span id="page-info">Página 1</span>
+          <button id="btn-next" class="btn btn-light" type="button">
+            Siguiente
+            <svg
+              class="btn-icon"
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke-width="2"
+              stroke="currentColor"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="m8.25 4.5 7.5 7.5-7.5 7.5"
+              />
+            </svg>
           </button>
         </div>
-        <div id="envio-estado-error" class="envio-estado hidden">
+      </section>
 
-          <button id="btn-modal-cerrar-error" type="button" class="modal-close" onclick="cerrarModal()"
-            aria-label="Cerrar" title="Cerrar">
-            ✕
+      <div
+        id="reinicio-modal"
+        class="reinicio-modal hidden"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="reinicio-modal-titulo"
+      >
+        <form id="reinicio-form" class="reinicio-modal-box">
+          <button
+            id="reinicio-cancelar"
+            type="button"
+            class="reinicio-modal-cerrar"
+            aria-label="Cerrar modal"
+            title="Cerrar"
+          >
+            ×
           </button>
+          <h2 id="reinicio-modal-titulo" class="reinicio-modal-titulo">Reiniciar aprobaciones</h2>
 
-          <div class="envio-icono envio-icono--error">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-              stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-              <circle cx="12" cy="12" r="10" />
-              <path d="M15 9l-6 6M9 9l6 6" />
-            </svg>
-          </div>
-
-          <p class="envio-titulo">Ocurrió un error</p>
-
-          <p id="envio-error-texto" class="envio-sub">
-            No fue posible procesar la solicitud.
+          <p>
+            La firma del inspector se conservará. Solo se eliminarán las
+            aprobaciones del Jefe de Área y COPASST.
           </p>
 
+          <div id="reinicio-paso-solicitud">
+            <label
+              class="reinicio-confirmacion-label"
+              for="reinicio-confirmacion"
+            >
+              <input
+                id="reinicio-confirmacion"
+                class="reinicio-confirmacion-checkbox"
+                type="checkbox"
+              />
+              <span>
+                Confirmo que deseo reiniciar las aprobaciones de esta
+                inspección.
+              </span>
+            </label>
+
+            <button
+              id="reinicio-solicitar-codigo"
+              type="button"
+              class="btn btn-primary reinicio-solicitar-codigo"
+              disabled
+            >
+              Solicitar código
+            </button>
+          </div>
+
+          <div id="reinicio-paso-codigo" class="hidden">
+            <p>
+              Ingresa el código de seis dígitos enviado al correo de
+              "s.ocupacional@cargoban.com.co" para confirmar.
+            </p>
+
+            <label>Código de autorización</label>
+
+            <div
+              id="reinicio-codigo-digitos"
+              class="reinicio-codigo-digitos"
+              aria-label="Código de autorización"
+            >
+              <input
+                class="reinicio-codigo-digito"
+                type="text"
+                inputmode="numeric"
+                maxlength="1"
+                aria-label="Dígito 1"
+              />
+              <input
+                class="reinicio-codigo-digito"
+                type="text"
+                inputmode="numeric"
+                maxlength="1"
+                aria-label="Dígito 2"
+              />
+              <input
+                class="reinicio-codigo-digito"
+                type="text"
+                inputmode="numeric"
+                maxlength="1"
+                aria-label="Dígito 3"
+              />
+              <input
+                class="reinicio-codigo-digito"
+                type="text"
+                inputmode="numeric"
+                maxlength="1"
+                aria-label="Dígito 4"
+              />
+              <input
+                class="reinicio-codigo-digito"
+                type="text"
+                inputmode="numeric"
+                maxlength="1"
+                aria-label="Dígito 5"
+              />
+              <input
+                class="reinicio-codigo-digito"
+                type="text"
+                inputmode="numeric"
+                maxlength="1"
+                aria-label="Dígito 6"
+              />
+            </div>
+
+            <p id="reinicio-contador" class="reinicio-contador"></p>
+
+            <button
+              id="reinicio-confirmar"
+              type="submit"
+              class="btn btn-primary reinicio-confirmar"
+            >
+              Confirmar reinicio
+            </button>
+          </div>
+
+          <p id="reinicio-error" class="reinicio-error hidden"></p>
+
+          <div class="reinicio-modal-acciones"></div>
+        </form>
+      </div>
+      <!-- Modal de envío -->
+      <div id="envio-modal" class="envio-modal" aria-modal="true" role="dialog">
+        <div class="envio-modal-box cancelar-modal-box">
+          <!-- Estado de carga -->
+          <div id="envio-estado-cargando" class="envio-estado">
+            <div class="envio-spinner"></div>
+            <p class="envio-titulo">Enviando inspección...</p>
+            <p class="envio-sub">Guardando la inspección</p>
+          </div>
+
+          <!-- Estado de éxito -->
+          <div id="envio-estado-exito" class="envio-estado hidden">
+            <div class="exito-icono-wrap">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.5"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M20 6L9 17l-5-5" />
+              </svg>
+            </div>
+            <p class="exito-titulo">¡Inspección guardada!</p>
+            <p
+              id="envio-num-inspeccion"
+              class="envio-num-inspeccion hidden"
+            ></p>
+            <p id="envio-inspeccion-id" class="envio-id-chip"></p>
+            <p class="exito-sub">
+              El inspector (quien diligenció el formulario) ya quedó aprobado
+              automáticamente. Comparte estos enlaces con el Jefe de Área y el
+              COPASST para que aprueben. El correo con el PDF se envía
+              automáticamente cuando las 3 aprobaciones estén completas.
+            </p>
+
+            <div id="envio-links" class="envio-links">
+              <!-- JEFE -->
+              <div id="bloque-jefe" class="envio-link-item">
+                <span class="envio-link-label"> Jefe de Área </span>
+
+                <div class="envio-link-row">
+                  <input id="link-jefe" class="envio-link-input" readonly />
+
+                  <button
+                    type="button"
+                    class="envio-link-copy"
+                    data-copy-target="link-jefe"
+                  >
+                    Copiar
+                  </button>
+                </div>
+              </div>
+
+              <!-- BRIGADISTA -->
+              <div id="bloque-copasst" class="envio-link-item">
+                <span class="envio-link-label"> Brigadista </span>
+
+                <div class="envio-link-row">
+                  <input id="link-copasst" class="envio-link-input" readonly />
+
+                  <button
+                    type="button"
+                    class="envio-link-copy"
+                    data-copy-target="link-copasst"
+                  >
+                    Copiar
+                  </button>
+                </div>
+              </div>
+            </div>
+            <button
+              id="btn-modal-cerrar"
+              type="button"
+              class="modal-close"
+              onclick="cerrarModal()"
+              aria-label="Cerrar"
+              title="Cerrar"
+            >
+              ✕
+            </button>
+          </div>
+          <div id="envio-estado-error" class="envio-estado hidden">
+            <button
+              id="btn-modal-cerrar-error"
+              type="button"
+              class="modal-close"
+              onclick="cerrarModal()"
+              aria-label="Cerrar"
+              title="Cerrar"
+            >
+              ✕
+            </button>
+
+            <div class="envio-icono envio-icono--error">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.5"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <circle cx="12" cy="12" r="10" />
+                <path d="M15 9l-6 6M9 9l6 6" />
+              </svg>
+            </div>
+
+            <p class="envio-titulo">Ocurrió un error</p>
+
+            <p id="envio-error-texto" class="envio-sub">
+              No fue posible procesar la solicitud.
+            </p>
+          </div>
         </div>
       </div>
-  </main>
+    </main>
 
-  <script src="/flatpickr/flatpickr.min.js"></script>
-  <script src="/flatpickr/l10n/es.js"></script>
-  <script src="../js/modal-envio.js"></script>
-  <script src="../js/estadisticas.js"></script>
-
-</body>
-
+    <script src="/flatpickr/flatpickr.min.js"></script>
+    <script src="/flatpickr/l10n/es.js"></script>
+    <script src="../js/modal-envio.js"></script>
+    <script src="../js/estadisticas.js"></script>
+  </body>
 </html>

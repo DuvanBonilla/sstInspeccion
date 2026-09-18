@@ -2,12 +2,13 @@
   "name": "sst",
   "version": "1.0.0",
   "description": "",
-  "main": "src/backend/app.js",
+  "main": "src/backend/server.js",
   "scripts": {
-    "start": "node src/backend/app.js",
+    "start": "node src/backend/server.js",
     "migrate": "node src/backend/db/migrate.js",
     "docs": "jsdoc -c jsdoc.json && node docs-theme/apply-theme.js",
-    "test": "echo \"No tests configured\""
+    "test": "node --test tests/**/*.test.js",
+    "test:browser": "node --test tests/browser/*.browser.js"
   },
   "keywords": [],
   "author": "",

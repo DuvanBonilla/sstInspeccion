@@ -361,3 +361,73 @@ body {
   justify-content: center;
   margin-bottom: 16px;
 }
+
+/* Confirmación final de aprobación */
+
+.confirmacion-aprobacion-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 20px;
+  background: rgba(15, 34, 56, 0.52);
+}
+
+.confirmacion-aprobacion-modal.hidden {
+  display: none;
+}
+
+.confirmacion-aprobacion-box {
+  width: min(430px, 100%);
+  padding: 26px;
+
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  box-shadow: 0 20px 45px rgba(15, 34, 56, 0.24);
+
+  animation: reveal-card 220ms ease-out both;
+}
+
+.confirmacion-aprobacion-box h2 {
+  margin: 0 0 12px;
+  color: var(--ink-900);
+  font-size: 24px;
+}
+
+.confirmacion-aprobacion-box p {
+  margin: 0 0 12px;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.confirmacion-aprobacion-rol {
+  padding: 10px 12px;
+
+  color: var(--ink-700) !important;
+  font-weight: 700;
+  text-align: center;
+
+  background: linear-gradient(180deg, #f3f8ff 0%, #eef5ff 100%);
+  border: 1px solid #d7e6f7;
+  border-radius: 10px;
+}
+
+.confirmacion-aprobacion-acciones {
+  display: flex;
+  gap: 10px;
+  margin-top: 22px;
+}
+
+.confirmacion-aprobacion-acciones .aprobar-btn-secundario,
+.confirmacion-aprobacion-acciones .aprobar-btn-primario {
+  width: auto;
+  flex: 1;
+  padding: 12px 14px;
+  font-size: 14px;
+}
