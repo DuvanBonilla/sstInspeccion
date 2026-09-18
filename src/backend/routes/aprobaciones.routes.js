@@ -11,6 +11,8 @@ const {
   registrarAprobacion,
   previsualizarAprobacion,
   reiniciarAprobaciones,
+  solicitarCodigoReinicioAprobaciones,
+  confirmarReinicioAprobaciones,
 } = require("../controllers/aprobaciones.controller");
 
 const router = Router();
@@ -33,6 +35,16 @@ router.post(
 router.post(
   "/api/inspecciones/:id/reiniciar-aprobaciones",
   reiniciarAprobaciones,
+);
+
+router.post(
+  "/api/inspecciones/:id/reinicio-aprobaciones/solicitar-codigo",
+  solicitarCodigoReinicioAprobaciones,
+);
+
+router.post(
+  "/api/inspecciones/:id/reinicio-aprobaciones/confirmar",
+  confirmarReinicioAprobaciones,
 );
 
 module.exports = router;

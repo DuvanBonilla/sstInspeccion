@@ -193,8 +193,11 @@ async function marcarInspeccionEnviada(inspeccionId, pdfUrl) {
  * @param {string} inspeccionId
  * @returns {Promise<Object|null>}
  */
-async function reiniciarAprobacionesPendientes(inspeccionId) {
-  const { rows } = await query(
+async function reiniciarAprobacionesPendientes(
+  inspeccionId,
+  ejecutarConsulta = query,
+) {
+  const { rows } = await ejecutarConsulta(
     `UPDATE inspecciones
      SET aprobacion_jefe_nombre = NULL,
          aprobacion_jefe_at = NULL,
@@ -209,14 +212,11 @@ async function reiniciarAprobacionesPendientes(inspeccionId) {
   return rows[0] || null;
 }
 
-/**
- * Busca una inspección pendiente que puede solicitar un reinicio.
- *
- * @param {string} inspeccionId Identificador visible de la inspección.
- * @returns {Promise<Object|null>}
- */
-async function obtenerInspeccionPendienteParaReinicio(inspeccionId) {
-  const { rows } = await query(
+async function obtenerInspeccionPendienteParaReinicio(
+  inspeccionId,
+  ejecutarConsulta = query,
+) {
+  const { rows } = await ejecutarConsulta(
     `SELECT
        inspecciones_id,
        inspeccion_id,
@@ -235,68 +235,12 @@ async function obtenerInspeccionPendienteParaReinicio(inspeccionId) {
   return rows[0] || null;
 }
 
-/**
- * Invalida los códigos pendientes anteriores de una inspección.
- *
- * @param {number} inspeccionesId Llave interna de la inspección.
- * @param {string} tipoInspeccion SST o EPP.
- * @returns {Promise<void>}
- */
-async function invalidarCodigosReinicioActivos(inspeccionesId, tipoInspeccion) {
-  await query(
-    `UPDATE codigos_reinicio_aprobaciones
-     SET invalidado_en = now()
-     WHERE inspecciones_id = $1
-       AND tipo_inspeccion = $2
-       AND usado_en IS NULL
-       AND invalidado_en IS NULL`,
-    [inspeccionesId, tipoInspeccion],
-  );
-}
-
-/**
- * Guarda un código de reinicio sin almacenar su valor visible.
- *
- * @param {Object} datos
- * @returns {Promise<Object>}
- */
-async function crearCodigoReinicio({
+async function obtenerCodigoReinicioActivo(
   inspeccionesId,
   tipoInspeccion,
-  codigoHash,
-  codigoSalt,
-  venceEn,
-}) {
-  const { rows } = await query(
-    `INSERT INTO codigos_reinicio_aprobaciones (
-       inspecciones_id,
-       tipo_inspeccion,
-       codigo_hash,
-       codigo_salt,
-       vence_en
-     )
-     VALUES ($1, $2, $3, $4, $5)
-     RETURNING
-       codigo_reinicio_id,
-       inspecciones_id,
-       tipo_inspeccion,
-       vence_en,
-       creado_en`,
-    [inspeccionesId, tipoInspeccion, codigoHash, codigoSalt, venceEn],
-  );
-
-  return rows[0];
-}
-
-/**
- * Obtiene el último código aún disponible para una inspección.
- *
- * @param {number} inspeccionesId Llave interna de la inspección.
- * @param {string} tipoInspeccion SST o EPP.
- * @returns {Promise<Object|null>}
- */
-async function obtenerCodigoReinicioActivo(inspeccionesId, tipoInspeccion) {
-  const { rows } = await query(
+  ejecutarConsulta = query,
+) {
+  const { rows } = await ejecutarConsulta(
     `SELECT
        codigo_reinicio_id,
        inspecciones_id,
@@ -314,21 +258,19 @@ async function obtenerCodigoReinicioActivo(inspeccionesId, tipoInspeccion) {
        AND usado_en IS NULL
        AND invalidado_en IS NULL
      ORDER BY creado_en DESC
-     LIMIT 1`,
+     LIMIT 1
+     FOR UPDATE`,
     [inspeccionesId, tipoInspeccion],
   );
 
   return rows[0] || null;
 }
 
-/**
- * Suma un intento fallido sin superar el máximo permitido.
- *
- * @param {number} codigoReinicioId
- * @returns {Promise<Object|null>}
- */
-async function registrarIntentoCodigoReinicio(codigoReinicioId) {
-  const { rows } = await query(
+async function registrarIntentoCodigoReinicio(
+  codigoReinicioId,
+  ejecutarConsulta = query,
+) {
+  const { rows } = await ejecutarConsulta(
     `UPDATE codigos_reinicio_aprobaciones
      SET intentos = intentos + 1
      WHERE codigo_reinicio_id = $1
@@ -342,14 +284,11 @@ async function registrarIntentoCodigoReinicio(codigoReinicioId) {
   return rows[0] || null;
 }
 
-/**
- * Marca un código como consumido para impedir su reutilización.
- *
- * @param {number} codigoReinicioId
- * @returns {Promise<Object|null>}
- */
-async function marcarCodigoReinicioUsado(codigoReinicioId) {
-  const { rows } = await query(
+async function marcarCodigoReinicioUsado(
+  codigoReinicioId,
+  ejecutarConsulta = query,
+) {
+  const { rows } = await ejecutarConsulta(
     `UPDATE codigos_reinicio_aprobaciones
      SET usado_en = now()
      WHERE codigo_reinicio_id = $1
