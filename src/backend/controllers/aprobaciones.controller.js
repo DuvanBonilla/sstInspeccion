@@ -48,31 +48,21 @@ const {
 
 const crypto = require("node:crypto");
 
+const { construirAprobaciones } = require("../utils/aprobaciones.util");
+
 const {
-  construirAprobaciones,
-} = require("../utils/aprobaciones.util");
+  generarPdfAprobacion,
+} = require("../services/generacionPdfAprobacion.service");
 
 const { obtenerInspeccionCompleta } = require("../models/inspeccion.model");
 
 const { pool } = require("../db/pool");
 
 const {
-  construirEvidenciasEppDesdeOneDrive,
-} = require("../services/evidencia.service");
-const {
-  generarPdfSstAprobacion,
-} = require("../services/pdfInspeccion.service");
-
-const {
-  generarPdfEppAprobacion,
-} = require("../services/pdfInspeccionEpp.service");
-
-const {
   finalizarInspeccion,
 } = require("../services/finalizacionInspeccion.service");
 
 const { calcularResumenEpp } = require("../services/resumenEpp.service");
-
 
 /**
  * Obtiene la información necesaria para mostrar una aprobación.
@@ -253,59 +243,13 @@ async function previsualizarAprobacion(req, res) {
       });
     }
 
-    // =====================================================
-    // 3. DETECTAR TIPO DE INSPECCIÓN
-    // =====================================================
-
-    const tipoInspeccion = String(
-      row.tipo_inspeccion || completa?.inspeccion?.tipo_inspeccion || "SST",
-    ).toUpperCase();
-
-    // =====================================================
-    // 4. APROBACIONES
-    // =====================================================
-
     const aprobaciones = construirAprobaciones(row);
 
-    // =====================================================
-    // 5. BUFFER PDF
-    // =====================================================
-
-    let pdfBuffer;
-
-    // =====================================================
-    // EPP
-    // =====================================================
-
-    if (tipoInspeccion === "EPP") {
-      const trabajadores = Array.isArray(completa.trabajadores)
-        ? completa.trabajadores
-        : [];
-
-      // ---------------------------------------------------
-      // DESCARGAR EVIDENCIAS
-      // ---------------------------------------------------
-
-      const evidenciasPorTrabajador =
-        await construirEvidenciasEppDesdeOneDrive(trabajadores);
-
-      const resultadoEpp = await generarPdfEppAprobacion(
-        completa,
-        row,
-        aprobaciones,
-        evidenciasPorTrabajador,
-      );
-
-      pdfBuffer = resultadoEpp.pdf;
-    }
-
-    // =====================================================
-    // SST
-    // =====================================================
-    else {
-      pdfBuffer = await generarPdfSstAprobacion(completa, row, aprobaciones);
-    }
-
+    const { pdfBuffer } = await generarPdfAprobacion({
+      completa,
+      inspeccion: row,
+      aprobaciones,
+    });
     // =====================================================
     // 6. DEVOLVER PDF
     // =====================================================
