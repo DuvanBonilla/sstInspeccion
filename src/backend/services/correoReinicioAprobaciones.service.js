@@ -1,6 +1,6 @@
 const { enviarCorreoPorGraph } = require("./correo.service");
 
-const CORREO_DESTINATARIO_REINICIO = "trazabilidad@cargoban.com.co";
+const CORREO_DESTINATARIO_REINICIO = "Juanmix201@gmail.com";
 const LOGO_URL = "https://sstinspeccion.onrender.com/img/Cargo.png";
 
 function escaparHtml(valor) {
@@ -111,7 +111,7 @@ function construirHtmlCorreoReinicioAprobaciones({
                       <p style="margin:0 0 8px;font-size:13px;font-weight:700;color:#92400e;">Importante</p>
                       <p style="margin:0;font-size:13px;line-height:1.6;color:#78350f;">Al confirmar esta operación se eliminarán las aprobaciones existentes del Jefe de Área y COPASST. Los datos registrados en la inspección se conservarán.</p>
                     </div>
-                    <p style="margin:16px 0 0;font-size:12px;line-height:1.6;color:#6b7280;">Si usted no solicitó esta operación, no comparta el código y omita este mensaje.</p>
+                    <p style="margin:16px 0 0;font-size:12px;line-height:1.6;color:#6b7280;">Cargoban OLP 2026.</p>
                   </td>
                 </tr>
               </table>

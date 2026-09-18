@@ -29,6 +29,8 @@ const {
   marcarInspeccionEnviada,
   reiniciarAprobacionesPendientes,
   obtenerInspeccionPendienteParaReinicio,
+  invalidarCodigosReinicioActivos,
+  crearCodigoReinicio,
   obtenerCodigoReinicioActivo,
   registrarIntentoCodigoReinicio,
   marcarCodigoReinicioUsado,

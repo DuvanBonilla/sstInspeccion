@@ -301,6 +301,49 @@ async function marcarCodigoReinicioUsado(
   return rows[0] || null;
 }
 
+async function invalidarCodigosReinicioActivos(
+  inspeccionesId,
+  tipoInspeccion,
+) {
+  await query(
+    `UPDATE codigos_reinicio_aprobaciones
+     SET invalidado_en = now()
+     WHERE inspecciones_id = $1
+       AND tipo_inspeccion = $2
+       AND usado_en IS NULL
+       AND invalidado_en IS NULL`,
+    [inspeccionesId, tipoInspeccion],
+  );
+}
+
+async function crearCodigoReinicio({
+  inspeccionesId,
+  tipoInspeccion,
+  codigoHash,
+  codigoSalt,
+  venceEn,
+}) {
+  const { rows } = await query(
+    `INSERT INTO codigos_reinicio_aprobaciones (
+       inspecciones_id,
+       tipo_inspeccion,
+       codigo_hash,
+       codigo_salt,
+       vence_en
+     )
+     VALUES ($1, $2, $3, $4, $5)
+     RETURNING
+       codigo_reinicio_id,
+       inspecciones_id,
+       tipo_inspeccion,
+       vence_en,
+       creado_en`,
+    [inspeccionesId, tipoInspeccion, codigoHash, codigoSalt, venceEn],
+  );
+
+  return rows[0];
+}
+
 module.exports = {
   obtenerContextoAprobacion,
   guardarAprobacion,

@@ -1447,7 +1447,15 @@ td:nth-child(7) {
   background: rgba(15, 23, 42, 0.5);
 }
 
+.reinicio-modal.hidden,
+#reinicio-paso-solicitud.hidden,
+#reinicio-paso-codigo.hidden {
+  display: none !important;
+}
+
 .reinicio-modal-box {
+  position: relative;
+  justify-content: center;
   width: min(440px, 100%);
   padding: 24px;
 
@@ -1457,7 +1465,7 @@ td:nth-child(7) {
 }
 
 .reinicio-modal-box h2 {
-  margin: 0 0 10px;
+  margin: 0 34px 10px 0;
   font-size: 20px;
   color: var(--ink-primary);
 }
@@ -1477,23 +1485,141 @@ td:nth-child(7) {
   color: var(--ink-secondary);
 }
 
-.reinicio-modal-box input {
-  width: 100%;
-  height: 42px;
-  padding: 0 12px;
+/* Cierre del modal */
 
-  border: 1px solid var(--line);
-  border-radius: 8px;
+.reinicio-modal-cerrar {
+  position: absolute;
+  top: 14px;
+  right: 14px;
 
-  font-size: 15px;
-  color: var(--ink-primary);
+  display: grid;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  place-items: center;
+
+  border: 1px solid #d7dee9;
+  border-radius: 50%;
+  background: #ffffff;
+  color: #64748b;
+
+  font-size: 22px;
+  font-weight: 400;
+  line-height: 1;
+  cursor: pointer;
 }
 
-.reinicio-modal-box input:focus {
+.reinicio-modal-cerrar:hover {
+  border-color: #94a3b8;
+  background: #f8fafc;
+  color: #1e293b;
+}
+
+.reinicio-modal-cerrar:focus-visible {
   outline: none;
-  border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.16);
 }
+
+/* Checkbox de confirmación */
+
+.reinicio-confirmacion-label {
+  display: flex !important;
+  align-items: center;
+  gap: 10px;
+  margin: 18px 0 12px !important;
+
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.reinicio-confirmacion-checkbox {
+  appearance: none;
+  -webkit-appearance: none;
+
+  width: 18px !important;
+  height: 18px !important;
+  min-width: 18px;
+  margin: 0 !important;
+  padding: 0 !important;
+
+  border: 1px solid #94a3b8 !important;
+  border-radius: 4px !important;
+  background: #ffffff;
+  box-shadow: none !important;
+
+  cursor: pointer;
+}
+
+.reinicio-confirmacion-checkbox:checked {
+  border-color: #2563eb !important;
+  background-color: #2563eb;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M3 8.5 6.3 12 13 4.8' fill='none' stroke='%23fff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 13px;
+}
+
+.reinicio-confirmacion-checkbox:focus,
+.reinicio-confirmacion-checkbox:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+/* Botón de solicitud */
+
+.reinicio-solicitar-codigo {
+  margin-top: 4px;
+}
+
+.reinicio-solicitar-codigo:disabled {
+  border-color: #e2e8f0 !important;
+  background: #e2e8f0 !important;
+  box-shadow: none !important;
+  color: #94a3b8 !important;
+  cursor: not-allowed !important;
+  opacity: 1 !important;
+}
+
+/* Seis dígitos de autorización */
+
+.reinicio-codigo-digitos {
+  display: flex;
+  justify-content: center;
+  width: 75%;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.reinicio-modal-box .reinicio-codigo-digito {
+  flex: 1;
+  justify-content: center;
+  width: 100% !important;
+  height: 48px !important;
+  min-width: 0;
+  padding: 0 !important;
+
+  border: 1px solid #dfe5ec !important;
+  border-radius: 7px !important;
+  background: #ffffff;
+
+  color: #475569;
+  font-size: 21px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.reinicio-modal-box .reinicio-codigo-digito:focus {
+  border-color: #2563eb !important;
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.12) !important;
+}
+.auth-code{
+  justify-content: center;
+}
+
+/* Mensajes de error */
 
 .reinicio-error {
   margin-top: 10px !important;
@@ -1501,13 +1627,44 @@ td:nth-child(7) {
   font-size: 13px;
 }
 
-.reinicio-modal-acciones {
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-  margin-top: 22px;
+.reinicio-contador {
+  margin-top: 8px !important;
+  font-size: 11px;
+  color: #94a3b8 !important;
 }
 
-.reinicio-modal.hidden {
-  display: none;
+.reinicio-confirmar {
+  display: block;
+  margin-top: 14px;
+}
+
+/* Centrar la sección de autorización */
+
+#reinicio-paso-codigo > label {
+  text-align: center;
+}
+
+#reinicio-paso-codigo .reinicio-codigo-digitos {
+  margin-right: auto;
+  margin-left: auto;
+}
+
+#reinicio-paso-codigo .reinicio-contador {
+  text-align: center;
+}
+
+#reinicio-paso-codigo .reinicio-confirmar {
+  margin-right: auto;
+  margin-left: auto;
+}
+
+#reinicio-paso-solicitud .reinicio-solicitar-codigo {
+  display: block;
+  margin-right: auto;
+  margin-left: auto;
+}
+
+.reinicio-modal-box .reinicio-modal-titulo {
+  margin-right: 0;
+  text-align: center;
 }

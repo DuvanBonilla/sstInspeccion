@@ -16,9 +16,25 @@
 
   const reinicioModal = document.getElementById("reinicio-modal");
   const reinicioForm = document.getElementById("reinicio-form");
-  const reinicioCodigo = document.getElementById("reinicio-codigo");
+  const reinicioDigitos = Array.from(
+    document.querySelectorAll(".reinicio-codigo-digito"),
+  );
   const reinicioError = document.getElementById("reinicio-error");
   const btnReinicioCancelar = document.getElementById("reinicio-cancelar");
+
+  const reinicioConfirmacion = document.getElementById("reinicio-confirmacion");
+  const reinicioPasoSolicitud = document.getElementById(
+    "reinicio-paso-solicitud",
+  );
+  const reinicioPasoCodigo = document.getElementById("reinicio-paso-codigo");
+  const btnReinicioConfirmar = document.getElementById("reinicio-confirmar");
+  const btnReinicioSolicitarCodigo = document.getElementById(
+    "reinicio-solicitar-codigo",
+  );
+
+  let temporizadorReinicio = null;
+
+  let codigoReinicioSolicitado = false;
 
   let botonReinicioSeleccionado = null;
 
@@ -429,50 +445,115 @@
 
   function abrirModalReinicio(boton) {
     botonReinicioSeleccionado = boton;
+    codigoReinicioSolicitado = false;
 
     reinicioForm.reset();
+
+    reinicioPasoSolicitud.classList.remove("hidden");
+    reinicioPasoCodigo.classList.add("hidden");
+
+    btnReinicioSolicitarCodigo.disabled = true;
 
     reinicioError.textContent = "";
     reinicioError.classList.add("hidden");
 
     reinicioModal.classList.remove("hidden");
-
-    reinicioCodigo.focus();
+    reinicioConfirmacion.focus();
   }
 
   function cerrarModalReinicio() {
     reinicioModal.classList.add("hidden");
+    clearInterval(temporizadorReinicio);
 
     reinicioForm.reset();
 
+    codigoReinicioSolicitado = false;
+    botonReinicioSeleccionado = null;
+
+    reinicioPasoSolicitud.classList.remove("hidden");
+    reinicioPasoCodigo.classList.add("hidden");
+
+    btnReinicioSolicitarCodigo.disabled = true;
+
     reinicioError.textContent = "";
     reinicioError.classList.add("hidden");
-
-    botonReinicioSeleccionado = null;
   }
 
   btnReinicioCancelar.addEventListener("click", cerrarModalReinicio);
 
-  reinicioForm.addEventListener("submit", async (event) => {
-    event.preventDefault();
+  reinicioConfirmacion.addEventListener("change", () => {
+    btnReinicioSolicitarCodigo.disabled = !reinicioConfirmacion.checked;
+  });
 
-    if (!botonReinicioSeleccionado) {
+  reinicioDigitos.forEach((input, indice) => {
+    input.addEventListener("input", () => {
+      input.value = input.value.replace(/\D/g, "").slice(-1);
+
+      if (input.value && reinicioDigitos[indice + 1]) {
+        reinicioDigitos[indice + 1].focus();
+      }
+    });
+
+    input.addEventListener("keydown", (event) => {
+      if (
+        event.key === "Backspace" &&
+        !input.value &&
+        reinicioDigitos[indice - 1]
+      ) {
+        reinicioDigitos[indice - 1].focus();
+      }
+    });
+
+    input.addEventListener("paste", (event) => {
+      const digitos = event.clipboardData
+        .getData("text")
+        .replace(/\D/g, "")
+        .slice(0, 6);
+
+      if (!digitos) return;
+
+      event.preventDefault();
+
+      digitos.split("").forEach((digito, posicion) => {
+        if (reinicioDigitos[posicion]) {
+          reinicioDigitos[posicion].value = digito;
+        }
+      });
+
+      reinicioDigitos[Math.min(digitos.length, 6) - 1].focus();
+    });
+  });
+
+  function iniciarContadorReinicio(venceEn) {
+    clearInterval(temporizadorReinicio);
+
+    const contador = document.getElementById("reinicio-contador");
+
+    function actualizar() {
+      const restante = new Date(venceEn).getTime() - Date.now();
+
+      if (restante <= 0) {
+        clearInterval(temporizadorReinicio);
+        contador.textContent = "El código expiró. Solicita uno nuevo.";
+        return;
+      }
+
+      const minutos = Math.floor(restante / 60000);
+      const segundos = Math.floor((restante % 60000) / 1000);
+
+      contador.textContent = `El código expira en ${minutos}:${String(segundos).padStart(2, "0")}.`;
+    }
+
+    actualizar();
+    temporizadorReinicio = setInterval(actualizar, 1000);
+  }
+
+  btnReinicioSolicitarCodigo.addEventListener("click", async () => {
+    if (!botonReinicioSeleccionado || !reinicioConfirmacion.checked) {
       return;
     }
 
-    const codigo = reinicioCodigo.value.trim();
-
-    if (!codigo) {
-      reinicioError.textContent = "Ingresa el código de validación.";
-      reinicioError.classList.remove("hidden");
-      reinicioCodigo.focus();
-      return;
-    }
-
-    const botonConfirmar = reinicioForm.querySelector('button[type="submit"]');
-
-    botonConfirmar.disabled = true;
-
+    btnReinicioSolicitarCodigo.disabled = true;
     reinicioError.textContent = "";
     reinicioError.classList.add("hidden");
 
@@ -482,17 +563,72 @@
       const respuesta = await fetch(
         `/api/inspecciones/${encodeURIComponent(
           inspeccionId,
-        )}/reiniciar-aprobaciones`,
+        )}/reinicio-aprobaciones/solicitar-codigo`,
         {
           method: "POST",
-
           headers: {
             "Content-Type": "application/json",
           },
+          body: JSON.stringify({}),
+        },
+      );
 
-          body: JSON.stringify({
-            codigo,
-          }),
+      const data = await respuesta.json();
+
+      if (!respuesta.ok || !data.ok) {
+        throw new Error(data.mensaje || "No fue posible solicitar el código.");
+      }
+      iniciarContadorReinicio(data.venceEn);
+
+      codigoReinicioSolicitado = true;
+      reinicioPasoSolicitud.classList.add("hidden");
+      reinicioPasoCodigo.classList.remove("hidden");
+      reinicioDigitos[0].focus();
+    } catch (error) {
+      console.error("Error solicitando código de reinicio:", error);
+
+      reinicioError.textContent =
+        error.message || "No fue posible solicitar el código.";
+
+      reinicioError.classList.remove("hidden");
+      btnReinicioSolicitarCodigo.disabled = !reinicioConfirmacion.checked;
+    }
+  });
+
+  reinicioForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+
+    if (!botonReinicioSeleccionado || !codigoReinicioSolicitado) {
+      return;
+    }
+
+    const codigo = reinicioDigitos.map((input) => input.value).join("");
+
+    if (!/^\d{6}$/.test(codigo)) {
+      reinicioError.textContent =
+        "Ingresa el código de autorización de seis dígitos.";
+      reinicioError.classList.remove("hidden");
+      reinicioDigitos[0].focus();
+      return;
+    }
+
+    btnReinicioConfirmar.disabled = true;
+    reinicioError.textContent = "";
+    reinicioError.classList.add("hidden");
+
+    try {
+      const inspeccionId = botonReinicioSeleccionado.dataset.inspeccionId;
+
+      const respuesta = await fetch(
+        `/api/inspecciones/${encodeURIComponent(
+          inspeccionId,
+        )}/reinicio-aprobaciones/confirmar`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ codigo }),
         },
       );
 
@@ -500,24 +636,22 @@
 
       if (!respuesta.ok || !data.ok) {
         throw new Error(
-          data.mensaje || "No fue posible reiniciar las aprobaciones.",
+          data.mensaje || "No fue posible confirmar el reinicio.",
         );
       }
 
       cerrarModalReinicio();
-
       window.alert(data.mensaje);
-
       await cargarTodo();
     } catch (error) {
-      console.error("Error reiniciando aprobaciones:", error);
+      console.error("Error confirmando reinicio de aprobaciones:", error);
 
       reinicioError.textContent =
-        error.message || "No fue posible reiniciar las aprobaciones.";
+        error.message || "No fue posible confirmar el reinicio.";
 
       reinicioError.classList.remove("hidden");
     } finally {
-      botonConfirmar.disabled = false;
+      btnReinicioConfirmar.disabled = false;
     }
   });
 
