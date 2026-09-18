@@ -49,13 +49,16 @@ const {
 
 const crypto = require("node:crypto");
 
+const {
+  construirAprobaciones,
+} = require("../utils/aprobaciones.util");
+
 const { obtenerInspeccionCompleta } = require("../models/inspeccion.model");
 
 const { pool } = require("../db/pool");
 
 const {
   subirPdfAOneDrive,
-  construirEvidenciasDesdeOneDrive,
   construirEvidenciasEppDesdeOneDrive,
 } = require("../services/evidencia.service");
 const {
@@ -213,35 +216,6 @@ async function obtenerResumenAprobacion(req, res) {
       errores: [mensaje],
     });
   }
-}
-
-/**
- * Construye la información de los responsables que aprobaron la inspección.
- *
- * Normaliza los nombres almacenados para el inspector, jefe responsable y
- * representante de COPASST. Cuando una aprobación no existe, asigna una
- * cadena vacía.
- *
- * @param {Object} row Registro de la inspección obtenido desde la base de datos.
- * @returns {{
- *   inspector: {nombre: string},
- *   jefe: {nombre: string},
- *   copasst: {nombre: string}
- * }} Información normalizada de las aprobaciones.
- */
-
-function construirAprobaciones(row) {
-  return {
-    inspector: {
-      nombre: row.aprobacion_inspector_nombre || "",
-    },
-    jefe: {
-      nombre: row.aprobacion_jefe_nombre || "",
-    },
-    copasst: {
-      nombre: row.aprobacion_copasst_nombre || "",
-    },
-  };
 }
 
 /**
