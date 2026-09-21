@@ -31,6 +31,7 @@ import { crearResumenTrabajadorHtml } from "./epp/resumenEpp.template.js";
 import { crearResumenInspeccionEpp } from "./epp/controllers/resumenInspeccionEpp.controller.js";
 import { crearSalidaInspeccionEppController } from "./epp/controllers/salidaInspeccionEpp.controller.js";
 import { inicializarFechaEpp } from "./epp/controllers/inicializacionFechaEpp.controller.js";
+import { crearInicializacionInspeccionEppController } from "./epp/controllers/inicializacionInspeccionEpp.controller.js";
 import { generarInspeccionId } from "./epp/inspeccionEpp.id.js";
 import { crearRegistroInspeccionEppService } from "./epp/services/registroInspeccionEpp.service.js";
 import { crearContactosAprobacionController } from "./shared/controllers/contactosAprobacion.controller.js";
@@ -118,64 +119,7 @@ const salidaInspeccion = crearSalidaInspeccionEppController({
 });
 
 document.addEventListener("DOMContentLoaded", async () => {
-  try {
-    await cargarCatalogoEpp();
-  } catch (error) {
-    console.error("[EPP] Error cargando catálogo:", error);
-
-    alert(
-      "No fue posible cargar el catálogo de elementos EPP. " +
-        "Recarga la página e intenta nuevamente.",
-    );
-
-    return;
-  }
-
-  try {
-    inicializarFechaEpp({
-      fecha,
-      asignarFechaHoy,
-      abrirSelectorFecha,
-    });
-
-    validacionInformacionGeneral.inicializar();
-
-    contactosAprobacion.inicializar();
-
-    inicializarEnvioEpp({
-      documento: document,
-
-      ventana: window,
-
-      enviarInspeccionEpp,
-
-      validarContactos: contactosAprobacion.validar,
-
-      prepararAccionesAprobacion(datos) {
-        contactosAprobacion.configurarAcciones({
-          ...datos,
-          tipoInspeccion: "EPP",
-          sede: obtenerValor("sedeOperacion"),
-          area: obtenerValor("areaTrabajo"),
-        });
-      },
-    });
-
-    navegacion.inicializar();
-
-    salidaInspeccion.inicializar();
-
-    trabajadoresManager.init();
-
-    navegacion.actualizarPaso();
-  } catch (error) {
-    console.error("[EPP] Error inicializando formulario:", error);
-
-    alert(
-      "No fue posible inicializar el formulario de inspección EPP. " +
-        "Recarga la página e intenta nuevamente.",
-    );
-  }
+  await inicializacionInspeccionEpp.inicializar();
 });
 
 const registroInspeccionEpp = crearRegistroInspeccionEppService({
@@ -199,6 +143,32 @@ const registroInspeccionEpp = crearRegistroInspeccionEppService({
     return contactosAprobacion.obtenerContactos();
   },
 });
+
+const inicializacionInspeccionEpp =
+  crearInicializacionInspeccionEppController({
+    cargarCatalogoEpp,
+    console,
+    alert,
+
+    inicializarFechaEpp,
+    fecha,
+    asignarFechaHoy,
+    abrirSelectorFecha,
+
+    validacionInformacionGeneral,
+    contactosAprobacion,
+
+    inicializarEnvioEpp,
+    documento: document,
+    ventana: window,
+    enviarInspeccionEpp,
+
+    navegacion,
+    salidaInspeccion,
+    trabajadoresManager,
+
+    obtenerValor,
+  });
 /**
  * Envía la inspección EPP y sus evidencias.
  *
