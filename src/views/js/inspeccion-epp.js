@@ -32,6 +32,7 @@ import { crearResumenInspeccionEpp } from "./epp/controllers/resumenInspeccionEp
 import { crearSalidaInspeccionEppController } from "./epp/controllers/salidaInspeccionEpp.controller.js";
 import { inicializarFechaEpp } from "./epp/controllers/inicializacionFechaEpp.controller.js";
 import { generarInspeccionId } from "./epp/inspeccionEpp.id.js";
+import { crearRegistroInspeccionEppService } from "./epp/services/registroInspeccionEpp.service.js";
 import { crearContactosAprobacionController } from "./shared/controllers/contactosAprobacion.controller.js";
 
 const TOTAL_PASOS = 3;
@@ -176,42 +177,28 @@ document.addEventListener("DOMContentLoaded", async () => {
     );
   }
 });
-/**
- * Construye el objeto principal de la inspección EPP.
- *
- * @param {string|null} [inspeccionId=null] Identificador de la inspección.
- * @returns {Object} Datos estructurados de la inspección EPP.
- */
-function construirInspeccionEpp(inspeccionId = null) {
-  return construirPayloadInspeccionEpp({
-    inspeccionId,
 
-    obtenerValor,
+const registroInspeccionEpp = crearRegistroInspeccionEppService({
+  generarInspeccionId,
 
-    trabajadores: trabajadoresManager.leer(),
-  });
-}
+  construirPayload: construirPayloadInspeccionEpp,
+  construirContenidoFormData: construirContenidoFormDataEpp,
+  enviarInspeccion: enviarInspeccionEppApi,
 
-/**
- * Construye el contenido multipart de la inspección EPP.
- *
- * @param {string|null} [inspeccionId=null] Identificador de la inspección.
- * @returns {FormData} Contenido multipart.
- */
-function construirFormDataEpp(inspeccionId = null) {
-  const formData = construirContenidoFormDataEpp({
-    inspeccion: construirInspeccionEpp(inspeccionId),
-    evidencias: trabajadoresManager.obtenerEvidencias(),
-  });
+  obtenerValor,
 
-  formData.append(
-    "contactosAprobacion",
-    JSON.stringify(contactosAprobacion.obtenerContactos()),
-  );
+  leerTrabajadores() {
+    return trabajadoresManager.leer();
+  },
 
-  return formData;
-}
+  obtenerEvidencias() {
+    return trabajadoresManager.obtenerEvidencias();
+  },
 
+  obtenerContactos() {
+    return contactosAprobacion.obtenerContactos();
+  },
+});
 /**
  * Envía la inspección EPP y sus evidencias.
  *
@@ -220,11 +207,7 @@ function construirFormDataEpp(inspeccionId = null) {
  */
 async function enviarInspeccionEpp() {
   try {
-    const inspeccionId = generarInspeccionId();
-
-    const formData = construirFormDataEpp(inspeccionId);
-
-    return await enviarInspeccionEppApi(formData);
+    return await registroInspeccionEpp.enviar();
   } catch (error) {
     console.error("❌ Error enviando inspección EPP:", error);
 
