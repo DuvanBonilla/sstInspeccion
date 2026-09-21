@@ -17,9 +17,7 @@ const rutaControlador = path.resolve(
   "src/views/js/shared/controllers/contactosAprobacion.controller.js",
 );
 
-const urlUtilidades = crearUrlModulo(
-  fs.readFileSync(rutaUtilidades, "utf8"),
-);
+const urlUtilidades = crearUrlModulo(fs.readFileSync(rutaUtilidades, "utf8"));
 
 const codigoControlador = fs
   .readFileSync(rutaControlador, "utf8")
@@ -89,6 +87,10 @@ function crearElemento({ id, value = "" }) {
     setAttribute(nombre, valor) {
       this[nombre] = valor;
     },
+
+    removeAttribute(nombre) {
+      delete this[nombre];
+    },
   };
 }
 
@@ -142,10 +144,7 @@ test("inicializar deshabilita el destino mientras no exista método", async () =
 
   controlador.inicializar();
 
-  assert.equal(
-    escenario.elementos["destino-aprobacion-jefe"].disabled,
-    true,
-  );
+  assert.equal(escenario.elementos["destino-aprobacion-jefe"].disabled, true);
 
   assert.equal(
     escenario.elementos["destino-aprobacion-copasst"].disabled,
@@ -171,7 +170,7 @@ test("seleccionar WhatsApp configura un campo telefónico", async () => {
 
   assert.equal(destino.disabled, false);
   assert.equal(destino.type, "tel");
-  assert.equal(destino.inputMode, "tel");
+  assert.equal(destino.inputMode, "numeric");
   assert.match(destino.placeholder, /3001234567/);
 });
 
@@ -232,15 +231,12 @@ test("validar rechaza destinos inválidos y enfoca el primero", async () => {
 
   assert.equal(controlador.validar(), false);
 
-  assert.equal(
-    escenario.elementos["destino-aprobacion-jefe"].enfocado,
-    true,
-  );
+  assert.equal(escenario.elementos["destino-aprobacion-jefe"].enfocado, true);
 
   assert.equal(
-    escenario.elementos[
-      "destino-aprobacion-jefe"
-    ].classList.contains("campo-error"),
+    escenario.elementos["destino-aprobacion-jefe"].classList.contains(
+      "campo-error",
+    ),
     true,
   );
 });
@@ -256,9 +252,9 @@ test("validar exige seleccionar un método de envío", async () => {
   assert.equal(controlador.validar(), false);
 
   assert.equal(
-    escenario.elementos[
-      "metodo-aprobacion-jefe"
-    ].classList.contains("campo-error"),
+    escenario.elementos["metodo-aprobacion-jefe"].classList.contains(
+      "campo-error",
+    ),
     true,
   );
 
@@ -387,10 +383,7 @@ test("exige medio para COPASST aunque Jefe esté completo", async () => {
   });
 
   assert.equal(controlador.validar(), false);
-  assert.equal(
-    escenario.elementos["metodo-aprobacion-copasst"].enfocado,
-    true,
-  );
+  assert.equal(escenario.elementos["metodo-aprobacion-copasst"].enfocado, true);
 });
 
 test("cambiar de WhatsApp a correo no acepta el teléfono como destino", async () => {
