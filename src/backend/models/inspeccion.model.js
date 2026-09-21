@@ -548,6 +548,26 @@ function construirFiltrosInspecciones({
   };
 }
 
+/**
+ * Obtiene el resumen estadístico de las inspecciones.
+ *
+ * Calcula el total de inspecciones, sus cantidades por estado, las creadas
+ * durante el mes actual y la distribución de registros por sede. Aplica los
+ * filtros recibidos a todas las consultas del resumen.
+ *
+ * @async
+ * @param {Object} [filtros={}] Criterios de búsqueda de inspecciones.
+ * @param {string} [filtros.fechaDesde] Fecha inicial del rango.
+ * @param {string} [filtros.fechaHasta] Fecha final del rango.
+ * @param {string} [filtros.sedeOperacion] Sede operacional.
+ * @param {string} [filtros.estado] Estado de la inspección.
+ * @param {string} [filtros.q] Texto de búsqueda general.
+ * @param {string} [filtros.tipoInspeccion] Tipo de inspección.
+ * @returns {Promise<Object>} Totales por estado, registros del mes actual y
+ * distribución de inspecciones por sede.
+ * @throws {Error} Si falla alguna consulta a la base de datos.
+ */
+
 async function obtenerResumenEstadisticas(filtros = {}) {
   const { whereSql, valores } = construirFiltrosInspecciones(filtros);
 

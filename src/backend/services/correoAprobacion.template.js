@@ -9,6 +9,25 @@ function escaparHtml(valor) {
     .replaceAll("'", "&#39;");
 }
 
+/**
+ * Construye el correo HTML para solicitar la aprobación de una inspección.
+ *
+ * Escapa los datos mostrados en la plantilla y valida que el enlace personal
+ * de aprobación utilice el protocolo HTTP o HTTPS antes de incorporarlo.
+ *
+ * @param {Object} datos Información de la inspección y del enlace de aprobación.
+ * @param {string} datos.tipoInspeccion Tipo de inspección.
+ * @param {string} datos.rol Nombre del rol que debe aprobar.
+ * @param {number|string} datos.numInspeccion Número consecutivo.
+ * @param {string} datos.inspeccionId Identificador único de la inspección.
+ * @param {string} datos.fecha Fecha de realización.
+ * @param {string} datos.sede Sede operacional.
+ * @param {string} datos.area Área inspeccionada.
+ * @param {string} datos.enlace Enlace personal de aprobación.
+ * @returns {string} Contenido HTML listo para enviar por correo.
+ * @throws {Error} Si el enlace no es una URL HTTP o HTTPS válida.
+ */
+
 function construirHtmlSolicitudAprobacion({
   tipoInspeccion,
   rol,

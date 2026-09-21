@@ -86,6 +86,23 @@ async function obtenerFilasCamillasSstAprobadas() {
   return registros.map((registro) => mapearCamillaAExcel(registro, registro));
 }
 
+/**
+ * Actualiza la hoja y la tabla de camillas del seguimiento SST.
+ *
+ * Obtiene las camillas aprobadas, reemplaza las filas del XML de la hoja,
+ * ajusta el rango de la tabla estructurada y guarda ambos contenidos dentro
+ * del archivo Excel cargado en memoria.
+ *
+ * @async
+ * @param {@param {AdmZip} zip} zip - Archivo Excel abierto como contenedor ZIP.
+ * @returns {Promise<{
+ *   totalCamillas: number,
+ *   rango: string,
+ *   inspecciones: string[]
+ * }>} Resultado de la actualización, rango de la tabla e inspecciones incluidas.
+ * @throws {Error} Si no se proporciona el archivo Excel cargado en memoria.
+ */
+
 async function actualizarCamillas(zip) {
   if (!zip) {
     throw new Error("Se requiere el archivo Excel cargado en memoria");
@@ -132,22 +149,7 @@ async function actualizarCamillas(zip) {
   };
 }
 
-/**
- * Actualiza la hoja y la tabla de camillas del seguimiento SST.
- *
- * Obtiene las camillas aprobadas, reemplaza las filas del XML de la hoja,
- * ajusta el rango de la tabla estructurada y guarda ambos contenidos dentro
- * del archivo Excel cargado en memoria.
- *
- * @async
- * @param {@param {AdmZip} zip} zip - Archivo Excel abierto como contenedor ZIP.
- * @returns {Promise<{
- *   totalCamillas: number,
- *   rango: string,
- *   inspecciones: string[]
- * }>} Resultado de la actualización, rango de la tabla e inspecciones incluidas.
- * @throws {Error} Si no se proporciona el archivo Excel cargado en memoria.
- */
+
 
 module.exports = {
   mapearCamillaAExcel,

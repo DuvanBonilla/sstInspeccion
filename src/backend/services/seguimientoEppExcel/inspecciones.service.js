@@ -41,7 +41,7 @@ const {
  *   aprobacion_copasst_nombre: string,
  *   aprobacion_copasst_at: string|Date|null
  * }>} inspecciones - Inspecciones EPP obtenidas desde la base de datos.
- * @returns { @returns {ExcelJS.Worksheet}
+ * @returns {ExcelJS.Worksheet}
  * Hoja principal de inspecciones configurada y formateada.
  */
 

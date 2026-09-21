@@ -6,7 +6,12 @@ const {
   aplicarFormatoFecha,
 } = require("../excel.service");
 
-
+/**
+ * Normaliza una fecha a su representación local sin componente de hora.
+ *
+ * @param {string|Date|null|undefined} fecha Fecha que se normalizará.
+ * @returns {Date|null} Fecha local a medianoche, o `null` si no es válida.
+ */
 
 function obtenerFechaLocal(fecha) {
   if (!fecha) {
@@ -140,7 +145,13 @@ function clasificarPlanesPorInspeccion(planes) {
  * Registros individuales de trabajadores incluidos en el seguimiento.
  * @param {Array<Object>} planes
  * Planes de acción asociados con las inspecciones.
- * @returns {Object} Hoja construida, totales procesados y rango ocupado.Hoja construida, totales procesados y rango ocupado.
+ * @returns {{
+ *   hoja: ExcelJS.Worksheet,
+ *   totalInspecciones: number,
+ *   totalTrabajadores: number,
+ *   totalPlanes: number,
+ *   rango: string
+ * }} Hoja construida, totales procesados y rango ocupado.
  */
 
 function construirHojaResumenEpp(workbook, inspecciones, seguimiento, planes) {

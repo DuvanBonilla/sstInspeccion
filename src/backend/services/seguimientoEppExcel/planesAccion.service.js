@@ -43,7 +43,7 @@ const { COLORES_EVALUACION } = require("./estilos.service");
  *   responsable_cierre: string,
  *   fecha_cierre: string|Date|null
  * }>} planes - Planes de acción obtenidos desde la base de datos.
- * @returns { @returns {ExcelJS.Worksheet}
+ * @returns {ExcelJS.Worksheet}
  * Hoja de planes de acción construida y formateada.
  */
 

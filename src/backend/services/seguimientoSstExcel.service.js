@@ -77,6 +77,14 @@ async function cargarExcelSst() {
   return new AdmZip(buffer);
 }
 
+/**
+ * Verifica que el archivo XLSM conserve su proyecto de macros VBA.
+ *
+ * @param {AdmZip} zip Archivo XLSM cargado como contenedor ZIP.
+ * @returns {boolean} `true` cuando el proyecto de macros está presente.
+ * @throws {Error} Si el archivo no contiene el proyecto VBA.
+ */
+
 function validarMacrosExcel(zip) {
   const macrosConservadas = Boolean(zip.getEntry("xl/vbaProject.bin"));
 
@@ -88,14 +96,14 @@ function validarMacrosExcel(zip) {
 }
 
 /**
- * Verifica que el archivo XLSM conserve su proyecto de macros VBA.
+ * Diagnostica la estructura de la tabla de extintores del Excel SST.
  *
- * Comprueba la existencia de `xl/vbaProject.bin` antes de generar o publicar
- * la nueva versión del archivo.
+ * Descarga el archivo XLSM desde OneDrive y delega la validación de la tabla
+ * al módulo especializado de extintores.
  *
- * @param {AdmZip} zip - Archivo XLSM cargado como contenedor ZIP.
- * @returns {boolean} `true` cuando el proyecto de macros está presente.
- * @throws {Error} Si el archivo no contiene el proyecto VBA.
+ * @async
+ * @returns {Promise<Object>} Resultado del diagnóstico de la tabla.
+ * @throws {Error} Si no es posible descargar o analizar el archivo.
  */
 
 async function diagnosticarTablaExtintores() {
@@ -103,6 +111,18 @@ async function diagnosticarTablaExtintores() {
 
   return diagnosticarTablaExtintoresModulo(zip);
 }
+
+/**
+ * Actualiza en memoria la información de extintores del seguimiento SST.
+ *
+ * Descarga el archivo XLSM, actualiza su hoja de extintores, comprueba que las
+ * macros se conserven y devuelve el archivo actualizado sin subirlo a OneDrive.
+ *
+ * @async
+ * @returns {Promise<Object>} Buffer XLSM, total de extintores, rango,
+ * inspecciones procesadas y estado de conservación de macros.
+ * @throws {Error} Si falla la descarga, actualización o validación de macros.
+ */
 
 async function actualizarExtintoresEnMemoria() {
   const zip = await cargarExcelSst();
@@ -123,6 +143,15 @@ async function actualizarExtintoresEnMemoria() {
     inspecciones: resultadoExtintores.inspecciones,
   };
 }
+
+/**
+ * Actualiza la sección de extintores y reemplaza el archivo SST en OneDrive.
+ *
+ * @async
+ * @returns {Promise<Object>} Ruta del archivo, total de extintores, rango,
+ * inspecciones procesadas y estado de conservación de macros.
+ * @throws {Error} Si falla la actualización o carga del archivo XLSM.
+ */
 
 async function actualizarExtintoresEnOneDrive() {
   const rutaExcel = obtenerRutaExcelSst();

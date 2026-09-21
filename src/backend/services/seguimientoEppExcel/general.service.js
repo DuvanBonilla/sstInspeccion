@@ -134,6 +134,24 @@ function crearEncabezado(hoja, fila, configuracion) {
   hoja.getRow(fila).height = 25;
 }
 
+/**
+ * Crea una tarjeta de indicador en el tablero general.
+ *
+ * Combina las celdas de título y valor, aplica sus estilos y permite asignar
+ * una fórmula de Excel con un resultado inicial para su visualización.
+ *
+ * @param {ExcelJS.Worksheet} hoja Hoja donde se creará el indicador.
+ * @param {Object} configuracion Configuración visual y funcional del indicador.
+ * @param {[string, string]} configuracion.columnas Columnas inicial y final.
+ * @param {string} configuracion.titulo Texto mostrado en el encabezado.
+ * @param {string} [configuracion.formula] Fórmula de Excel asociada al valor.
+ * @param {string|number} configuracion.resultado Valor inicial del indicador.
+ * @param {string} [configuracion.fondo] Color ARGB de fondo.
+ * @param {string} [configuracion.color] Color ARGB del texto.
+ * @param {string} [configuracion.formato] Formato numérico de Excel.
+ * @returns {void}
+ */
+
 function crearIndicador(
   hoja,
   {
@@ -306,7 +324,7 @@ function aplicarEstiloFilaDatos(hoja, numeroFila) {
  * @param {Array<Object>} planes
  * Planes de acción asociados con las inspecciones.
  * @returns {{
- *   hoja: string,
+ *   hoja: ExcelJS.Worksheet,
  *   totalInspecciones: number,
  *   totalTrabajadores: number,
  *   totalEppEvaluados: number,

@@ -109,7 +109,7 @@ async function obtenerFilasBotiquinesSstAprobados() {
  * numéricas para que sean escritas con el tipo correspondiente.
  *
  * @async
- * @param {@param {AdmZip} zip} zip - Archivo Excel abierto como contenedor ZIP.
+ * @param {AdmZip} zip Archivo Excel abierto como contenedor ZIP.
  * @returns {Promise<{
  *   totalBotiquinItems: number,
  *   rango: string,

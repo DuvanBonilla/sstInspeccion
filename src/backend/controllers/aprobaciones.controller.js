@@ -734,12 +734,23 @@ async function finalizarInspeccion(inspeccionId) {
 }
 
 /**
- * Reinicia las aprobaciones de Jefe de Área y COPASST.
- * La firma del inspector se conserva.
+ * Reinicia directamente las aprobaciones de Jefe de Área y COPASST.
  *
- * Solo permite la acción si:
- * - El código administrativo es correcto.
- * - La inspección sigue en estado pendiente_aprobacion.
+ * Conserva la aprobación del inspector y permite reutilizar los enlaces
+ * existentes. Solo opera sobre inspecciones en estado pendiente de aprobación
+ * y exige el código administrativo configurado en el servidor.
+ *
+ * Corresponde al endpoint POST /api/inspecciones/:id/reiniciar-aprobaciones.
+ *
+ * @async
+ * @param {Object} req Solicitud HTTP de Express.
+ * @param {Object} req.params Parámetros recibidos en la URL.
+ * @param {string} req.params.id Identificador de la inspección.
+ * @param {Object} req.body Datos enviados en la solicitud.
+ * @param {string} req.body.codigo Código administrativo de validación.
+ * @param {Object} res Respuesta HTTP de Express.
+ * @returns {Promise<Object>} Respuesta con la inspección reiniciada; 403 si el
+ * código es inválido, 409 si no puede reiniciarse o 500 si ocurre un error.
  */
 async function reiniciarAprobaciones(req, res) {
   const codigoConfigurado = String(
@@ -796,6 +807,25 @@ async function reiniciarAprobaciones(req, res) {
     });
   }
 }
+
+/**
+ * Solicita un código temporal para reiniciar aprobaciones.
+ *
+ * Verifica que la inspección esté pendiente, invalida códigos anteriores,
+ * crea un código de autorización y lo envía al correo de trazabilidad.
+ *
+ * Corresponde al endpoint POST
+ * /api/inspecciones/:id/reinicio-aprobaciones/solicitar-codigo.
+ *
+ * @async
+ * @param {Object} req Solicitud HTTP de Express.
+ * @param {Object} req.params Parámetros recibidos en la URL.
+ * @param {string} req.params.id Identificador de la inspección.
+ * @param {Object} res Respuesta HTTP de Express.
+ * @returns {Promise<Object>} Respuesta con la fecha de vencimiento del código;
+ * 409 si la inspección no está pendiente, 502 si falla el correo o 500 si
+ * ocurre un error.
+ */
 
 async function solicitarCodigoReinicioAprobaciones(req, res) {
   const inspeccionId = String(req.params.id || "").trim();
@@ -873,6 +903,28 @@ async function solicitarCodigoReinicioAprobaciones(req, res) {
     });
   }
 }
+
+/**
+ * Verifica un código temporal y reinicia las aprobaciones de una inspección.
+ *
+ * Ejecuta el proceso dentro de una transacción: valida el código, registra
+ * intentos fallidos cuando corresponde, marca el código como usado y limpia
+ * las aprobaciones de Jefe de Área y COPASST.
+ *
+ * Corresponde al endpoint POST
+ * /api/inspecciones/:id/reinicio-aprobaciones/confirmar.
+ *
+ * @async
+ * @param {Object} req Solicitud HTTP de Express.
+ * @param {Object} req.params Parámetros recibidos en la URL.
+ * @param {string} req.params.id Identificador de la inspección.
+ * @param {Object} req.body Datos enviados en la solicitud.
+ * @param {string} req.body.codigo Código temporal de seis dígitos.
+ * @param {Object} res Respuesta HTTP de Express.
+ * @returns {Promise<Object>} Respuesta con la inspección reiniciada; 400 si el
+ * código es inválido, 404 si no existe un código activo, 409 si expiró o no se
+ * puede reiniciar, o 500 si ocurre un error.
+ */
 
 async function confirmarReinicioAprobaciones(req, res) {
   const inspeccionId = String(req.params.id || "").trim();

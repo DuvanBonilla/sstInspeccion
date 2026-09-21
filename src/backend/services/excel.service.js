@@ -40,7 +40,7 @@ async function generarBuffer(workbook) {
  * @param {ExcelJS.Workbook} workbook Libro que contiene la hoja.
  * @param {string} nombre Nombre de la hoja.
  * @param {Object} [opciones={}] Opciones utilizadas al crear una nueva hoja.
- * @returns { @returns {ExcelJS.Worksheet} Hoja existente o recién creada.
+ * @returns {ExcelJS.Worksheet} Hoja existente o recién creada.
  * @throws {Error} Si no se proporciona el libro o el nombre de la hoja.
  */
 
@@ -62,6 +62,15 @@ function obtenerOCrearHoja(workbook, nombre, opciones = {}) {
   return worksheet;
 }
 
+/**
+ * Configura las columnas de una hoja de Excel.
+ *
+ * @param {ExcelJS.Worksheet} worksheet Hoja que recibirá la configuración.
+ * @param {Array<Object>} columnas Definiciones de columnas compatibles con ExcelJS.
+ * @returns {void}
+ * @throws {Error} Si no se recibe una hoja o las columnas no son un arreglo.
+ */
+
 function configurarColumnas(worksheet, columnas) {
   if (!worksheet) {
     throw new Error("Se requiere una hoja");
@@ -73,6 +82,14 @@ function configurarColumnas(worksheet, columnas) {
 
   worksheet.columns = columnas;
 }
+
+/**
+ * Congela las filas superiores de una hoja para mantener visible el encabezado.
+ *
+ * @param {ExcelJS.Worksheet} worksheet Hoja que se configurará.
+ * @param {number} [filas=1] Cantidad de filas que permanecerán fijas.
+ * @returns {void}
+ */
 
 function congelarEncabezado(worksheet, filas = 1) {
   if (!worksheet) {
@@ -87,6 +104,14 @@ function congelarEncabezado(worksheet, filas = 1) {
   ];
 }
 
+/**
+ * Activa el filtro automático en un rango de la hoja.
+ *
+ * @param {ExcelJS.Worksheet} worksheet Hoja que se configurará.
+ * @param {string} rango Rango de celdas al que se aplicará el filtro.
+ * @returns {void}
+ */
+
 function activarFiltro(worksheet, rango) {
   if (!worksheet || !rango) {
     return;
@@ -94,6 +119,18 @@ function activarFiltro(worksheet, rango) {
 
   worksheet.autoFilter = rango;
 }
+
+/**
+ * Aplica un formato de fecha a una columna dentro de un rango de filas.
+ *
+ * @param {ExcelJS.Worksheet} worksheet Hoja que contiene las celdas.
+ * @param {string} columna Letra o referencia de la columna.
+ * @param {number} filaInicio Primera fila que recibirá el formato.
+ * @param {number} filaFin Última fila que recibirá el formato.
+ * @param {string} [formato="dd/mm/yyyy"] Formato de fecha compatible con Excel.
+ * @returns {void}
+ * @throws {Error} Si no se recibe una hoja.
+ */
 
 function aplicarFormatoFecha(
   worksheet,
@@ -110,6 +147,17 @@ function aplicarFormatoFecha(
     worksheet.getCell(`${columna}${fila}`).numFmt = formato;
   }
 }
+
+/**
+ * Aplica el estilo visual estándar al encabezado de una hoja.
+ *
+ * Configura altura, tipografía, color de fondo, alineación y bordes.
+ *
+ * @param {ExcelJS.Worksheet} worksheet Hoja que contiene el encabezado.
+ * @param {number} [fila=1] Número de la fila de encabezado.
+ * @returns {void}
+ * @throws {Error} Si no se recibe una hoja.
+ */
 
 function aplicarEstiloEncabezado(worksheet, fila = 1) {
   if (!worksheet) {
@@ -163,6 +211,16 @@ function aplicarEstiloEncabezado(worksheet, fila = 1) {
   });
 }
 
+/**
+ * Aplica el formato visual estándar a las filas de contenido de una hoja.
+ *
+ * @param {ExcelJS.Worksheet} worksheet Hoja que contiene los registros.
+ * @param {number} [filaInicio=2] Primera fila de datos.
+ * @param {number} [filaFin=worksheet.rowCount] Última fila de datos.
+ * @returns {void}
+ * @throws {Error} Si no se recibe una hoja.
+ */
+
 function aplicarFormatoCuerpo(
   worksheet,
   filaInicio = 2,
@@ -198,6 +256,16 @@ function aplicarFormatoCuerpo(
   }
 }
 
+/**
+ * Centra horizontal y verticalmente las celdas de columnas seleccionadas.
+ *
+ * @param {ExcelJS.Worksheet} worksheet Hoja que contiene las columnas.
+ * @param {string[]} columnas Referencias de las columnas que se centrarán.
+ * @param {number} [filaInicio=2] Primera fila que se procesará.
+ * @param {number} [filaFin=worksheet.rowCount] Última fila que se procesará.
+ * @returns {void}
+ */
+
 function centrarColumnas(
   worksheet,
   columnas,
@@ -219,6 +287,16 @@ function centrarColumnas(
   });
 }
 
+/**
+ * Alinea a la izquierda las celdas de columnas seleccionadas.
+ *
+ * @param {ExcelJS.Worksheet} worksheet Hoja que contiene las columnas.
+ * @param {string[]} columnas Referencias de las columnas que se alinearán.
+ * @param {number} [filaInicio=2] Primera fila que se procesará.
+ * @param {number} [filaFin=worksheet.rowCount] Última fila que se procesará.
+ * @returns {void}
+ */
+
 function alinearColumnasIzquierda(
   worksheet,
   columnas,
@@ -239,6 +317,16 @@ function alinearColumnasIzquierda(
     }
   });
 }
+
+/**
+ * Alinea a la izquierda las celdas de columnas seleccionadas.
+ *
+ * @param {ExcelJS.Worksheet} worksheet Hoja que contiene las columnas.
+ * @param {string[]} columnas Referencias de las columnas que se alinearán.
+ * @param {number} [filaInicio=2] Primera fila que se procesará.
+ * @param {number} [filaFin=worksheet.rowCount] Última fila que se procesará.
+ * @returns {void}
+ */
 
 function aplicarColorPorValor(
   worksheet,

@@ -29,6 +29,23 @@ function dibujarIdInspeccion(doc, general, y) {
     .fillColor("black");
 }
 
+/**
+ * Dibuja una evidencia de imagen ajustada y centrada dentro de una caja PDF.
+ *
+ * Conserva la proporción de la imagen y limita el tamaño de las evidencias
+ * horizontales. Si el archivo no puede renderizarse, muestra un mensaje en
+ * lugar de interrumpir la generación del documento.
+ *
+ * @param {PDFDocument} doc Documento PDF en construcción.
+ * @param {Object} file Archivo de evidencia con contenido binario.
+ * @param {number} x Coordenada horizontal de la caja.
+ * @param {number} y Coordenada vertical de la caja.
+ * @param {number} width Ancho disponible.
+ * @param {number} height Alto disponible.
+ * @param {number} [fontSize=9] Tamaño del texto ante un error.
+ * @returns {void}
+ */
+
 function dibujarImagenAjustada(doc, file, x, y, width, height, fontSize = 9) {
   try {
     if (!file?.buffer?.length) {
@@ -145,6 +162,22 @@ function dibujarImagenAjustada(doc, file, x, y, width, height, fontSize = 9) {
   }
 }
 
+/**
+ * Dibuja hasta dos evidencias dentro de una caja del documento PDF.
+ *
+ * Cuando no existen archivos válidos, muestra un texto informativo
+ * configurable. Las evidencias adicionales se gestionan en páginas aparte.
+ *
+ * @param {PDFDocument} doc Documento PDF en construcción.
+ * @param {Array<Object>} files Archivos de evidencia.
+ * @param {number} x Coordenada horizontal de la caja.
+ * @param {number} y Coordenada vertical de la caja.
+ * @param {number} width Ancho disponible.
+ * @param {number} height Alto disponible.
+ * @param {Object} [opts={}] Opciones visuales de la caja.
+ * @returns {void}
+ */
+
 function dibujarEvidenciasEnCaja(doc, files, x, y, width, height, opts = {}) {
   const {
     fontSize = 9,
@@ -174,6 +207,24 @@ function dibujarEvidenciasEnCaja(doc, files, x, y, width, height, opts = {}) {
     dibujarImagenAjustada(doc, file, cellX, y, cellW, height, fontSize);
   });
 }
+
+/**
+ * Genera páginas adicionales para las evidencias que no caben en la caja principal.
+ *
+ * Omite las dos primeras evidencias, ya mostradas en la página de la
+ * inspección, y distribuye las restantes en cuadrículas de cuatro imágenes.
+ *
+ * @param {PDFDocument} doc Documento PDF en construcción.
+ * @param {Object} general Datos generales de la inspección.
+ * @param {string} titulo Título de la sección inspeccionada.
+ * @param {string} subtitulo Identificación adicional del elemento.
+ * @param {Array<Object>} files Archivos de evidencia.
+ * @param {Object} [opts={}] Opciones de renderizado.
+ * @param {boolean} [opts.dibujarIdEnUltima=true] Indica si debe mostrar el
+ * identificador de la inspección en la última página adicional.
+ * @returns {{lastY: number}|null} Posición final renderizada o `null` cuando
+ * no existen evidencias adicionales.
+ */
 
 function renderPaginasEvidenciasExtra(
   doc,
@@ -331,6 +382,19 @@ function renderPaginasEvidenciasExtra(
   };
 }
 
+/**
+ * Obtiene la fecha de evidencia para cada elemento de una sección SST.
+ *
+ * Usa la primera evidencia de cada elemento y, cuando está disponible, la
+ * fecha de modificación enviada desde el formulario.
+ *
+ * @async
+ * @param {Map<number, Array<Object>>} fileMapa Evidencias agrupadas por índice.
+ * @param {Object} body Datos recibidos desde el formulario.
+ * @param {string} prefijo Prefijo de los campos de evidencia.
+ * @returns {Promise<Map<number, Date|string>>} Fechas asociadas a cada índice.
+ */
+
 async function extraerFechasArchivos(fileMapa, body, prefijo) {
   const fechas = new Map();
 
@@ -384,6 +448,22 @@ function extraerEvidenciasPorIndex(files, prefix = "evidencia") {
 
   return mapa;
 }
+
+/**
+ * Renderiza la página de una inspección de camilla de emergencia.
+ *
+ * Incluye información general, condiciones evaluadas, observaciones,
+ * evidencias, fecha de evidencia y, cuando corresponde, páginas adicionales.
+ *
+ * @param {PDFDocument} doc Documento PDF en construcción.
+ * @param {Object} general Datos generales de la inspección.
+ * @param {Object} camilla Datos de la camilla inspeccionada.
+ * @param {number} idx Índice de la camilla dentro de la inspección.
+ * @param {Map<number, Array<Object>>} evidenciasCamillaPorIndex Evidencias por camilla.
+ * @param {Date|string|null} fechaExif Fecha asociada a la evidencia.
+ * @returns {{lastY: number, tienePaginaExtra: boolean}} Posición final y estado
+ * de páginas adicionales.
+ */
 
 function renderPaginaCamilla(
   doc,
@@ -629,6 +709,22 @@ function renderPaginaCamilla(
   };
 }
 
+/**
+ * Renderiza la página de una inspección de señalización.
+ *
+ * Muestra los datos de ubicación, tipo, cantidad, estado, aseo, observaciones
+ * y evidencias de una señalización inspeccionada.
+ *
+ * @param {PDFDocument} doc Documento PDF en construcción.
+ * @param {Object} general Datos generales de la inspección.
+ * @param {Object} senalizacion Datos de la señalización inspeccionada.
+ * @param {number} idx Índice de la señalización dentro de la inspección.
+ * @param {Map<number, Array<Object>>} evidenciasSenalizacionPorIndex Evidencias por señalización.
+ * @param {Date|string|null} fechaExif Fecha asociada a la evidencia.
+ * @returns {{lastY: number, tienePaginaExtra: boolean}} Posición final y estado
+ * de páginas adicionales.
+ */
+
 function renderPaginaSenalizacion(
   doc,
   general,
@@ -854,6 +950,21 @@ function renderPaginaSenalizacion(
     tienePaginaExtra: false,
   };
 }
+
+/**
+ * Renderiza las páginas de inspección de equipos tecnológicos.
+ *
+ * Genera una página por equipo, incorpora sus condiciones y evidencias, y
+ * devuelve la posición disponible para continuar el documento.
+ *
+ * @param {PDFDocument} doc Documento PDF en construcción.
+ * @param {Object} general Datos generales de la inspección.
+ * @param {Array<Object>} equiposTecnologicos Equipos inspeccionados.
+ * @param {Map<number, Array<Object>>} evidenciasEquipoTecnologicoPorIndex Evidencias por equipo.
+ * @param {Map<number, Date|string>} fechasExif Fechas de evidencia por equipo.
+ * @returns {{lastY: number, tienePaginaExtra: boolean}|null} Última posición
+ * renderizada o `null` cuando no existen equipos.
+ */
 
 function renderPaginaEquiposTecnologicos(
   doc,
@@ -1172,6 +1283,22 @@ function renderPaginaEquiposTecnologicos(
   return ultimaPosicion;
 }
 
+/**
+ * Renderiza la página de una inspección de botiquín.
+ *
+ * Presenta la información general, los elementos evaluados, observaciones,
+ * evidencias y el bloque de aprobaciones al finalizar el contenido.
+ *
+ * @param {PDFDocument} doc Documento PDF en construcción.
+ * @param {Object} general Datos generales de la inspección.
+ * @param {Object} botiquin Datos del botiquín inspeccionado.
+ * @param {number} idx Índice del botiquín dentro de la inspección.
+ * @param {Map<number, Array<Object>>} evidenciasBotiquinPorIndex Evidencias por botiquín.
+ * @param {Date|string|null} fechaExif Fecha asociada a la evidencia.
+ * @param {Object|null} [aprobaciones=null] Responsables que aprobaron la inspección.
+ * @returns {void}
+ */
+
 function renderPaginaBotiquin(
   doc,
   general,
@@ -1488,6 +1615,15 @@ function renderPaginaBotiquin(
   renderAprobaciones(doc, yAprobaciones, aprobaciones);
   dibujarIdInspeccion(doc, general, yAprobaciones + 60 + 4);
 }
+
+/**
+ * Dibuja el bloque de aprobación de Inspector, Jefe de Área y COPASST.
+ *
+ * @param {PDFDocument} doc Documento PDF en construcción.
+ * @param {number} y Coordenada vertical inicial del bloque.
+ * @param {Object|null} [aprobaciones=null] Información de aprobación por rol.
+ * @returns {void}
+ */
 
 function renderAprobaciones(doc, y, aprobaciones = null) {
   doc.save();

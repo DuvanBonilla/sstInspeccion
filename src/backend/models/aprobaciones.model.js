@@ -184,14 +184,18 @@ async function marcarInspeccionEnviada(inspeccionId, pdfUrl) {
 }
 
 /**
- * Reinicia las aprobaciones de Jefe de Área y COPASST.
- * Conserva la aprobación original del inspector y mantiene
- * los mismos tokens/enlaces de aprobación.
+ * Reinicia las aprobaciones de Jefe de Área y COPASST de una inspección.
  *
- * Solo permite la acción mientras la inspección esté pendiente.
+ * Conserva la aprobación del inspector y los tokens existentes. La operación
+ * solo se ejecuta cuando la inspección permanece pendiente de aprobación.
  *
- * @param {string} inspeccionId
- * @returns {Promise<Object|null>}
+ * @async
+ * @param {string} inspeccionId Identificador único de la inspección.
+ * @param {Function} [ejecutarConsulta=query] Función para ejecutar consultas
+ * a la base de datos; permite usar una transacción o una dependencia de prueba.
+ * @returns {Promise<Object|null>} Inspección reiniciada o `null` si no existe
+ * o no se encuentra pendiente de aprobación.
+ * @throws {Error} Si falla la actualización en la base de datos.
  */
 async function reiniciarAprobacionesPendientes(
   inspeccionId,
@@ -211,6 +215,18 @@ async function reiniciarAprobacionesPendientes(
 
   return rows[0] || null;
 }
+
+/**
+ * Obtiene una inspección pendiente que puede reiniciar sus aprobaciones.
+ *
+ * @async
+ * @param {string} inspeccionId Identificador único de la inspección.
+ * @param {Function} [ejecutarConsulta=query] Función para ejecutar consultas
+ * a la base de datos.
+ * @returns {Promise<Object|null>} Datos mínimos de la inspección pendiente o
+ * `null` si no existe o su estado no permite el reinicio.
+ * @throws {Error} Si falla la consulta a la base de datos.
+ */
 
 async function obtenerInspeccionPendienteParaReinicio(
   inspeccionId,
@@ -234,6 +250,22 @@ async function obtenerInspeccionPendienteParaReinicio(
 
   return rows[0] || null;
 }
+
+/**
+ * Obtiene y bloquea el código activo más reciente para reiniciar aprobaciones.
+ *
+ * Busca códigos que no hayan sido usados ni invalidados y aplica un bloqueo de
+ * fila para evitar validaciones simultáneas dentro de una transacción.
+ *
+ * @async
+ * @param {number} inspeccionesId Identificador interno de la inspección.
+ * @param {string} tipoInspeccion Tipo de inspección asociado al código.
+ * @param {Function} [ejecutarConsulta=query] Función para ejecutar consultas
+ * a la base de datos.
+ * @returns {Promise<Object|null>} Código de reinicio activo o `null` si no hay
+ * uno disponible.
+ * @throws {Error} Si falla la consulta a la base de datos.
+ */
 
 async function obtenerCodigoReinicioActivo(
   inspeccionesId,
@@ -266,6 +298,21 @@ async function obtenerCodigoReinicioActivo(
   return rows[0] || null;
 }
 
+/**
+ * Registra un intento de validación de un código de reinicio.
+ *
+ * Incrementa el contador únicamente si el código permanece activo y aún no ha
+ * alcanzado el límite de cinco intentos.
+ *
+ * @async
+ * @param {number} codigoReinicioId Identificador del código de reinicio.
+ * @param {Function} [ejecutarConsulta=query] Función para ejecutar consultas
+ * a la base de datos.
+ * @returns {Promise<Object|null>} Código con su número de intentos actualizado
+ * o `null` si no puede modificarse.
+ * @throws {Error} Si falla la actualización en la base de datos.
+ */
+
 async function registrarIntentoCodigoReinicio(
   codigoReinicioId,
   ejecutarConsulta = query,
@@ -284,6 +331,18 @@ async function registrarIntentoCodigoReinicio(
   return rows[0] || null;
 }
 
+/**
+ * Marca un código de reinicio como utilizado.
+ *
+ * @async
+ * @param {number} codigoReinicioId Identificador del código de reinicio.
+ * @param {Function} [ejecutarConsulta=query] Función para ejecutar consultas
+ * a la base de datos.
+ * @returns {Promise<Object|null>} Código actualizado o `null` si ya fue usado
+ * o invalidado.
+ * @throws {Error} Si falla la actualización en la base de datos.
+ */
+
 async function marcarCodigoReinicioUsado(
   codigoReinicioId,
   ejecutarConsulta = query,
@@ -301,10 +360,20 @@ async function marcarCodigoReinicioUsado(
   return rows[0] || null;
 }
 
-async function invalidarCodigosReinicioActivos(
-  inspeccionesId,
-  tipoInspeccion,
-) {
+/**
+ * Invalida los códigos activos de reinicio de una inspección.
+ *
+ * Se utiliza antes de generar un código nuevo para que solo exista una
+ * autorización vigente por tipo de inspección.
+ *
+ * @async
+ * @param {number} inspeccionesId Identificador interno de la inspección.
+ * @param {string} tipoInspeccion Tipo de inspección asociado a los códigos.
+ * @returns {Promise<void>} Finaliza cuando los códigos activos son invalidados.
+ * @throws {Error} Si falla la actualización en la base de datos.
+ */
+
+async function invalidarCodigosReinicioActivos(inspeccionesId, tipoInspeccion) {
   await query(
     `UPDATE codigos_reinicio_aprobaciones
      SET invalidado_en = now()
@@ -315,6 +384,22 @@ async function invalidarCodigosReinicioActivos(
     [inspeccionesId, tipoInspeccion],
   );
 }
+
+/**
+ * Crea un código temporal para autorizar el reinicio de aprobaciones.
+ *
+ * Almacena el hash y la sal del código, sin persistir su valor en texto plano.
+ *
+ * @async
+ * @param {Object} datos Datos requeridos para crear el código.
+ * @param {number} datos.inspeccionesId Identificador interno de la inspección.
+ * @param {string} datos.tipoInspeccion Tipo de inspección asociado.
+ * @param {string} datos.codigoHash Hash del código temporal.
+ * @param {string} datos.codigoSalt Sal utilizada para generar el hash.
+ * @param {Date|string} datos.venceEn Fecha y hora de vencimiento.
+ * @returns {Promise<Object>} Código creado con sus datos de trazabilidad.
+ * @throws {Error} Si falla la inserción en la base de datos.
+ */
 
 async function crearCodigoReinicio({
   inspeccionesId,

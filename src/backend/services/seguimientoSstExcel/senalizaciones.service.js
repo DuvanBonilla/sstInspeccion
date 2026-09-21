@@ -101,7 +101,7 @@ async function obtenerFilasSenalizacionesSstAprobadas() {
  * dentro del archivo Excel cargado en memoria.
  *
  * @async
- * @param {@param {AdmZip} zip} zip - Archivo Excel abierto como contenedor ZIP.
+ * @param {AdmZip} zip Archivo Excel abierto como contenedor ZIP.
  * @returns {Promise<{
  *   totalSenalizaciones: number,
  *   rango: string,

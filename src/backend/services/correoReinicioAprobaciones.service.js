@@ -23,9 +23,18 @@ function formatearFechaVencimiento(fecha) {
 /**
  * Construye el correo de autorización para reiniciar aprobaciones.
  *
- * @param {Object} datos
- * @returns {string}
+ * Incluye los datos de la inspección, el código temporal de un solo uso y su
+ * fecha de vencimiento, expresada en la zona horaria de Colombia.
+ *
+ * @param {Object} datos Información para construir el correo.
+ * @param {Object} datos.inspeccion Registro de la inspección pendiente.
+ * @param {number|string} datos.inspeccion.inspecciones_id Número consecutivo.
+ * @param {string} datos.inspeccion.inspeccion_id Identificador de la inspección.
+ * @param {string} datos.codigo Código temporal de autorización.
+ * @param {Date|string} datos.venceEn Fecha y hora de vencimiento del código.
+ * @returns {string} Contenido HTML listo para enviar.
  */
+
 function construirHtmlCorreoReinicioAprobaciones({
   inspeccion,
   codigo,
@@ -135,11 +144,22 @@ function construirHtmlCorreoReinicioAprobaciones({
 }
 
 /**
- * Envía el código temporal al correo de trazabilidad.
+ * Envía el código temporal para autorizar el reinicio de aprobaciones.
  *
- * @param {Object} datos
- * @returns {Promise<void>}
+ * Envía al correo de trazabilidad la plantilla con los datos de la inspección,
+ * el código de un solo uso y su fecha de vencimiento.
+ *
+ * @async
+ * @param {Object} datos Información necesaria para el envío.
+ * @param {Object} datos.inspeccion Registro de la inspección pendiente.
+ * @param {string} datos.codigo Código temporal de autorización.
+ * @param {Date|string} datos.venceEn Fecha y hora de vencimiento del código.
+ * @param {Function} [datos.enviarCorreo=enviarCorreoPorGraph] Función usada
+ * para enviar el correo; permite inyectar una implementación de prueba.
+ * @returns {Promise<void>} Finaliza cuando el correo es aceptado para envío.
+ * @throws {Error} Si no es posible enviar el correo.
  */
+
 async function enviarCodigoReinicioAprobaciones({
   inspeccion,
   codigo,

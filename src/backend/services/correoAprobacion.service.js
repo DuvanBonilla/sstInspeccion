@@ -6,6 +6,20 @@ const {
 
 const ROLES = ["jefe", "copasst"];
 
+/**
+ * Lee y valida los contactos utilizados en las solicitudes de aprobación.
+ *
+ * Acepta un objeto o su representación JSON. Verifica que Jefe de Área y
+ * COPASST tengan un medio válido —correo o WhatsApp— y un destino con el
+ * formato correspondiente.
+ *
+ * @param {Object|string|null|undefined} valor Contactos recibidos desde el
+ * formulario o la base de datos.
+ * @returns {Object|null} Contactos normalizados por rol, o `null` cuando no
+ * se recibe ninguna configuración.
+ * @throws {Error} Si la estructura, el medio de envío o el destino son inválidos.
+ */
+
 function leerContactosAprobacion(valor) {
   if (valor == null || valor === "") {
     return null; // Mantiene compatibles los envíos anteriores.
@@ -44,6 +58,29 @@ function leerContactosAprobacion(valor) {
 
   return resultado;
 }
+
+/**
+ * Envía por correo las solicitudes de aprobación configuradas para una inspección.
+ *
+ * Los contactos configurados para WhatsApp se marcan como envío manual. Para
+ * los correos, valida que el enlace pertenezca al origen público configurado y
+ * registra individualmente los resultados de Jefe de Área y COPASST.
+ *
+ * @async
+ * @param {Object} datos Información de la inspección y sus destinatarios.
+ * @param {Object|null} datos.contactos Contactos configurados por rol.
+ * @param {Object} datos.links Enlaces de aprobación por rol.
+ * @param {string} datos.tipoInspeccion Tipo de inspección.
+ * @param {number|string} datos.numInspeccion Número consecutivo.
+ * @param {string} datos.inspeccionId Identificador único de la inspección.
+ * @param {string} datos.fecha Fecha de realización.
+ * @param {string} datos.sede Sede operacional.
+ * @param {string} datos.area Área inspeccionada.
+ * @param {Function} [datos.enviarCorreo=enviarCorreoPorGraph] Función usada
+ * para enviar el correo; permite inyectar una implementación de prueba.
+ * @returns {Promise<Object>} Estado de envío por rol: `enviado`, `manual`,
+ * `fallido` o `no_configurado`.
+ */
 
 async function enviarSolicitudesAprobacion({
   contactos,
