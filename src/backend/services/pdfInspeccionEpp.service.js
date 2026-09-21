@@ -163,7 +163,7 @@ function renderEncabezado(doc) {
   doc
     .font("Helvetica")
     .fontSize(9)
-    .text("CÓDIGO: ST-FST EPP", 425, y + 7)
+    .text("CÓDIGO: FPSST23", 425, y + 7)
     .text("VERSIÓN: 01", 425, y + 30)
     .text("FECHA DE VERSIÓN: 2026", 425, y + 53);
 

@@ -417,7 +417,7 @@ function renderPaginaCamilla(
   doc
     .font("Helvetica")
     .fontSize(9)
-    .text("CÓDIGO: ST-FST 25", 425, y + 7)
+    .text("CÓDIGO: FPSST22", 425, y + 7)
     .text("VERSIÓN: 01", 425, y + 30)
     .text("FECHA DE VERSIÓN: 4/6/2026", 425, y + 53);
 
@@ -453,15 +453,24 @@ function renderPaginaCamilla(
   doc
     .font("Helvetica")
     .fontSize(9)
-    .text(general.ÁREATrabajo || "", 130, y + 8, { width: 160 });
+    .text(general.areaTrabajo || "", 130, y + 8, { width: 160 });
   doc
     .font("Helvetica-Bold")
-    .fontSize(9)
-    .text("RESPONSABLE DE LA INSPECCIÓN", 302, y + 8);
+    .fontSize(7.5)
+    .text("RESPONSABLE DE LA INSPECCIÓN:", 302, y + 8, {
+      width: 142,
+      height: 12,
+      lineBreak: false,
+    });
   doc
     .font("Helvetica")
-    .fontSize(9)
-    .text(general.responsableInspeccion || "", 445, y + 8, { width: 120 });
+    .fontSize(8.5)
+    .text(general.responsableInspeccion || "", 448, y + 8, {
+      width: 107,
+      height: 12,
+      lineBreak: false,
+      ellipsis: true,
+    });
 
   y += 25;
 
@@ -651,7 +660,7 @@ function renderPaginaSenalizacion(
   doc
     .font("Helvetica")
     .fontSize(9)
-    .text("CÓDIGO: ST-FST 25", 425, y + 7)
+    .text("CÓDIGO: FPSST22", 425, y + 7)
     .text("VERSIÓN: 01", 425, y + 30)
     .text("FECHA DE VERSIÓN: 4/6/2026", 425, y + 53);
 
@@ -686,15 +695,24 @@ function renderPaginaSenalizacion(
   doc
     .font("Helvetica")
     .fontSize(9)
-    .text(general.ÁREATrabajo || "", 130, y + 8);
+    .text(general.areaTrabajo || "", 130, y + 8, { width: 160 });
   doc
     .font("Helvetica-Bold")
-    .fontSize(9)
-    .text("RESPONSABLE DE LA INSPECCIÓN", 302, y + 8);
+    .fontSize(7.5)
+    .text("RESPONSABLE DE LA INSPECCIÓN:", 302, y + 8, {
+      width: 142,
+      height: 12,
+      lineBreak: false,
+    });
   doc
     .font("Helvetica")
-    .fontSize(9)
-    .text(general.responsableInspeccion || "", 445, y + 8);
+    .fontSize(8.5)
+    .text(general.responsableInspeccion || "", 448, y + 8, {
+      width: 107,
+      height: 12,
+      lineBreak: false,
+      ellipsis: true,
+    });
   y += 25;
 
   doc.rect(25, y, 545, 25).stroke();
@@ -869,7 +887,7 @@ function renderPaginaEquiposTecnologicos(
   doc
     .font("Helvetica")
     .fontSize(9)
-    .text("CÓDIGO: ST-FST 25", 425, y + 7)
+    .text("CÓDIGO: FPSST22", 425, y + 7)
     .text("VERSIÓN: 01", 425, y + 30)
     .text("FECHA DE VERSIÓN: 4/6/2026", 425, y + 53);
 
@@ -904,15 +922,24 @@ function renderPaginaEquiposTecnologicos(
   doc
     .font("Helvetica")
     .fontSize(9)
-    .text(general.ÁREATrabajo || "", 130, y + 8);
+    .text(general.areaTrabajo || "", 130, y + 8, { width: 160 });
   doc
     .font("Helvetica-Bold")
-    .fontSize(9)
-    .text("RESPONSABLE DE LA INSPECCIÓN", 302, y + 8);
+    .fontSize(7.5)
+    .text("RESPONSABLE DE LA INSPECCIÓN:", 302, y + 8, {
+      width: 142,
+      height: 12,
+      lineBreak: false,
+    });
   doc
     .font("Helvetica")
-    .fontSize(9)
-    .text(general.responsableInspeccion || "", 445, y + 8);
+    .fontSize(8.5)
+    .text(general.responsableInspeccion || "", 448, y + 8, {
+      width: 107,
+      height: 12,
+      lineBreak: false,
+      ellipsis: true,
+    });
   y += 25;
 
   doc.rect(25, y, 545, 25).stroke();
@@ -1178,7 +1205,7 @@ function renderPaginaBotiquin(
   doc
     .font("Helvetica")
     .fontSize(9)
-    .text("CÓDIGO: ST-FST 25", 425, y + 7)
+    .text("CÓDIGO: FPSST22", 425, y + 7)
     .text("VERSIÓN: 01", 425, y + 30)
     .text("FECHA DE VERSIÓN: 4/6/2026", 425, y + 53);
 
@@ -1213,15 +1240,24 @@ function renderPaginaBotiquin(
   doc
     .font("Helvetica")
     .fontSize(9)
-    .text(general.ÁREATrabajo || "", 123, y + 8, { width: 167 });
+    .text(general.areaTrabajo || "", 123, y + 8, { width: 167 });
   doc
     .font("Helvetica-Bold")
-    .fontSize(9)
-    .text("RESPONSABLE DE LA INSPECCIÓN", 302, y + 8, { width: 140 });
+    .fontSize(7.5)
+    .text("RESPONSABLE DE LA INSPECCIÓN:", 302, y + 8, {
+      width: 142,
+      height: 12,
+      lineBreak: false,
+    });
   doc
     .font("Helvetica")
-    .fontSize(9)
-    .text(general.responsableInspeccion || "", 445, y + 8, { width: 120 });
+    .fontSize(8.5)
+    .text(general.responsableInspeccion || "", 448, y + 8, {
+      width: 107,
+      height: 12,
+      lineBreak: false,
+      ellipsis: true,
+    });
   y += 25;
 
   doc.rect(25, y, 545, 25).stroke();
@@ -1646,7 +1682,7 @@ async function crearPdfInspeccionExtintor(
       doc
         .font("Helvetica")
         .fontSize(9)
-        .text("CÓDIGO: ST-FST 25", 425, y + 7)
+        .text("CÓDIGO: FPSST22", 425, y + 7)
         .text("VERSIÓN: 01", 425, y + 30)
         .text("FECHA DE VERSIÓN: 4/6/2026", 425, y + 53);
 
@@ -1681,15 +1717,24 @@ async function crearPdfInspeccionExtintor(
       doc
         .font("Helvetica")
         .fontSize(9)
-        .text(general.ÁREATrabajo || "", 130, y + 8, { width: 160 });
+        .text(general.areaTrabajo || "", 130, y + 8, { width: 160 });
       doc
         .font("Helvetica-Bold")
-        .fontSize(9)
-        .text("RESPONSABLE DE LA INSPECCIÓN", 302, y + 8);
+        .fontSize(7.5)
+        .text("RESPONSABLE DE LA INSPECCIÓN:", 302, y + 8, {
+          width: 142,
+          height: 12,
+          lineBreak: false,
+        });
       doc
         .font("Helvetica")
-        .fontSize(9)
-        .text(general.responsableInspeccion || "", 445, y + 8, { width: 120 });
+        .fontSize(8.5)
+        .text(general.responsableInspeccion || "", 448, y + 8, {
+          width: 107,
+          height: 12,
+          lineBreak: false,
+          ellipsis: true,
+        });
       y += 25;
 
       doc.rect(25, y, 545, 25).stroke();
@@ -2007,7 +2052,7 @@ function construirDatosGenerales(row) {
     numInspeccion: Number(row.inspecciones_id),
     fecha: row.fecha,
     sedeOperacion: row.sede_operacion,
-    ÁREATrabajo: row.ÁREA_trabajo,
+    areaTrabajo: row.area_trabajo,
     jefeResponsable: row.jefe_responsable,
     cargoJefe: row.cargo_jefe,
     responsableInspeccion: row.responsable_inspeccion,

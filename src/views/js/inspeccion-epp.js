@@ -30,7 +30,10 @@ import { crearValidacionInformacionGeneralEpp } from "./epp/controllers/validaci
 import { crearResumenTrabajadorHtml } from "./epp/resumenEpp.template.js";
 import { crearResumenInspeccionEpp } from "./epp/controllers/resumenInspeccionEpp.controller.js";
 import { crearSalidaInspeccionEppController } from "./epp/controllers/salidaInspeccionEpp.controller.js";
+import { inicializarFechaEpp } from "./epp/controllers/inicializacionFechaEpp.controller.js";
+import { crearInicializacionInspeccionEppController } from "./epp/controllers/inicializacionInspeccionEpp.controller.js";
 import { generarInspeccionId } from "./epp/inspeccionEpp.id.js";
+import { crearRegistroInspeccionEppService } from "./epp/services/registroInspeccionEpp.service.js";
 import { crearContactosAprobacionController } from "./shared/controllers/contactosAprobacion.controller.js";
 
 const TOTAL_PASOS = 3;
@@ -116,110 +119,56 @@ const salidaInspeccion = crearSalidaInspeccionEppController({
 });
 
 document.addEventListener("DOMContentLoaded", async () => {
-  try {
-    await cargarCatalogoEpp();
-  } catch (error) {
-    console.error("[EPP] Error cargando catálogo:", error);
-
-    alert(
-      "No fue posible cargar el catálogo de elementos EPP. " +
-        "Recarga la página e intenta nuevamente.",
-    );
-
-    return;
-  }
-
-  try {
-    inicializarFecha();
-
-    validacionInformacionGeneral.inicializar();
-
-    contactosAprobacion.inicializar();
-
-    inicializarEnvioEpp({
-      documento: document,
-
-      ventana: window,
-
-      enviarInspeccionEpp,
-
-      validarContactos: contactosAprobacion.validar,
-
-      prepararAccionesAprobacion(datos) {
-        contactosAprobacion.configurarAcciones({
-          ...datos,
-          tipoInspeccion: "EPP",
-          sede: obtenerValor("sedeOperacion"),
-          area: obtenerValor("areaTrabajo"),
-        });
-      },
-    });
-
-    navegacion.inicializar();
-
-    salidaInspeccion.inicializar();
-
-    trabajadoresManager.init();
-
-    navegacion.actualizarPaso();
-  } catch (error) {
-    console.error("[EPP] Error inicializando formulario:", error);
-
-    alert(
-      "No fue posible inicializar el formulario de inspección EPP. " +
-        "Recarga la página e intenta nuevamente.",
-    );
-  }
+  await inicializacionInspeccionEpp.inicializar();
 });
 
-function inicializarFecha() {
-  if (!fecha) {
-    return;
-  }
+const registroInspeccionEpp = crearRegistroInspeccionEppService({
+  generarInspeccionId,
 
-  asignarFechaHoy(fecha);
+  construirPayload: construirPayloadInspeccionEpp,
+  construirContenidoFormData: construirContenidoFormDataEpp,
+  enviarInspeccion: enviarInspeccionEppApi,
 
-  fecha.addEventListener("click", () => {
-    abrirSelectorFecha(fecha);
-  });
-}
+  obtenerValor,
 
-/**
- * Construye el objeto principal de la inspección EPP.
- *
- * @param {string|null} [inspeccionId=null] Identificador de la inspección.
- * @returns {Object} Datos estructurados de la inspección EPP.
- */
-function construirInspeccionEpp(inspeccionId = null) {
-  return construirPayloadInspeccionEpp({
-    inspeccionId,
+  leerTrabajadores() {
+    return trabajadoresManager.leer();
+  },
+
+  obtenerEvidencias() {
+    return trabajadoresManager.obtenerEvidencias();
+  },
+
+  obtenerContactos() {
+    return contactosAprobacion.obtenerContactos();
+  },
+});
+
+const inicializacionInspeccionEpp =
+  crearInicializacionInspeccionEppController({
+    cargarCatalogoEpp,
+    console,
+    alert,
+
+    inicializarFechaEpp,
+    fecha,
+    asignarFechaHoy,
+    abrirSelectorFecha,
+
+    validacionInformacionGeneral,
+    contactosAprobacion,
+
+    inicializarEnvioEpp,
+    documento: document,
+    ventana: window,
+    enviarInspeccionEpp,
+
+    navegacion,
+    salidaInspeccion,
+    trabajadoresManager,
 
     obtenerValor,
-
-    trabajadores: trabajadoresManager.leer(),
   });
-}
-
-/**
- * Construye el contenido multipart de la inspección EPP.
- *
- * @param {string|null} [inspeccionId=null] Identificador de la inspección.
- * @returns {FormData} Contenido multipart.
- */
-function construirFormDataEpp(inspeccionId = null) {
-  const formData = construirContenidoFormDataEpp({
-    inspeccion: construirInspeccionEpp(inspeccionId),
-    evidencias: trabajadoresManager.obtenerEvidencias(),
-  });
-
-  formData.append(
-    "contactosAprobacion",
-    JSON.stringify(contactosAprobacion.obtenerContactos()),
-  );
-
-  return formData;
-}
-
 /**
  * Envía la inspección EPP y sus evidencias.
  *
@@ -228,11 +177,7 @@ function construirFormDataEpp(inspeccionId = null) {
  */
 async function enviarInspeccionEpp() {
   try {
-    const inspeccionId = generarInspeccionId();
-
-    const formData = construirFormDataEpp(inspeccionId);
-
-    return await enviarInspeccionEppApi(formData);
+    return await registroInspeccionEpp.enviar();
   } catch (error) {
     console.error("❌ Error enviando inspección EPP:", error);
 
