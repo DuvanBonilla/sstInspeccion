@@ -30,6 +30,7 @@ import { crearValidacionInformacionGeneralEpp } from "./epp/controllers/validaci
 import { crearResumenTrabajadorHtml } from "./epp/resumenEpp.template.js";
 import { crearResumenInspeccionEpp } from "./epp/controllers/resumenInspeccionEpp.controller.js";
 import { crearSalidaInspeccionEppController } from "./epp/controllers/salidaInspeccionEpp.controller.js";
+import { inicializarFechaEpp } from "./epp/controllers/inicializacionFechaEpp.controller.js";
 import { generarInspeccionId } from "./epp/inspeccionEpp.id.js";
 import { crearContactosAprobacionController } from "./shared/controllers/contactosAprobacion.controller.js";
 
@@ -130,7 +131,11 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   try {
-    inicializarFecha();
+    inicializarFechaEpp({
+      fecha,
+      asignarFechaHoy,
+      abrirSelectorFecha,
+    });
 
     validacionInformacionGeneral.inicializar();
 
@@ -171,19 +176,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     );
   }
 });
-
-function inicializarFecha() {
-  if (!fecha) {
-    return;
-  }
-
-  asignarFechaHoy(fecha);
-
-  fecha.addEventListener("click", () => {
-    abrirSelectorFecha(fecha);
-  });
-}
-
 /**
  * Construye el objeto principal de la inspección EPP.
  *
