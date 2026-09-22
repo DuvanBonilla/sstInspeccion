@@ -172,6 +172,7 @@ const inicializacionInspeccionEpp =
 /**
  * Envía la inspección EPP y sus evidencias.
  *
+ * @async
  * @returns {Promise<Object>} Respuesta procesada del backend.
  * @throws {Error} Cuando no puede completarse el envío.
  */

@@ -443,6 +443,16 @@
     }
   });
 
+  /**
+   * Abre el flujo de reinicio de aprobaciones para una inspección.
+   *
+   * Restablece el formulario, muestra el paso de confirmación y conserva el
+   * botón de la inspección seleccionada para solicitar el código de seguridad.
+   *
+   * @param {HTMLButtonElement} boton Botón asociado con la inspección.
+   * @returns {void}
+   */
+
   function abrirModalReinicio(boton) {
     botonReinicioSeleccionado = boton;
     codigoReinicioSolicitado = false;
@@ -460,6 +470,15 @@
     reinicioModal.classList.remove("hidden");
     reinicioConfirmacion.focus();
   }
+
+  /**
+   * Cierra y restablece el flujo de reinicio de aprobaciones.
+   *
+   * Cancela el contador activo, limpia el formulario y elimina la inspección
+   * seleccionada de la sesión actual.
+   *
+   * @returns {void}
+   */
 
   function cerrarModalReinicio() {
     reinicioModal.classList.add("hidden");
@@ -523,6 +542,13 @@
       reinicioDigitos[Math.min(digitos.length, 6) - 1].focus();
     });
   });
+
+  /**
+   * Inicia el contador visual de vencimiento del código de reinicio.
+   *
+   * @param {string|Date} venceEn Fecha y hora de vencimiento del código.
+   * @returns {void}
+   */
 
   function iniciarContadorReinicio(venceEn) {
     clearInterval(temporizadorReinicio);
@@ -784,16 +810,7 @@
   );
 
   if (btnActualizarExcelSst) {
-    /**
-     * Solicita la actualización manual del seguimiento SST en OneDrive.
-     *
-     * Bloquea temporalmente el botón, ejecuta la actualización mediante el
-     * backend y comunica al usuario si el archivo Excel fue actualizado o si
-     * ocurrió un error durante el proceso.
-     *
-     * @async
-     * @returns {Promise<void>}
-     */
+
     btnActualizarExcelSst.addEventListener("click", async () => {
       const contenidoOriginal = btnActualizarExcelSst.innerHTML;
 

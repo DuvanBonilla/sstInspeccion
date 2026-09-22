@@ -2,17 +2,15 @@
  * Muestra el modal correspondiente al estado de una operación de inspección.
  *
  * Alterna entre los estados de carga, éxito y error. Cuando la operación
- * finaliza correctamente, configura la información de la inspección y los
- * enlaces de aprobación que deben presentarse.
+ * finaliza correctamente, configura la información y los enlaces de aprobación.
  *
- * @param {"cargando"|"exito"|"error"} estado - Estado que debe mostrar el modal.
- * @param {string|null} [inspeccionId=null] - Identificador público de la inspección.
- * @param {number|string|null} [numInspeccion=null] - Número interno de la inspección.
- * @param {Object|null} enlaces - Enlaces de aprobación recibidos.
- * @param {string} [enlaces.jefe] - Enlace de aprobación correspondiente al jefe.
- * @param {string} [enlaces.copasst] - Enlace de aprobación correspondiente al COPASST.
- * Enlaces de aprobación disponibles.
- * @param {"crear"|"recuperar"} [modo="crear"] - Contexto en el que se abre el modal.
+ * @param {"cargando"|"exito"|"error"} estado Estado que debe mostrar el modal.
+ * @param {string|null} [inspeccionId=null] Identificador público de la inspección.
+ * @param {number|string|null} [numInspeccion=null] Número interno de la inspección.
+ * @param {Object|null} [links=null] Enlaces de aprobación recibidos.
+ * @param {string} [links.jefe] Enlace de aprobación del jefe de área.
+ * @param {string} [links.copasst] Enlace de aprobación de COPASST.
+ * @param {"crear"|"recuperar"} [modo="crear"] Contexto en que se abre el modal.
  * @returns {void}
  */
 
@@ -58,8 +56,9 @@ function mostrarModal(
  *
  * @param {string|null} inspeccionId - Identificador público de la inspección.
  * @param {number|string|null} numInspeccion - Número interno de la inspección.
- * @param {Object|null} links
- * Enlaces de aprobación recibidos.
+ * @param {Object|null} [links=null] Enlaces de aprobación recibidos.
+ * @param {string} [links.jefe] Enlace de aprobación del jefe de área.
+ * @param {string} [links.copasst] Enlace de aprobación de COPASST.
  * @param {"crear"|"recuperar"} [modo="crear"] - Contexto de presentación del modal.
  * @returns {void}
  */
@@ -188,6 +187,12 @@ function copiarLink(boton) {
       console.error("No fue posible copiar el enlace:", err);
     });
 }
+
+/**
+ * Oculta el modal de estado de envío de la inspección.
+ *
+ * @returns {void}
+ */
 
 function cerrarModal() {
   document.getElementById("envio-modal").classList.remove("visible");

@@ -1,21 +1,3 @@
-/**
- * index.js
- *
- * Controla las interacciones de la página principal.
- *
- * Funciones:
- * - Actualiza automáticamente el año del footer.
- * - Abre y cierra el selector de tipo de inspección.
- * - Abre y cierra el selector de tipo de estadística.
- * - Permite cerrar los selectores haciendo clic fuera.
- * - Permite cerrar los selectores con Escape.
- */
-
-// =====================================================
-// ELEMENTOS DEL DOM
-// =====================================================
-
-// Footer
 const yearElement = document.getElementById("yr");
 
 // -----------------------------------------------------

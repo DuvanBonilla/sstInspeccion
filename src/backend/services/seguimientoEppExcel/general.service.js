@@ -142,7 +142,7 @@ function crearEncabezado(hoja, fila, configuracion) {
  *
  * @param {ExcelJS.Worksheet} hoja Hoja donde se creará el indicador.
  * @param {Object} configuracion Configuración visual y funcional del indicador.
- * @param {[string, string]} configuracion.columnas Columnas inicial y final.
+ * @param {string[]} configuracion.columnas Columnas inicial y final.
  * @param {string} configuracion.titulo Texto mostrado en el encabezado.
  * @param {string} [configuracion.formula] Fórmula de Excel asociada al valor.
  * @param {string|number} configuracion.resultado Valor inicial del indicador.

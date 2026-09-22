@@ -83,7 +83,7 @@ function calcularVencimientoCodigo(fechaActual = new Date()) {
  * @param {Date|string} [datos.fechaActual=new Date()] Fecha actual de referencia.
  * @param {number} [datos.intentos=0] Cantidad de intentos fallidos.
  * @param {Date|string|null} [datos.usadoEn=null] Fecha de uso previo del código.
- * @returns {{valido: boolean, motivo?: string}} Resultado de validación y, si
+ * @returns {{valido: boolean, motivo: (string|undefined)}} Resultado de validación y, si
  * aplica, uno de los motivos: `UTILIZADO`, `BLOQUEADO`, `EXPIRADO` o `INCORRECTO`.
  */
 

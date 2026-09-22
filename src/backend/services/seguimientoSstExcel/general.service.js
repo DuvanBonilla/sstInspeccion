@@ -392,7 +392,7 @@ function activarRecalculoAutomatico(workbookXml) {
  * contenido del libro, y elimina el archivo interno cuando está presente.
  * Esto permite que Excel reconstruya la cadena al abrir el documento.
  *
- * @param {@param {AdmZip} zip} zip - Archivo Excel abierto como contenedor ZIP.
+ * @param {AdmZip} zip Archivo Excel abierto como contenedor ZIP.
  * @returns {boolean} `true` cuando finaliza el proceso de eliminación.
  */
 
@@ -448,7 +448,7 @@ function eliminarCadenaCalculo(zip) {
  * del libro. Finalmente elimina la cadena de cálculo para que Excel la genere
  * nuevamente al abrir el archivo.
  *
- * @param {@param {AdmZip} zip} zip - Archivo Excel abierto como contenedor ZIP.
+ * @param {AdmZip} zip Archivo Excel abierto como contenedor ZIP.
  * @returns {{
  *   hoja: string,
  *   formulasPuntualesActualizadas: number,

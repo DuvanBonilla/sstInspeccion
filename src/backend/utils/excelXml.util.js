@@ -4,7 +4,7 @@
  * Busca la entrada indicada dentro del contenedor ZIP y convierte su contenido
  * binario en una cadena UTF-8.
  *
- * @param {@param {AdmZip} zip} zip - Archivo Excel abierto como contenedor ZIP.
+@param {AdmZip} zip Archivo Excel abierto como contenedor ZIP.
  * @param {string} rutaInterna - Ruta del archivo XML dentro del contenedor.
  * @returns {string} Contenido XML de la entrada solicitada.
  * @throws {Error} Si la ruta indicada no existe dentro del archivo Excel.
@@ -26,7 +26,7 @@ function obtenerXml(zip, rutaInterna) {
  * Convierte el XML actualizado en un Buffer UTF-8 y lo almacena nuevamente
  * en la misma ruta interna del contenedor.
  *
- * @param {@param {AdmZip} zip} zip - Archivo Excel abierto como contenedor ZIP.
+@param {AdmZip} zip Archivo Excel abierto como contenedor ZIP.
  * @param {string} rutaInterna - Ruta del archivo XML que debe reemplazarse.
  * @param {string} contenidoXml - Nuevo contenido XML.
  * @returns {void}
@@ -43,9 +43,23 @@ function reemplazarXml(zip, rutaInterna, contenidoXml) {
   zip.updateFile(rutaInterna, Buffer.from(contenidoXml, "utf8"));
 }
 
+/**
+ * Genera el contenido binario final del libro de Excel.
+ *
+ * @param {AdmZip} zip Archivo Excel abierto como contenedor ZIP.
+ * @returns {Buffer} Libro de Excel serializado.
+ */
+
 function generarBufferExcel(zip) {
   return zip.toBuffer();
 }
+
+/**
+ * Convierte una letra o referencia de columna de Excel en su posición numérica.
+ *
+ * @param {string} columna Letra de columna, por ejemplo, `A`, `Z` o `AA`.
+ * @returns {number} Posición numérica de la columna.
+ */
 
 function obtenerNumeroColumna(columna) {
   let numero = 0;
@@ -56,6 +70,13 @@ function obtenerNumeroColumna(columna) {
 
   return numero;
 }
+
+/**
+ * Genera las letras de todas las columnas desde `A` hasta la indicada.
+ *
+ * @param {string} columnaFinal Última columna que se incluirá.
+ * @returns {string[]} Columnas generadas en orden ascendente.
+ */
 
 function obtenerColumnasHasta(columnaFinal) {
   const totalColumnas = obtenerNumeroColumna(columnaFinal);
@@ -80,6 +101,15 @@ function obtenerColumnasHasta(columnaFinal) {
 
   return columnas;
 }
+
+/**
+ * Escapa caracteres especiales para incluir un valor de forma segura en XML.
+ *
+ * También elimina caracteres de control no permitidos por XML.
+ *
+ * @param {*} valor Valor que se convertirá a texto XML seguro.
+ * @returns {string} Valor escapado.
+ */
 
 function escaparXml(valor) {
   return String(valor ?? "")
@@ -128,6 +158,15 @@ function convertirFechaAExcel(fecha) {
   return Math.floor((fechaUtc - origenExcel) / 86400000);
 }
 
+/**
+ * Obtiene los identificadores de estilo de las celdas de una fila plantilla.
+ *
+ * @param {string} hojaXml Contenido XML de la hoja de Excel.
+ * @param {number} [numeroFila=2] Número de la fila que se utilizará como plantilla.
+ * @returns {Object<string, string|null>} Estilos indexados por letra de columna.
+ * @throws {Error} Si la fila indicada no existe en la hoja.
+ */
+
 function obtenerEstilosFilaPlantilla(hojaXml, numeroFila = 2) {
   const expresionFila = new RegExp(
     `<row\\b[^>]*\\br="${numeroFila}"[^>]*(?:\\/>|>[\\s\\S]*?<\\/row>)`,
@@ -157,6 +196,13 @@ function obtenerEstilosFilaPlantilla(hojaXml, numeroFila = 2) {
 
   return estilos;
 }
+
+/**
+ * Elimina el contenido de una celda XML y conserva su referencia y estilo.
+ *
+ * @param {string} celdaXml Representación XML de la celda.
+ * @returns {string} Celda XML vacía con sus atributos esenciales preservados.
+ */
 
 function limpiarCeldaExistenteXml(celdaXml) {
   const referencia = celdaXml.match(/\br="([^"]+)"/)?.[1];

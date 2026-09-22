@@ -5,6 +5,18 @@ const MENSAJES = {
   manual: "Abra WhatsApp o copie el enlace para compartirlo.",
 };
 
+/**
+ * Muestra el estado del envío de las solicitudes de aprobación por rol.
+ *
+ * Crea el aviso visual cuando es necesario y oculta el enlace de correo
+ * después de un envío exitoso.
+ *
+ * @param {Document} documento Documento de la interfaz.
+ * @param {Object<string, ("enviado"|"fallido"|"manual")>} [estados={}]
+ * Estados de envío indexados por rol.
+ * @returns {void}
+ */
+
 export function mostrarEstadoEnvioAprobacion(documento, estados = {}) {
   for (const rol of ["jefe", "copasst"]) {
     const bloque = documento.getElementById(`bloque-${rol}`);

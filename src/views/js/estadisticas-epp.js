@@ -1,8 +1,3 @@
-/*
-  estadisticas-epp.js
-  Dashboard de estadísticas de inspecciones EPP.
-*/
-
 (function () {
   // =====================================================
   // ELEMENTOS DEL DOM
@@ -42,7 +37,7 @@
   );
 
   let temporizadorReinicio = null;
-  
+
   let codigoReinicioSolicitado = false;
 
   let botonReinicioSeleccionado = null;
@@ -382,14 +377,12 @@
   }
 
   /**
-   * Renderiza las inspecciones EPP en la tabla del dashboard.
+   * Consulta y actualiza los indicadores del dashboard EPP.
    *
-   * Construye una fila por inspección con su información general, estado,
-   * cantidad de trabajadores y acciones disponibles para recuperar enlaces
-   * de aprobación o consultar el informe.
-   *
-   * @param {Array<Object>} items - Inspecciones EPP que deben mostrarse.
-   * @returns {void}
+   * @async
+   * @param {Object} filtros Filtros activos del dashboard.
+   * @returns {Promise<void>}
+   * @throws {Error} Si el resumen no puede obtenerse desde el backend.
    */
 
   async function cargarResumen(filtros) {
@@ -583,6 +576,13 @@
     }
   });
 
+  /**
+   * Abre el flujo de reinicio de aprobaciones para una inspección EPP.
+   *
+   * @param {HTMLButtonElement} boton Botón asociado con la inspección.
+   * @returns {void}
+   */
+
   function abrirModalReinicio(boton) {
     botonReinicioSeleccionado = boton;
     codigoReinicioSolicitado = false;
@@ -600,6 +600,15 @@
     reinicioModal.classList.remove("hidden");
     reinicioConfirmacion.focus();
   }
+
+  /**
+   * Cierra y restablece el flujo de reinicio de aprobaciones.
+   *
+   * Cancela el contador activo, limpia el formulario y elimina la inspección
+   * seleccionada de la sesión actual.
+   *
+   * @returns {void}
+   */
 
   function cerrarModalReinicio() {
     reinicioModal.classList.add("hidden");
@@ -662,6 +671,13 @@
       reinicioDigitos[Math.min(digitos.length, 6) - 1].focus();
     });
   });
+
+  /**
+   * Inicia el contador visual de vencimiento del código de reinicio.
+   *
+   * @param {string|Date} venceEn Fecha y hora de vencimiento del código.
+   * @returns {void}
+   */
 
   function iniciarContadorReinicio(venceEn) {
     clearInterval(temporizadorReinicio);
@@ -909,16 +925,6 @@
     },
   });
 
-  /**
-   * Solicita la actualización manual del seguimiento EPP en OneDrive.
-   *
-   * Bloquea temporalmente el botón durante la solicitud y comunica al usuario
-   * si la actualización del archivo Excel finalizó correctamente o presentó
-   * un error.
-   *
-   * @async
-   * @returns {Promise<void>}
-   */
 
   const btnExportarExcelEpp = document.getElementById("btn-exportar-excel-epp");
 

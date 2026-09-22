@@ -1,27 +1,3 @@
-/**
- * ============================================================
- * IMAGE OPTIMIZER
- * ------------------------------------------------------------
- * Módulo reutilizable para optimizar imágenes en el navegador
- * antes de enviarlas al servidor.
- *
- * API pública:
- *   await optimizarImagen(file)
- *   await optimizarImagen(file, { profile: "inspection" })
- *
- * El módulo:
- *  - valida el archivo;
- *  - analiza resolución, orientación y tamaño;
- *  - aplica una estrategia según el perfil;
- *  - redimensiona conservando proporción;
- *  - mantiene JPEG, PNG o WebP;
- *  - nunca devuelve un archivo más pesado que el original;
- *  - conserva el archivo original ante cualquier error.
- *
- * No conoce formularios, FormData, OneDrive, PDF ni backend.
- * ============================================================
- */
-
 export const IMAGE_OPTIMIZER_VERSION = "2.0.0";
 
 const MB = 1024 * 1024;

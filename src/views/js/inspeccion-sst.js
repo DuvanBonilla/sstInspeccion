@@ -177,6 +177,18 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+  /**
+   * Construye los datos multipart necesarios para enviar una inspección SST.
+   *
+   * Incluye el payload de la inspección, las evidencias optimizadas y los
+   * contactos seleccionados para las solicitudes de aprobación.
+   *
+   * @async
+   * @param {string} inspeccionId Identificador público de la inspección.
+   * @param {number|string} numInspeccion Número interno de la inspección.
+   * @returns {Promise<FormData>} Datos preparados para el envío al backend.
+   */
+
   async function construirFormData(inspeccionId, numInspeccion) {
     const formData = await construirFormDataSst({
       inspeccionId,

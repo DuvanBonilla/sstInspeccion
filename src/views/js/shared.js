@@ -167,6 +167,15 @@ function actualizarRequeridosEvidencia(slotsContainer, rolePrefix) {
     });
 }
 
+/**
+ * Muestra una alerta temporal cuando una evidencia no cumple los requisitos.
+ *
+ * Reemplaza cualquier alerta anterior y permite cerrarla manualmente.
+ *
+ * @param {string} mensaje Descripción del motivo por el que se rechazó el archivo.
+ * @returns {void}
+ */
+
 export function mostrarAlertaEvidencia(mensaje) {
   document.querySelector(".alerta-evidencia")?.remove();
 
@@ -200,6 +209,17 @@ export function mostrarAlertaEvidencia(mensaje) {
 
   setTimeout(cerrar, 5000);
 }
+
+/**
+ * Inicializa la gestión de evidencias de una tarjeta de inspección.
+ *
+ * Configura la selección, validación, previsualización, adición y eliminación
+ * de fotografías, con un máximo de tres evidencias por bloque.
+ *
+ * @param {HTMLElement} card Tarjeta que contiene el bloque de evidencias.
+ * @param {string} rolePrefix Prefijo usado para identificar los elementos del bloque.
+ * @returns {void}
+ */
 
 export function inicializarBloqueEvidencias(card, rolePrefix) {
   const MAX_EVIDENCIAS = 3;
@@ -412,6 +432,15 @@ export function actualizarPreviewArchivo(input, nombreEl, previewEl) {
   reader.readAsDataURL(archivo);
 }
 
+/**
+ * Restringe a dígitos los campos numéricos de la interfaz.
+ *
+ * Escucha cambios en campos con `inputmode="numeric"` y elimina caracteres
+ * distintos de números.
+ *
+ * @returns {void}
+ */
+
 export function activarSoloNumeros() {
   document.addEventListener("input", (event) => {
     const target = event.target;
@@ -434,6 +463,12 @@ export function abrirSelectorFecha() {
     fecha?.focus();
   }
 }
+
+/**
+ * Mantiene vacío el campo de fecha cuando aún no tiene un valor.
+ *
+ * @returns {void}
+ */
 
 export function asignarFechaHoy() {
   const fecha = document.getElementById("fecha");

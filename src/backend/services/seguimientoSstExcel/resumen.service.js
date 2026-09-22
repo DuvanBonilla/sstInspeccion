@@ -79,7 +79,7 @@ async function obtenerFilasResumenSstAprobadas() {
  * procesa con el formato correspondiente durante la actualización.
  *
  * @async
- * @param {@param {AdmZip} zip} zip - Archivo Excel abierto como contenedor ZIP.
+ * @param {AdmZip} zip Archivo Excel abierto como contenedor ZIP.
  * @returns {Promise<{
  *   totalInspecciones: number,
  *   rango: string,

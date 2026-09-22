@@ -1,20 +1,3 @@
-/*
-  aprobar.js — Página de aprobación de la inspección.
-
-  Qué hace:
-  - Lee el token de la URL.
-  - Obtiene la inspección desde GET /api/aprobaciones/:token.
-  - Detecta automáticamente si la inspección es SST o EPP.
-  - Muestra el panel correspondiente.
-  - Mantiene una única lógica de aprobación para SST y EPP.
-  - Envía la aprobación a POST /api/aprobaciones/:token.
-  - Permite abrir el informe mediante /api/aprobaciones/:token/preview.
-
-  Cómo interactúa:
-  - Consume la API expuesta por aprobaciones.controller.js.
-  - aprobar.html contiene panel-sst y panel-epp.
-*/
-
 document.addEventListener("DOMContentLoaded", () => {
   // =========================================================
   // CONFIGURACIÓN GENERAL
@@ -325,7 +308,7 @@ document.addEventListener("DOMContentLoaded", () => {
    * de una respuesta satisfactoria, informa si todavía existen aprobaciones
    * pendientes o si se completó la última aprobación requerida.
    *
-   * @async
+   * @returns {void}
    * @returns {Promise<void>}
    */
 
@@ -352,6 +335,17 @@ document.addEventListener("DOMContentLoaded", () => {
 
     modalConfirmacion.classList.remove("hidden");
   }
+
+  /**
+   * Envía al backend la confirmación de aprobación del responsable.
+   *
+   * Deshabilita el botón durante la solicitud y muestra el resultado o el error
+   * correspondiente en el formulario.
+   *
+   * @async
+   * @param {string} nombre Nombre confirmado por el aprobador.
+   * @returns {Promise<void>}
+   */
 
   async function enviarAprobacion(nombre) {
     const btn = el("btn-aprobar");
@@ -460,7 +454,7 @@ document.addEventListener("DOMContentLoaded", () => {
   if (btnAprobar) {
     btnAprobar.addEventListener("click", aprobar);
   }
-  
+
   btnCancelarConfirmacion?.addEventListener("click", () => {
     modalConfirmacion.classList.add("hidden");
 
