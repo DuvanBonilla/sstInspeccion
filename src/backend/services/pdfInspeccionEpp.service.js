@@ -56,6 +56,8 @@ function dibujarIdInspeccion(doc, general, y) {
     .text(`${num}${inspeccionId}`, MARGEN, y + 4, {
       width: ANCHO,
       align: "right",
+      height: 10,
+      lineBreak: false,
     })
     .fillColor("black");
 }
@@ -281,7 +283,14 @@ function renderInformacionGeneral(doc, general, y) {
   return y + 25;
 }
 
+function altoDatosTrabajador(doc, trabajador) {
+  const columnas = [250, 120, 175];
+  return 47 + Math.max(25, ...[trabajador.nombre, trabajador.codigo, trabajador.cargo]
+    .map((valor, i) => altoTexto(doc, texto(valor), columnas[i] - 8) + 16));
+}
+
 function renderDatosTrabajador(doc, trabajador, numero, y) {
+  const altoValores = altoDatosTrabajador(doc, trabajador) - 47;
   doc.rect(MARGEN, y, ANCHO, 25).stroke();
 
   doc
@@ -321,7 +330,7 @@ function renderDatosTrabajador(doc, trabajador, numero, y) {
   const valores = [trabajador.nombre, trabajador.codigo, trabajador.cargo];
 
   valores.forEach((valor, i) => {
-    doc.rect(x, y, columnas[i], 25).stroke();
+    doc.rect(x, y, columnas[i], altoValores).stroke();
 
     doc
       .font("Helvetica")
@@ -334,7 +343,7 @@ function renderDatosTrabajador(doc, trabajador, numero, y) {
     x += columnas[i];
   });
 
-  return y + 25;
+  return y + altoValores;
 }
 
 function renderTablaEpp(doc, trabajador, y, nuevaPagina) {
@@ -396,8 +405,9 @@ function renderTablaEpp(doc, trabajador, y, nuevaPagina) {
     y += 22;
   }
 
-  // La sección y su encabezado deben caber juntos.
-  if (y + 60 > LIMITE_INFERIOR) {
+  // Evitar encabezados solos al pie de página.
+  const primeraFila = trabajador.elementos?.length ? rowHeight : 0;
+  if (y + 60 + primeraFila > LIMITE_INFERIOR) {
     y = nuevaPagina(false);
   }
 
@@ -441,40 +451,65 @@ function renderTablaEpp(doc, trabajador, y, nuevaPagina) {
   return y;
 }
 
-function renderTextoBloque(doc, titulo, contenido, y) {
-  const contenidoSeguro = texto(contenido) || "Sin registro.";
+// Medir con la misma fuente y tamaño usados al dibujar.
+function altoTexto(doc, contenido, width) {
+  return doc.font("Helvetica").fontSize(8).heightOfString(contenido, { width });
+}
 
-  const altoTexto = Math.max(
-    35,
-    doc.heightOfString(contenidoSeguro, {
-      width: ANCHO - 10,
-      font: "Helvetica",
-      fontSize: 8,
-    }) + 16,
-  );
+function dividirTexto(doc, contenido, width, maxHeight) {
+  if (altoTexto(doc, contenido, width) <= maxHeight) {
+    return [contenido, ""];
+  }
 
-  doc.rect(MARGEN, y, ANCHO, 22).stroke();
+  let inicio = 0;
+  let fin = contenido.length;
+  while (inicio < fin) {
+    const mitad = Math.ceil((inicio + fin) / 2);
+    if (altoTexto(doc, contenido.slice(0, mitad), width) <= maxHeight) {
+      inicio = mitad;
+    } else {
+      fin = mitad - 1;
+    }
+  }
 
-  doc
-    .font("Helvetica-Bold")
-    .fontSize(9)
-    .text(titulo, MARGEN, y + 6, {
-      width: ANCHO,
-      align: "center",
+  // Preferir un corte entre palabras, sin perder el texto restante.
+  const espacio = contenido.slice(0, inicio).search(/\s+\S*$/);
+  const corte = espacio > 0 ? espacio : Math.max(1, inicio);
+  return [contenido.slice(0, corte).trimEnd(), contenido.slice(corte).trimStart()];
+}
+
+function renderTextoBloque(doc, titulo, contenido, y, nuevaPagina) {
+  let pendiente = texto(contenido).trim() || "Sin registro.";
+  let continuacion = false;
+
+  do {
+    const minimo = 22 + altoTexto(doc, "Texto", ANCHO - 10) + 14;
+    if (y + minimo > LIMITE_INFERIOR) y = nuevaPagina(false);
+
+    const [parte, resto] = dividirTexto(
+      doc, pendiente, ANCHO - 10, LIMITE_INFERIOR - y - 22 - 14,
+    );
+    const alto = Math.max(22, altoTexto(doc, parte, ANCHO - 10) + 14);
+
+    doc.rect(MARGEN, y, ANCHO, 22).stroke();
+    doc.font("Helvetica-Bold").fontSize(9).text(
+      continuacion ? `${titulo} - CONTINUACIÓN` : titulo,
+      MARGEN, y + 6, { width: ANCHO, align: "center" },
+    );
+    y += 22;
+    doc.rect(MARGEN, y, ANCHO, alto).stroke();
+    doc.font("Helvetica").fontSize(8).text(parte, MARGEN + 5, y + 7, {
+      width: ANCHO - 10, height: alto - 14,
     });
+    y += alto;
+    pendiente = resto;
+    if (pendiente) {
+      y = nuevaPagina(false);
+      continuacion = true;
+    }
+  } while (pendiente);
 
-  y += 22;
-
-  doc.rect(MARGEN, y, ANCHO, altoTexto).stroke();
-
-  doc
-    .font("Helvetica")
-    .fontSize(8)
-    .text(contenidoSeguro, MARGEN + 5, y + 7, {
-      width: ANCHO - 10,
-    });
-
-  return y + altoTexto;
+  return y;
 }
 
 function renderPlanAccion(doc, trabajador, y, nuevaPagina) {
@@ -530,38 +565,19 @@ function renderPlanAccion(doc, trabajador, y, nuevaPagina) {
   }
 
   if (planes.length === 0) {
-    const altoTotal = 22 + 35;
-
-    if (y + altoTotal > LIMITE_INFERIOR) {
-      y = nuevaPagina(false);
-    }
-
-    doc.rect(MARGEN, y, ANCHO, 22).stroke();
-
-    doc
-      .font("Helvetica-Bold")
-      .fontSize(9)
-      .text("PLAN DE ACCIÓN", MARGEN, y + 6, {
-        width: ANCHO,
-        align: "center",
-      });
-
-    y += 22;
-
-    doc.rect(MARGEN, y, ANCHO, 35).stroke();
-
-    doc
-      .font("Helvetica")
-      .fontSize(8)
-      .text("Sin registro.", MARGEN + 5, y + 12, {
-        width: ANCHO - 10,
-        align: "center",
-      });
-
-    return y + 35;
+    return renderTextoBloque(doc, "PLAN DE ACCIÓN", "Sin registro.", y, nuevaPagina);
   }
 
-  if (y + 44 > LIMITE_INFERIOR) {
+  // Reservar también la primera fila; no dejar solo el encabezado.
+  const primerPlan = planes[0];
+  const altoPrimeraFila = Math.max(
+    28,
+    altoTexto(doc, texto(primerPlan.elemento), columnas[0] - 10) + 14,
+    altoTexto(doc, texto(primerPlan.planAccion) || "Sin registro.", columnas[1] - 10) + 14,
+    altoTexto(doc, formatearFecha(primerPlan.fechaPlanAccion) || "No aplica", columnas[2] - 10) + 14,
+  );
+  const altoPagina = LIMITE_INFERIOR - (MARGEN + 70) - 44;
+  if (y + 44 + Math.min(altoPrimeraFila, altoPagina) > LIMITE_INFERIOR) {
     y = nuevaPagina(false);
   }
 
@@ -576,57 +592,58 @@ function renderPlanAccion(doc, trabajador, y, nuevaPagina) {
       ? formatearFecha(elemento.fechaPlanAccion)
       : "No aplica";
 
-    doc.font("Helvetica").fontSize(8);
+    let pendientes = [nombreElemento, planAccion, fechaLimite];
+    const altoFila = (valores) => Math.max(
+      28, ...valores.map((valor, i) => altoTexto(doc, valor, columnas[i] - 10) + 14),
+    );
+    let rowHeight = altoFila(pendientes);
+    const altoPaginaCompleta = LIMITE_INFERIOR - (MARGEN + 70) - 44;
 
-    const altoElemento =
-      doc.heightOfString(nombreElemento, {
-        width: columnas[0] - 10,
-      }) + 14;
-
-    const altoPlan =
-      doc.heightOfString(planAccion, {
-        width: columnas[1] - 10,
-      }) + 14;
-
-    const altoFecha =
-      doc.heightOfString(fechaLimite, {
-        width: columnas[2] - 10,
-      }) + 14;
-
-    const rowHeight = Math.max(28, altoElemento, altoPlan, altoFecha);
-
-    // Ninguna columna se escribe hasta garantizar
-    // que la fila completa cabe.
-    if (y + rowHeight > LIMITE_INFERIOR) {
+    // Una fila normal se mantiene completa; las mayores que una página
+    // continúan sin truncar su contenido ni provocar saltos automáticos.
+    if (y + Math.min(rowHeight, altoPaginaCompleta) > LIMITE_INFERIOR) {
       y = nuevaPagina(false);
       dibujarEncabezadoTabla(true);
     }
 
-    let x = MARGEN;
+    do {
+      const disponibles = LIMITE_INFERIOR - y;
+      const fragmentos = pendientes.map((valor, i) => dividirTexto(
+        doc, valor, columnas[i] - 10, disponibles - 14,
+      ));
+      const valores = fragmentos.map(([parte]) => parte);
+      rowHeight = altoFila(valores);
+      let x = MARGEN;
 
-    const valores = [nombreElemento, planAccion, fechaLimite];
-
-    valores.forEach((valor, i) => {
-      doc.rect(x, y, columnas[i], rowHeight).stroke();
-
-      doc
-        .font("Helvetica")
-        .fontSize(8)
-        .text(valor, x + 5, y + 7, {
+      valores.forEach((valor, i) => {
+        doc.rect(x, y, columnas[i], rowHeight).stroke();
+        doc.font("Helvetica").fontSize(8).text(valor, x + 5, y + 7, {
           width: columnas[i] - 10,
           height: rowHeight - 14,
           align: i === 2 ? "center" : "left",
-          lineBreak: true,
-          ellipsis: true,
         });
-
-      x += columnas[i];
-    });
-
-    y += rowHeight;
+        x += columnas[i];
+      });
+      y += rowHeight;
+      pendientes = fragmentos.map(([, resto]) => resto);
+      if (pendientes.some(Boolean)) {
+        y = nuevaPagina(false);
+        dibujarEncabezadoTabla(true);
+      }
+    } while (pendientes.some(Boolean));
   });
 
   return y;
+}
+
+function altoEvidencia(doc, evidencia) {
+  if (!evidencia?.buffer?.length) return 42;
+  try {
+    const img = doc.openImage(evidencia.buffer);
+    return 20 + img.height * Math.min(300 / img.width, 100 / img.height, 1) + 10;
+  } catch {
+    return 50;
+  }
 }
 
 function renderEvidencia(doc, evidencia, y) {
@@ -635,7 +652,7 @@ function renderEvidencia(doc, evidencia, y) {
   // =========================================================
 
   const MAX_ANCHO_IMAGEN = 300;
-  const MAX_ALTO_IMAGEN = 100;
+  const MAX_ALTO_IMAGEN = altoEvidencia(doc, evidencia) - 30;
 
   const PADDING = 5;
 
@@ -660,7 +677,7 @@ function renderEvidencia(doc, evidencia, y) {
   // =========================================================
 
   if (!evidencia?.buffer?.length) {
-    const altoSinEvidencia = 30;
+    const altoSinEvidencia = 22;
 
     doc.rect(MARGEN, y, ANCHO, altoSinEvidencia).stroke();
 
@@ -668,7 +685,7 @@ function renderEvidencia(doc, evidencia, y) {
       .font("Helvetica")
       .fontSize(9)
       .fillColor("#666666")
-      .text("Sin evidencia adjunta.", MARGEN, y + 10, {
+      .text("Sin evidencia adjunta.", MARGEN, y + 6, {
         width: ANCHO,
         align: "center",
       })
@@ -689,7 +706,7 @@ function renderEvidencia(doc, evidencia, y) {
   // DIBUJAR IMAGEN
   // =========================================================
 
-  const resultado = dibujarImagenAjustada(
+  dibujarImagenAjustada(
     doc,
     evidencia,
     areaX,
@@ -827,6 +844,7 @@ async function crearPdfInspeccionEpp(
       size: "A4",
       margin: MARGEN,
       autoFirstPage: false,
+      bufferPages: true,
     });
 
     const chunks = [];
@@ -854,16 +872,8 @@ async function crearPdfInspeccionEpp(
     nuevaPagina(true);
 
     trabajadores.forEach((trabajador, index) => {
-      /*
-       * Cada trabajador se inicia en una página
-       * independiente.
-       *
-       * Esto evita cortar la tabla EPP entre dos
-       * trabajadores y hace el informe legible incluso
-       * con 30+ trabajadores.
-       */
-
-      const espacioMinimoTrabajador = 300;
+      // Datos del trabajador + encabezado EPP + primera fila.
+      const espacioMinimoTrabajador = altoDatosTrabajador(doc, trabajador) + 60 + (trabajador.elementos?.length ? 22 : 0);
 
       if (y + espacioMinimoTrabajador > LIMITE_INFERIOR) {
         nuevaPagina(false);
@@ -875,30 +885,18 @@ async function crearPdfInspeccionEpp(
 
       y = renderPlanAccion(doc, trabajador, y, nuevaPagina);
 
-      y = renderTextoBloque(doc, "OBSERVACIONES", trabajador.observaciones, y);
-
-      /*
-       * La evidencia ocupa bastante espacio.
-       * Si no cabe, pasa completa a la página
-       * siguiente.
-       */
-
-      const altoEvidencia = 130;
-
-      if (y + altoEvidencia > LIMITE_INFERIOR) {
-        dibujarIdInspeccion(doc, general, Math.min(y + 5, 810));
-
-        nuevaPagina(false);
-      }
+      y = renderTextoBloque(doc, "OBSERVACIONES", trabajador.observaciones, y, nuevaPagina);
 
       const evidencia =
         evidenciasPorTrabajador.get(index) ||
         evidenciasPorTrabajador.get(trabajador.trabajadorId) ||
         null;
 
-      y = renderEvidencia(doc, evidencia, y);
+      if (y + altoEvidencia(doc, evidencia) > LIMITE_INFERIOR) {
+        nuevaPagina(false);
+      }
 
-      dibujarIdInspeccion(doc, general, Math.min(y + 5, 810));
+      y = renderEvidencia(doc, evidencia, y);
     });
 
     if (trabajadores.length === 0) {
@@ -918,15 +916,13 @@ async function crearPdfInspeccionEpp(
       y += 70;
     }
 
-    const espacioAprobaciones = 20 + 25 + 60 + 20;
+    const espacioAprobaciones = 8 + 28 + 60;
 
     if (y + espacioAprobaciones > LIMITE_INFERIOR) {
       nuevaPagina(false);
-    } else {
-      y += 20;
     }
 
-    y += 12;
+    y += 8;
 
     doc
       .font("Helvetica-Bold")
@@ -941,7 +937,12 @@ async function crearPdfInspeccionEpp(
 
     y = renderAprobaciones(doc, y, aprobaciones);
 
-    dibujarIdInspeccion(doc, general, y + 4);
+    // Un único pie por página, independiente del flujo del formulario.
+    const paginas = doc.bufferedPageRange();
+    for (let pagina = paginas.start; pagina < paginas.start + paginas.count; pagina++) {
+      doc.switchToPage(pagina);
+      dibujarIdInspeccion(doc, general, doc.page.height - 40);
+    }
 
     doc.end();
   });
