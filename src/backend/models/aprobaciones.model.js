@@ -206,9 +206,10 @@ async function reiniciarAprobacionesPendientes(
      SET aprobacion_jefe_nombre = NULL,
          aprobacion_jefe_at = NULL,
          aprobacion_copasst_nombre = NULL,
-         aprobacion_copasst_at = NULL
+         aprobacion_copasst_at = NULL,
+         estado = 'pendiente_aprobacion',
+         pdf_url = NULL
      WHERE inspeccion_id = $1
-       AND estado = 'pendiente_aprobacion'
      RETURNING inspeccion_id, inspecciones_id, estado`,
     [inspeccionId],
   );
@@ -243,7 +244,6 @@ async function obtenerInspeccionPendienteParaReinicio(
        estado
      FROM inspecciones
      WHERE inspeccion_id = $1
-       AND estado = 'pendiente_aprobacion'
      LIMIT 1`,
     [inspeccionId],
   );

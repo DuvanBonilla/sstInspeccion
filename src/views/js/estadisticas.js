@@ -229,8 +229,7 @@
     class="btn-reiniciar-aprobaciones accion-btn"
     data-inspeccion-id="${it.inspeccion_id}"
     title="Reiniciar aprobaciones"
-    aria-label="Reiniciar aprobaciones de Jefe de Área y COPASST"
-    ${it.estado === "pendiente_aprobacion" ? "" : "disabled"}>
+    aria-label="Reiniciar aprobaciones de Jefe de Área y COPASST">
 
     <svg
       xmlns="http://www.w3.org/2000/svg"
