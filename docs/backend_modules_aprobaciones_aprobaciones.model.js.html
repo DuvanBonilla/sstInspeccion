@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: backend/modules/aprobaciones/aprobaciones.model.js</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+    <link type="text/css" rel="stylesheet" href="styles/sst-docs.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: backend/modules/aprobaciones/aprobaciones.model.js</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>// Ruta: src/backend/modules/aprobaciones/aprobaciones.model.js
+/*
+  aprobaciones.model.js — Acceso a datos del estado de aprobación de una inspección.
+
+  Qué hace:
+  - Cada inspección tiene 3 roles que deben aprobarla: Inspector, Jefe de Área,
+    COPASST. No se captura firma manuscrita/biométrica (restricción legal):
+    la aprobación de cada rol es nombre completo, con fecha.
+  - obtenerContextoAprobacion(): dado un token de link, identifica el rol
+    dueño y el estado actual de esa aprobación.
+  - guardarAprobacion(): registra la aprobación de un rol (nombre) de
+    forma atómica, evitando que un mismo link se use dos veces. Indica si con
+    esta aprobación quedaron las 3 completas.
+  - marcarInspeccionEnviada(): actualiza el estado final tras archivar el PDF
+    y enviar el correo.
+
+  Cómo interactúa:
+  - Es el único punto de acceso a las columnas de aprobación en la tabla
+    `inspecciones` (Neon). aprobaciones.controller.js NO debe hacer SQL directo;
+    siempre pasa por aquí (capa Modelo).
+  - inspeccion.model.js maneja los datos de la inspección en sí (general +
+    secciones); este archivo maneja solo el estado de aprobación.
+*/
+const { pool, query } = require("../../config/database");
+
+const ROLES = {
+  inspector: {
+    tokenCol: "token_inspector",
+    cedulaCol: "aprobacion_inspector_cedula",
+    nombreCol: "aprobacion_inspector_nombre",
+    atCol: "aprobacion_inspector_at",
+    label: "Inspector",
+  },
+  jefe: {
+    tokenCol: "token_jefe",
+    cedulaCol: "aprobacion_jefe_cedula",
+    nombreCol: "aprobacion_jefe_nombre",
+    atCol: "aprobacion_jefe_at",
+    label: "Jefe de Área",
+  },
+  copasst: {
+    tokenCol: "token_copasst",
+    cedulaCol: "aprobacion_copasst_cedula",
+    nombreCol: "aprobacion_copasst_nombre",
+    atCol: "aprobacion_copasst_at",
+    label: "COPASST",
+  },
+};
+/**
+ * Busca una inspección y determina el rol asociado a un token.
+ *
+ * Compara el token recibido con los tokens del inspector, jefe responsable y
+ * COPASST almacenados en la inspección.
+ *
+ * @async
+ * @param {string} token Token único del enlace de aprobación.
+ * @returns {Promise&lt;Object|null>} Registro de la inspección y rol propietario
+ * del token, o `null` cuando no existe ninguna coincidencia.
+ * @throws {Error} Si falla la consulta a la base de datos.
+ */
+
+async function buscarPorToken(token) {
+  const { rows } = await query(
+    `SELECT * FROM inspecciones WHERE token_inspector = $1 OR token_jefe = $1 OR token_copasst = $1 LIMIT 1`,
+    [token],
+  );
+  const row = rows[0];
+  if (!row) return null;
+
+  const rol =
+    row.token_inspector === token
+      ? "inspector"
+      : row.token_jefe === token
+        ? "jefe"
+        : "copasst";
+  return { row, rol };
+}
+
+/**
+ * Obtiene el contexto completo de una aprobación.
+ *
+ * Identifica el rol relacionado con el token y determina si ese responsable
+ * ya aprobó la inspección. También recupera el nombre del aprobador y el
+ * registro completo de la inspección.
+ *
+ * @async
+ * @param {string} token Token único del enlace de aprobación.
+ * @returns {Promise&lt;Object|null>} Contexto con el rol, nombre visible,
+ * estado de aprobación y registro de la inspección, o `null` si el token
+ * no existe.
+ * @throws {Error} Si falla la consulta a la base de datos.
+ */
+
+async function obtenerContextoAprobacion(token) {
+  const encontrado = await buscarPorToken(token);
+  if (!encontrado) return null;
+
+  const { row, rol } = encontrado;
+  const cfg = ROLES[rol];
+
+  return {
+    rol,
+    rolLabel: cfg.label,
+    yaAprobado: Boolean(row[cfg.nombreCol]),
+    nombreAprobador: row[cfg.nombreCol] || null,
+    row,
+  };
+}
+
+/**
+ * Registra la aprobación correspondiente a un token.
+ *
+ * Identifica el rol propietario del token, comprueba que todavía no haya
+ * aprobado y almacena el nombre del aprobador junto con la fecha del registro.
+ *
+ * La actualización se realiza de forma atómica para impedir que dos solicitudes
+ * simultáneas utilicen el mismo enlace. Cuando las tres aprobaciones quedan
+ * completas, cambia el estado de la inspección a `aprobada`.
+ *
+ * @async
+ * @param {string} token Token único del enlace de aprobación.
+ * @param {Object} aprobacion Información suministrada por el aprobador.
+ * @param {string} aprobacion.nombre Nombre de la persona que aprueba.
+ * @returns {Promise&lt;Object>} Resultado del registro. Si la aprobación es
+ * válida, devuelve el rol, identificador de la inspección y estado de las
+ * aprobaciones; de lo contrario, indica si el token no existe o ya fue usado.
+ * @throws {Error} Si falla alguna operación en la base de datos.
+ */
+
+async function guardarAprobacion(token, { nombre }) {
+  const encontrado = await buscarPorToken(token);
+  if (!encontrado) return { ok: false, motivo: "no_encontrado" };
+
+  const { row, rol } = encontrado;
+  const cfg = ROLES[rol];
+
+  if (row[cfg.nombreCol]) return { ok: false, motivo: "ya_aprobado" };
+
+  // WHERE ... AND &lt;col> IS NULL evita que dos requests casi simultáneos aprueben dos veces el mismo rol.
+  const { rows, rowCount } = await query(
+    `UPDATE inspecciones
+     SET ${cfg.nombreCol} = $1, ${cfg.atCol} = now()
+     WHERE inspeccion_id = $2 AND ${cfg.nombreCol} IS NULL
+     RETURNING *`,
+    [String(nombre).trim(), row.inspeccion_id],
+  );
+
+  if (rowCount === 0) return { ok: false, motivo: "ya_aprobado" };
+
+  const actualizado = rows[0];
+  const completas = Boolean(
+    actualizado.aprobacion_inspector_nombre &amp;&amp;
+    actualizado.aprobacion_jefe_nombre &amp;&amp;
+    actualizado.aprobacion_copasst_nombre,
+  );
+
+  if (completas &amp;&amp; actualizado.estado === "pendiente_aprobacion") {
+    await query(
+      `UPDATE inspecciones SET estado = 'aprobada' WHERE inspeccion_id = $1`,
+      [actualizado.inspeccion_id],
+    );
+  }
+
+  return { ok: true, rol, inspeccionId: actualizado.inspeccion_id, completas };
+}
+
+/**
+ * Marca una inspección como enviada y almacena la ubicación de su PDF.
+ *
+ * Se utiliza después de completar las aprobaciones, generar el informe final,
+ * almacenarlo y procesar el correo correspondiente.
+ *
+ * @async
+ * @param {string} inspeccionId Identificador único de la inspección.
+ * @param {string} pdfUrl URL del informe PDF almacenado.
+ * @returns {Promise&lt;void>} Finaliza cuando la inspección ha sido actualizada.
+ * @throws {Error} Si falla la actualización en la base de datos.
+ */
+
+async function marcarInspeccionEnviada(inspeccionId, pdfUrl) {
+  await query(
+    `UPDATE inspecciones SET estado = 'enviada', pdf_url = $1 WHERE inspeccion_id = $2`,
+    [pdfUrl, inspeccionId],
+  );
+}
+
+/**
+ * Reinicia las aprobaciones de Jefe de Área y COPASST de una inspección.
+ *
+ * Conserva la aprobación del inspector y los tokens existentes. La operación
+ * solo se ejecuta cuando la inspección permanece pendiente de aprobación.
+ *
+ * @async
+ * @param {string} inspeccionId Identificador único de la inspección.
+ * @param {Function} [ejecutarConsulta=query] Función para ejecutar consultas
+ * a la base de datos; permite usar una transacción o una dependencia de prueba.
+ * @returns {Promise&lt;Object|null>} Inspección reiniciada o `null` si no existe
+ * o no se encuentra pendiente de aprobación.
+ * @throws {Error} Si falla la actualización en la base de datos.
+ */
+async function reiniciarAprobacionesPendientes(
+  inspeccionId,
+  ejecutarConsulta = query,
+) {
+  const { rows } = await ejecutarConsulta(
+    `UPDATE inspecciones
+     SET aprobacion_jefe_nombre = NULL,
+         aprobacion_jefe_at = NULL,
+         aprobacion_copasst_nombre = NULL,
+         aprobacion_copasst_at = NULL,
+         estado = 'pendiente_aprobacion',
+         pdf_url = NULL
+     WHERE inspeccion_id = $1
+     RETURNING inspeccion_id, inspecciones_id, estado`,
+    [inspeccionId],
+  );
+
+  return rows[0] || null;
+}
+
+/**
+ * Obtiene una inspección pendiente que puede reiniciar sus aprobaciones.
+ *
+ * @async
+ * @param {string} inspeccionId Identificador único de la inspección.
+ * @param {Function} [ejecutarConsulta=query] Función para ejecutar consultas
+ * a la base de datos.
+ * @returns {Promise&lt;Object|null>} Datos mínimos de la inspección pendiente o
+ * `null` si no existe o su estado no permite el reinicio.
+ * @throws {Error} Si falla la consulta a la base de datos.
+ */
+
+async function obtenerInspeccionPendienteParaReinicio(
+  inspeccionId,
+  ejecutarConsulta = query,
+) {
+  const { rows } = await ejecutarConsulta(
+    `SELECT
+       inspecciones_id,
+       inspeccion_id,
+       tipo_inspeccion,
+       fecha,
+       sede_operacion,
+       area_trabajo,
+       estado
+     FROM inspecciones
+     WHERE inspeccion_id = $1
+     LIMIT 1`,
+    [inspeccionId],
+  );
+
+  return rows[0] || null;
+}
+
+/**
+ * Obtiene y bloquea el código activo más reciente para reiniciar aprobaciones.
+ *
+ * Busca códigos que no hayan sido usados ni invalidados y aplica un bloqueo de
+ * fila para evitar validaciones simultáneas dentro de una transacción.
+ *
+ * @async
+ * @param {number} inspeccionesId Identificador interno de la inspección.
+ * @param {string} tipoInspeccion Tipo de inspección asociado al código.
+ * @param {Function} [ejecutarConsulta=query] Función para ejecutar consultas
+ * a la base de datos.
+ * @returns {Promise&lt;Object|null>} Código de reinicio activo o `null` si no hay
+ * uno disponible.
+ * @throws {Error} Si falla la consulta a la base de datos.
+ */
+
+async function obtenerCodigoReinicioActivo(
+  inspeccionesId,
+  tipoInspeccion,
+  ejecutarConsulta = query,
+) {
+  const { rows } = await ejecutarConsulta(
+    `SELECT
+       codigo_reinicio_id,
+       inspecciones_id,
+       tipo_inspeccion,
+       codigo_hash,
+       codigo_salt,
+       vence_en,
+       intentos,
+       usado_en,
+       invalidado_en,
+       creado_en
+     FROM codigos_reinicio_aprobaciones
+     WHERE inspecciones_id = $1
+       AND tipo_inspeccion = $2
+       AND usado_en IS NULL
+       AND invalidado_en IS NULL
+     ORDER BY creado_en DESC
+     LIMIT 1
+     FOR UPDATE`,
+    [inspeccionesId, tipoInspeccion],
+  );
+
+  return rows[0] || null;
+}
+
+/**
+ * Registra un intento de validación de un código de reinicio.
+ *
+ * Incrementa el contador únicamente si el código permanece activo y aún no ha
+ * alcanzado el límite de cinco intentos.
+ *
+ * @async
+ * @param {number} codigoReinicioId Identificador del código de reinicio.
+ * @param {Function} [ejecutarConsulta=query] Función para ejecutar consultas
+ * a la base de datos.
+ * @returns {Promise&lt;Object|null>} Código con su número de intentos actualizado
+ * o `null` si no puede modificarse.
+ * @throws {Error} Si falla la actualización en la base de datos.
+ */
+
+async function registrarIntentoCodigoReinicio(
+  codigoReinicioId,
+  ejecutarConsulta = query,
+) {
+  const { rows } = await ejecutarConsulta(
+    `UPDATE codigos_reinicio_aprobaciones
+     SET intentos = intentos + 1
+     WHERE codigo_reinicio_id = $1
+       AND usado_en IS NULL
+       AND invalidado_en IS NULL
+       AND intentos &lt; 5
+     RETURNING codigo_reinicio_id, intentos`,
+    [codigoReinicioId],
+  );
+
+  return rows[0] || null;
+}
+
+/**
+ * Marca un código de reinicio como utilizado.
+ *
+ * @async
+ * @param {number} codigoReinicioId Identificador del código de reinicio.
+ * @param {Function} [ejecutarConsulta=query] Función para ejecutar consultas
+ * a la base de datos.
+ * @returns {Promise&lt;Object|null>} Código actualizado o `null` si ya fue usado
+ * o invalidado.
+ * @throws {Error} Si falla la actualización en la base de datos.
+ */
+
+async function marcarCodigoReinicioUsado(
+  codigoReinicioId,
+  ejecutarConsulta = query,
+) {
+  const { rows } = await ejecutarConsulta(
+    `UPDATE codigos_reinicio_aprobaciones
+     SET usado_en = now()
+     WHERE codigo_reinicio_id = $1
+       AND usado_en IS NULL
+       AND invalidado_en IS NULL
+     RETURNING codigo_reinicio_id, usado_en`,
+    [codigoReinicioId],
+  );
+
+  return rows[0] || null;
+}
+
+/**
+ * Invalida los códigos activos de reinicio de una inspección.
+ *
+ * Se utiliza antes de generar un código nuevo para que solo exista una
+ * autorización vigente por tipo de inspección.
+ *
+ * @async
+ * @param {number} inspeccionesId Identificador interno de la inspección.
+ * @param {string} tipoInspeccion Tipo de inspección asociado a los códigos.
+ * @returns {Promise&lt;void>} Finaliza cuando los códigos activos son invalidados.
+ * @throws {Error} Si falla la actualización en la base de datos.
+ */
+
+async function invalidarCodigosReinicioActivos(inspeccionesId, tipoInspeccion) {
+  await query(
+    `UPDATE codigos_reinicio_aprobaciones
+     SET invalidado_en = now()
+     WHERE inspecciones_id = $1
+       AND tipo_inspeccion = $2
+       AND usado_en IS NULL
+       AND invalidado_en IS NULL`,
+    [inspeccionesId, tipoInspeccion],
+  );
+}
+
+/**
+ * Crea un código temporal para autorizar el reinicio de aprobaciones.
+ *
+ * Almacena el hash y la sal del código, sin persistir su valor en texto plano.
+ *
+ * @async
+ * @param {Object} datos Datos requeridos para crear el código.
+ * @param {number} datos.inspeccionesId Identificador interno de la inspección.
+ * @param {string} datos.tipoInspeccion Tipo de inspección asociado.
+ * @param {string} datos.codigoHash Hash del código temporal.
+ * @param {string} datos.codigoSalt Sal utilizada para generar el hash.
+ * @param {Date|string} datos.venceEn Fecha y hora de vencimiento.
+ * @returns {Promise&lt;Object>} Código creado con sus datos de trazabilidad.
+ * @throws {Error} Si falla la inserción en la base de datos.
+ */
+
+async function crearCodigoReinicio({
+  inspeccionesId,
+  tipoInspeccion,
+  codigoHash,
+  codigoSalt,
+  venceEn,
+}) {
+  const { rows } = await query(
+    `INSERT INTO codigos_reinicio_aprobaciones (
+       inspecciones_id,
+       tipo_inspeccion,
+       codigo_hash,
+       codigo_salt,
+       vence_en
+     )
+     VALUES ($1, $2, $3, $4, $5)
+     RETURNING
+       codigo_reinicio_id,
+       inspecciones_id,
+       tipo_inspeccion,
+       vence_en,
+       creado_en`,
+    [inspeccionesId, tipoInspeccion, codigoHash, codigoSalt, venceEn],
+  );
+
+  return rows[0];
+}
+
+/**
+ * Abre una conexión dedicada del pool para ejecutar una transacción.
+ *
+ * Encapsula el manejo del cliente de PostgreSQL para que los controladores
+ * no accedan directamente al pool. El llamador decide cuándo iniciar,
+ * confirmar o revertir la transacción y debe liberar siempre la conexión.
+ *
+ * `ejecutarConsulta` puede enviarse a las funciones de este modelo que
+ * aceptan el parámetro opcional del mismo nombre, para que sus consultas
+ * se ejecuten dentro de la transacción.
+ *
+ * @async
+ * @returns {Promise&lt;{
+ *   ejecutarConsulta: Function,
+ *   iniciar: Function,
+ *   confirmar: Function,
+ *   revertir: Function,
+ *   liberar: Function
+ * }>} Operaciones disponibles sobre la conexión transaccional.
+ * @throws {Error} Si no es posible obtener una conexión del pool.
+ */
+
+async function conectarTransaccion() {
+  const cliente = await pool.connect();
+
+  return {
+    ejecutarConsulta: cliente.query.bind(cliente),
+    iniciar: () => cliente.query("BEGIN"),
+    confirmar: () => cliente.query("COMMIT"),
+    revertir: () => cliente.query("ROLLBACK"),
+    liberar: () => cliente.release(),
+  };
+}
+
+module.exports = {
+  obtenerContextoAprobacion,
+  guardarAprobacion,
+  marcarInspeccionEnviada,
+  reiniciarAprobacionesPendientes,
+  obtenerInspeccionPendienteParaReinicio,
+  invalidarCodigosReinicioActivos,
+  crearCodigoReinicio,
+  obtenerCodigoReinicioActivo,
+  registrarIntentoCodigoReinicio,
+  marcarCodigoReinicioUsado,
+  conectarTransaccion,
+};
+</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Modules</h3><ul><li><a href="module-app.html">app</a></li><li><a href="module-middlewares_upload.html">middlewares/upload</a></li><li><a href="module-modules_aprobaciones_routes.html">modules/aprobaciones/routes</a></li><li><a href="module-modules_estadisticas_routes.html">modules/estadisticas/routes</a></li><li><a href="module-modules_excel_routes.html">modules/excel/routes</a></li><li><a href="module-modules_inspecciones-epp_catalogo_routes.html">modules/inspecciones-epp/catalogo/routes</a></li><li><a href="module-modules_inspecciones-epp_routes.html">modules/inspecciones-epp/routes</a></li><li><a href="module-modules_inspecciones-sst_routes.html">modules/inspecciones-sst/routes</a></li><li><a href="module-modules_paginas_controller.html">modules/paginas/controller</a></li><li><a href="module-modules_paginas_routes.html">modules/paginas/routes</a></li><li><a href="module-routes.html">routes</a></li><li><a href="module-server.html">server</a></li></ul><h3>Global</h3><ul><li><a href="global.html#KB">KB</a></li><li><a href="global.html#MAX_TAMANO_EVIDENCIA_MB">MAX_TAMANO_EVIDENCIA_MB</a></li><li><a href="global.html#PDF_OPTIMIZER_CONFIG">PDF_OPTIMIZER_CONFIG</a></li><li><a href="global.html#PDF_OPTIMIZER_VERSION">PDF_OPTIMIZER_VERSION</a></li><li><a href="global.html#PROFILES">PROFILES</a></li><li><a href="global.html#TIPOS_EVIDENCIA_PERMITIDOS">TIPOS_EVIDENCIA_PERMITIDOS</a></li><li><a href="global.html#VALORES_CALIFICACION">VALORES_CALIFICACION</a></li><li><a href="global.html#abrirTrabajador">abrirTrabajador</a></li><li><a href="global.html#activarFiltro">activarFiltro</a></li><li><a href="global.html#activarRecalculoAutomatico">activarRecalculoAutomatico</a></li><li><a href="global.html#activarSoloNumeros">activarSoloNumeros</a></li><li><a href="global.html#actualizarBotiquines">actualizarBotiquines</a></li><li><a href="global.html#actualizarCamillas">actualizarCamillas</a></li><li><a href="global.html#actualizarDimensionHojaXml">actualizarDimensionHojaXml</a></li><li><a href="global.html#actualizarEquiposTecnologicos">actualizarEquiposTecnologicos</a></li><li><a href="global.html#actualizarExcelSeguimientoEpp">actualizarExcelSeguimientoEpp</a></li><li><a href="global.html#actualizarExcelSeguimientoEppEnOneDrive">actualizarExcelSeguimientoEppEnOneDrive</a></li><li><a href="global.html#actualizarExcelSeguimientoSst">actualizarExcelSeguimientoSst</a></li><li><a href="global.html#actualizarExcelSeguimientoSstEnMemoria">actualizarExcelSeguimientoSstEnMemoria</a></li><li><a href="global.html#actualizarExcelSeguimientoSstEnOneDrive">actualizarExcelSeguimientoSstEnOneDrive</a></li><li><a href="global.html#actualizarExtintores">actualizarExtintores</a></li><li><a href="global.html#actualizarExtintoresEnMemoria">actualizarExtintoresEnMemoria</a></li><li><a href="global.html#actualizarExtintoresEnOneDrive">actualizarExtintoresEnOneDrive</a></li><li><a href="global.html#actualizarFilasExtintoresXml">actualizarFilasExtintoresXml</a></li><li><a href="global.html#actualizarFilasHojaXml">actualizarFilasHojaXml</a></li><li><a href="global.html#actualizarFormulasExistentes">actualizarFormulasExistentes</a></li><li><a href="global.html#actualizarGeneral">actualizarGeneral</a></li><li><a href="global.html#actualizarNombreResumen">actualizarNombreResumen</a></li><li><a href="global.html#actualizarNumeracion">actualizarNumeracion</a></li><li><a href="global.html#actualizarPlanElemento">actualizarPlanElemento</a></li><li><a href="global.html#actualizarPreviewArchivo">actualizarPreviewArchivo</a></li><li><a href="global.html#actualizarRangoTablaExtintores">actualizarRangoTablaExtintores</a></li><li><a href="global.html#actualizarRangoTablaXml">actualizarRangoTablaXml</a></li><li><a href="global.html#actualizarResumen">actualizarResumen</a></li><li><a href="global.html#actualizarSeleccionCatalogoEpp">actualizarSeleccionCatalogoEpp</a></li><li><a href="global.html#actualizarSenalizaciones">actualizarSenalizaciones</a></li><li><a href="global.html#agregarElementosSeleccionados">agregarElementosSeleccionados</a></li><li><a href="global.html#alinearColumnasIzquierda">alinearColumnasIzquierda</a></li><li><a href="global.html#alternarCatalogoEpp">alternarCatalogoEpp</a></li><li><a href="global.html#analizarImagen">analizarImagen</a></li><li><a href="global.html#analizarPdf">analizarPdf</a></li><li><a href="global.html#anexarArchivoOptimizado">anexarArchivoOptimizado</a></li><li><a href="global.html#anexarEvidenciasMultiples">anexarEvidenciasMultiples</a></li><li><a href="global.html#aplicarColorPorValor">aplicarColorPorValor</a></li><li><a href="global.html#aplicarEstiloEncabezado">aplicarEstiloEncabezado</a></li><li><a href="global.html#aplicarFormatoCuerpo">aplicarFormatoCuerpo</a></li><li><a href="global.html#aplicarFormatoFecha">aplicarFormatoFecha</a></li><li><a href="global.html#asignarFechaHoy">asignarFechaHoy</a></li><li><a href="global.html#autorizarAzureEpp">autorizarAzureEpp</a></li><li><a href="global.html#buscarPorToken">buscarPorToken</a></li><li><a href="global.html#calcularDiasRestantes">calcularDiasRestantes</a></li><li><a href="global.html#calcularDimensiones">calcularDimensiones</a></li><li><a href="global.html#calcularResumenEpp">calcularResumenEpp</a></li><li><a href="global.html#calcularVencimientoCodigo">calcularVencimientoCodigo</a></li><li><a href="global.html#cargarCatalogoEpp">cargarCatalogoEpp</a></li><li><a href="global.html#cargarExcelSst">cargarExcelSst</a></li><li><a href="global.html#cargarImagen">cargarImagen</a></li><li><a href="global.html#centrarColumnas">centrarColumnas</a></li><li><a href="global.html#cerrarModal">cerrarModal</a></li><li><a href="global.html#cerrarPlanesAccionDesdeExcel">cerrarPlanesAccionDesdeExcel</a></li><li><a href="global.html#clasificarCatalogoEpp">clasificarCatalogoEpp</a></li><li><a href="global.html#clasificarPlanesPorInspeccion">clasificarPlanesPorInspeccion</a></li><li><a href="global.html#compararCodigoReinicio">compararCodigoReinicio</a></li><li><a href="global.html#conectarTransaccion">conectarTransaccion</a></li><li><a href="global.html#configurarColumnas">configurarColumnas</a></li><li><a href="global.html#configurarModalExito">configurarModalExito</a></li><li><a href="global.html#confirmarReinicioAprobaciones">confirmarReinicioAprobaciones</a></li><li><a href="global.html#congelarEncabezado">congelarEncabezado</a></li><li><a href="global.html#construirAprobaciones">construirAprobaciones</a></li><li><a href="global.html#construirArchivoOptimizado">construirArchivoOptimizado</a></li><li><a href="global.html#construirCeldaXml">construirCeldaXml</a></li><li><a href="global.html#construirEvidenciasDesdeOneDrive">construirEvidenciasDesdeOneDrive</a></li><li><a href="global.html#construirEvidenciasEppDesdeOneDrive">construirEvidenciasEppDesdeOneDrive</a></li><li><a href="global.html#construirFilaBotiquin">construirFilaBotiquin</a></li><li><a href="global.html#construirFilaEquipoTecnologico">construirFilaEquipoTecnologico</a></li><li><a href="global.html#construirFilaResumen">construirFilaResumen</a></li><li><a href="global.html#construirFiltrosExcelEpp">construirFiltrosExcelEpp</a></li><li><a href="global.html#construirFiltrosInspecciones">construirFiltrosInspecciones</a></li><li><a href="global.html#construirFormDataEpp">construirFormDataEpp</a></li><li><a href="global.html#construirFormDataSst">construirFormDataSst</a></li><li><a href="global.html#construirHojaGeneralEpp">construirHojaGeneralEpp</a></li><li><a href="global.html#construirHojaInspecciones">construirHojaInspecciones</a></li><li><a href="global.html#construirHojaPlanesAccion">construirHojaPlanesAccion</a></li><li><a href="global.html#construirHojaResumenEpp">construirHojaResumenEpp</a></li><li><a href="global.html#construirHojaSeguimientoEpp">construirHojaSeguimientoEpp</a></li><li><a href="global.html#construirHtmlCorreo">construirHtmlCorreo</a></li><li><a href="global.html#construirHtmlCorreoEpp">construirHtmlCorreoEpp</a></li><li><a href="global.html#construirHtmlCorreoReinicioAprobaciones">construirHtmlCorreoReinicioAprobaciones</a></li><li><a href="global.html#construirHtmlSolicitudAprobacion">construirHtmlSolicitudAprobacion</a></li><li><a href="global.html#construirInspeccionEpp">construirInspeccionEpp</a></li><li><a href="global.html#construirInspeccionSst">construirInspeccionSst</a></li><li><a href="global.html#construirLinksAprobacionEpp">construirLinksAprobacionEpp</a></li><li><a href="global.html#construirNombreArchivo">construirNombreArchivo</a></li><li><a href="global.html#consultarCatalogoEpp">consultarCatalogoEpp</a></li><li><a href="global.html#convertirCanvasABlob">convertirCanvasABlob</a></li><li><a href="global.html#convertirFechaAExcel">convertirFechaAExcel</a></li><li><a href="global.html#copiarLink">copiarLink</a></li><li><a href="global.html#corregirFormulasPuntuales">corregirFormulasPuntuales</a></li><li><a href="global.html#crearArchivosTemporales">crearArchivosTemporales</a></li><li><a href="global.html#crearBloqueEvidencias">crearBloqueEvidencias</a></li><li><a href="global.html#crearCanvas">crearCanvas</a></li><li><a href="global.html#crearCodigoReinicio">crearCodigoReinicio</a></li><li><a href="global.html#crearContactosAprobacionController">crearContactosAprobacionController</a></li><li><a href="global.html#crearContenidoTrabajador">crearContenidoTrabajador</a></li><li><a href="global.html#crearEnvioInspeccionSstController">crearEnvioInspeccionSstController</a></li><li><a href="global.html#crearFilaEpp">crearFilaEpp</a></li><li><a href="global.html#crearHashCodigoReinicio">crearHashCodigoReinicio</a></li><li><a href="global.html#crearIndicador">crearIndicador</a></li><li><a href="global.html#crearMensajeAprobacion">crearMensajeAprobacion</a></li><li><a href="global.html#crearMensajeCatalogoSinResultados">crearMensajeCatalogoSinResultados</a></li><li><a href="global.html#crearNavegacionInspeccionEpp">crearNavegacionInspeccionEpp</a></li><li><a href="global.html#crearNavegacionInspeccionSst">crearNavegacionInspeccionSst</a></li><li><a href="global.html#crearOpcionesCatalogoEpp">crearOpcionesCatalogoEpp</a></li><li><a href="global.html#crearPanelCatalogoEpp">crearPanelCatalogoEpp</a></li><li><a href="global.html#crearPdfInspeccionEpp">crearPdfInspeccionEpp</a></li><li><a href="global.html#crearPdfInspeccionExtintor">crearPdfInspeccionExtintor</a></li><li><a href="global.html#crearResumenInspeccionEpp">crearResumenInspeccionEpp</a></li><li><a href="global.html#crearResumenInspeccionSstController">crearResumenInspeccionSstController</a></li><li><a href="global.html#crearResumenTrabajadorHtml">crearResumenTrabajadorHtml</a></li><li><a href="global.html#crearSalidaInspeccionEppController">crearSalidaInspeccionEppController</a></li><li><a href="global.html#crearSalidaInspeccionSstController">crearSalidaInspeccionSstController</a></li><li><a href="global.html#crearSelectCalificacion">crearSelectCalificacion</a></li><li><a href="global.html#crearTrabajador">crearTrabajador</a></li><li><a href="global.html#crearUrlCorreo">crearUrlCorreo</a></li><li><a href="global.html#crearUrlWhatsApp">crearUrlWhatsApp</a></li><li><a href="global.html#crearValidacionInformacionGeneralEpp">crearValidacionInformacionGeneralEpp</a></li><li><a href="global.html#crearValidacionPasosSst">crearValidacionPasosSst</a></li><li><a href="global.html#crearWorkbook">crearWorkbook</a></li><li><a href="global.html#createBotiquinesManager">createBotiquinesManager</a></li><li><a href="global.html#createCamillasManager">createCamillasManager</a></li><li><a href="global.html#createEquiposTecnologicosManager">createEquiposTecnologicosManager</a></li><li><a href="global.html#createExtintoresManager">createExtintoresManager</a></li><li><a href="global.html#createSenalizacionesManager">createSenalizacionesManager</a></li><li><a href="global.html#createTrabajadoresEppManager">createTrabajadoresEppManager</a></li><li><a href="global.html#descargarArchivoOneDrive">descargarArchivoOneDrive</a></li><li><a href="global.html#descargarEvidenciaOneDrive">descargarEvidenciaOneDrive</a></li><li><a href="global.html#diagnosticarTablaExtintores">diagnosticarTablaExtintores</a></li><li><a href="global.html#dibujarEvidenciasEnCaja">dibujarEvidenciasEnCaja</a></li><li><a href="global.html#dibujarImagen">dibujarImagen</a></li><li><a href="global.html#dibujarImagenAjustada">dibujarImagenAjustada</a></li><li><a href="global.html#ejecutarGhostscript">ejecutarGhostscript</a></li><li><a href="global.html#eliminarCadenaCalculo">eliminarCadenaCalculo</a></li><li><a href="global.html#eliminarElementoEpp">eliminarElementoEpp</a></li><li><a href="global.html#enviarCodigoReinicioAprobaciones">enviarCodigoReinicioAprobaciones</a></li><li><a href="global.html#enviarCorreoPorGraph">enviarCorreoPorGraph</a></li><li><a href="global.html#enviarExtintorOneDrive">enviarExtintorOneDrive</a></li><li><a href="global.html#enviarInspeccionEpp">enviarInspeccionEpp</a></li><li><a href="global.html#enviarInspeccionSst">enviarInspeccionSst</a></li><li><a href="global.html#enviarPdfPruebaCorreo">enviarPdfPruebaCorreo</a></li><li><a href="global.html#enviarSolicitudesAprobacion">enviarSolicitudesAprobacion</a></li><li><a href="global.html#esCampoOpcional">esCampoOpcional</a></li><li><a href="global.html#esNovedadEpp">esNovedadEpp</a></li><li><a href="global.html#escaparHtml">escaparHtml</a></li><li><a href="global.html#escaparXml">escaparXml</a></li><li><a href="global.html#extraerEvidenciasPorIndex">extraerEvidenciasPorIndex</a></li><li><a href="global.html#extraerFechaExif">extraerFechaExif</a></li><li><a href="global.html#extraerFechasArchivos">extraerFechasArchivos</a></li><li><a href="global.html#fetchConRetry">fetchConRetry</a></li><li><a href="global.html#filtrarCatalogoEpp">filtrarCatalogoEpp</a></li><li><a href="global.html#filtrarElementosEpp">filtrarElementosEpp</a></li><li><a href="global.html#finalizarInspeccion">finalizarInspeccion</a></li><li><a href="global.html#formatearFechaMs">formatearFechaMs</a></li><li><a href="global.html#formatearPesoArchivo">formatearPesoArchivo</a></li><li><a href="global.html#fs">fs</a></li><li><a href="global.html#generarBuffer">generarBuffer</a></li><li><a href="global.html#generarBufferExcel">generarBufferExcel</a></li><li><a href="global.html#generarCodigoReinicio">generarCodigoReinicio</a></li><li><a href="global.html#generarExcelSeguimientoEpp">generarExcelSeguimientoEpp</a></li><li><a href="global.html#generarInspeccionId">generarInspeccionId</a></li><li><a href="global.html#generarPdfEppAprobacion">generarPdfEppAprobacion</a></li><li><a href="global.html#generarPdfPrueba">generarPdfPrueba</a></li><li><a href="global.html#generarPdfSstAprobacion">generarPdfSstAprobacion</a></li><li><a href="global.html#getAccessToken">getAccessToken</a></li><li><a href="global.html#getEvidenceFolderPath">getEvidenceFolderPath</a></li><li><a href="global.html#getRequiredEnv">getRequiredEnv</a></li><li><a href="global.html#ghostscriptExecutable">ghostscriptExecutable</a></li><li><a href="global.html#guardarAprobacion">guardarAprobacion</a></li><li><a href="global.html#guardarInspeccionEnDB">guardarInspeccionEnDB</a></li><li><a href="global.html#guardarInspeccionEppEnDB">guardarInspeccionEppEnDB</a></li><li><a href="global.html#guardarPdfTemporal">guardarPdfTemporal</a></li><li><a href="global.html#inicializarBloqueEvidencias">inicializarBloqueEvidencias</a></li><li><a href="global.html#inicializarEnvioEpp">inicializarEnvioEpp</a></li><li><a href="global.html#invalidarCodigosReinicioActivos">invalidarCodigosReinicioActivos</a></li><li><a href="global.html#leerArchivosEvidencia">leerArchivosEvidencia</a></li><li><a href="global.html#leerCierresDesdeExcelEpp">leerCierresDesdeExcelEpp</a></li><li><a href="global.html#leerContactosAprobacion">leerContactosAprobacion</a></li><li><a href="global.html#leerElementoEpp">leerElementoEpp</a></li><li><a href="global.html#leerFiltros">leerFiltros</a></li><li><a href="global.html#leerPayload">leerPayload</a></li><li><a href="global.html#leerPdfOptimizado">leerPdfOptimizado</a></li><li><a href="global.html#leerRespuesta">leerRespuesta</a></li><li><a href="global.html#leerTrabajadorEpp">leerTrabajadorEpp</a></li><li><a href="global.html#leerTrabajadoresEpp">leerTrabajadoresEpp</a></li><li><a href="global.html#leerValor">leerValor</a></li><li><a href="global.html#liberarImagen">liberarImagen</a></li><li><a href="global.html#limpiarCeldaExistenteXml">limpiarCeldaExistenteXml</a></li><li><a href="global.html#limpiarSeleccionCatalogoEpp">limpiarSeleccionCatalogoEpp</a></li><li><a href="global.html#limpiarTemporales">limpiarTemporales</a></li><li><a href="global.html#limpiarValoresCalculados">limpiarValoresCalculados</a></li><li><a href="global.html#listarCatalogoEpp">listarCatalogoEpp</a></li><li><a href="global.html#listarEppPredeterminados">listarEppPredeterminados</a></li><li><a href="global.html#listarInspecciones">listarInspecciones</a></li><li><a href="global.html#listarInspeccionesConFiltros">listarInspeccionesConFiltros</a></li><li><a href="global.html#listarInspeccionesEpp">listarInspeccionesEpp</a></li><li><a href="global.html#listarInspeccionesEppConFiltros">listarInspeccionesEppConFiltros</a></li><li><a href="global.html#manejarAccionCatalogoEpp">manejarAccionCatalogoEpp</a></li><li><a href="global.html#manejarAccionTrabajador">manejarAccionTrabajador</a></li><li><a href="global.html#manejarCambioCalificacionEpp">manejarCambioCalificacionEpp</a></li><li><a href="global.html#manejarCambioEvidencia">manejarCambioEvidencia</a></li><li><a href="global.html#manejarEntradaTrabajador">manejarEntradaTrabajador</a></li><li><a href="global.html#mapearCamillaAExcel">mapearCamillaAExcel</a></li><li><a href="global.html#mapearExtintorAExcel">mapearExtintorAExcel</a></li><li><a href="global.html#mapearExtintoresAExcel">mapearExtintoresAExcel</a></li><li><a href="global.html#mapearSenalizacionAExcel">mapearSenalizacionAExcel</a></li><li><a href="global.html#mapearTipoExtintor">mapearTipoExtintor</a></li><li><a href="global.html#marcarCodigoReinicioUsado">marcarCodigoReinicioUsado</a></li><li><a href="global.html#marcarInspeccionEnviada">marcarInspeccionEnviada</a></li><li><a href="global.html#maximumInputSize">maximumInputSize</a></li><li><a href="global.html#mostrarAlertaEvidencia">mostrarAlertaEvidencia</a></li><li><a href="global.html#mostrarEstadoEnvioAprobacion">mostrarEstadoEnvioAprobacion</a></li><li><a href="global.html#mostrarEstadoValidacion">mostrarEstadoValidacion</a></li><li><a href="global.html#mostrarModal">mostrarModal</a></li><li><a href="global.html#normalizarBotiquin">normalizarBotiquin</a></li><li><a href="global.html#normalizarBotiquinItem">normalizarBotiquinItem</a></li><li><a href="global.html#normalizarBotiquines">normalizarBotiquines</a></li><li><a href="global.html#normalizarCamilla">normalizarCamilla</a></li><li><a href="global.html#normalizarCamillas">normalizarCamillas</a></li><li><a href="global.html#normalizarCorreo">normalizarCorreo</a></li><li><a href="global.html#normalizarEquipoTecnologico">normalizarEquipoTecnologico</a></li><li><a href="global.html#normalizarEquiposTecnologicos">normalizarEquiposTecnologicos</a></li><li><a href="global.html#normalizarExtintor">normalizarExtintor</a></li><li><a href="global.html#normalizarExtintores">normalizarExtintores</a></li><li><a href="global.html#normalizarSenalizacion">normalizarSenalizacion</a></li><li><a href="global.html#normalizarSenalizaciones">normalizarSenalizaciones</a></li><li><a href="global.html#normalizarTelefonoColombia">normalizarTelefonoColombia</a></li><li><a href="global.html#normalizarTextoBusqueda">normalizarTextoBusqueda</a></li><li><a href="global.html#obtenerArchivos">obtenerArchivos</a></li><li><a href="global.html#obtenerBotiquinItemsSstAprobados">obtenerBotiquinItemsSstAprobados</a></li><li><a href="global.html#obtenerCamillasSstAprobadas">obtenerCamillasSstAprobadas</a></li><li><a href="global.html#obtenerCatalogoEppActivo">obtenerCatalogoEppActivo</a></li><li><a href="global.html#obtenerCodigoReinicioActivo">obtenerCodigoReinicioActivo</a></li><li><a href="global.html#obtenerColumnasHasta">obtenerColumnasHasta</a></li><li><a href="global.html#obtenerContextoAprobacion">obtenerContextoAprobacion</a></li><li><a href="global.html#obtenerDiasRestantes">obtenerDiasRestantes</a></li><li><a href="global.html#obtenerEppPredeterminados">obtenerEppPredeterminados</a></li><li><a href="global.html#obtenerEquiposTecnologicosSstAprobados">obtenerEquiposTecnologicosSstAprobados</a></li><li><a href="global.html#obtenerEstilosFilaPlantilla">obtenerEstilosFilaPlantilla</a></li><li><a href="global.html#obtenerEstrategiaCompresion">obtenerEstrategiaCompresion</a></li><li><a href="global.html#obtenerEvidenciasTrabajadoresEpp">obtenerEvidenciasTrabajadoresEpp</a></li><li><a href="global.html#obtenerExtensionOriginal">obtenerExtensionOriginal</a></li><li><a href="global.html#obtenerExtintoresSstAprobados">obtenerExtintoresSstAprobados</a></li><li><a href="global.html#obtenerFechaLocal">obtenerFechaLocal</a></li><li><a href="global.html#obtenerFilasBotiquinesSstAprobados">obtenerFilasBotiquinesSstAprobados</a></li><li><a href="global.html#obtenerFilasCamillasSstAprobadas">obtenerFilasCamillasSstAprobadas</a></li><li><a href="global.html#obtenerFilasEquiposTecnologicosSstAprobados">obtenerFilasEquiposTecnologicosSstAprobados</a></li><li><a href="global.html#obtenerFilasExtintoresSstAprobados">obtenerFilasExtintoresSstAprobados</a></li><li><a href="global.html#obtenerFilasResumenSstAprobadas">obtenerFilasResumenSstAprobadas</a></li><li><a href="global.html#obtenerFilasSenalizacionesSstAprobadas">obtenerFilasSenalizacionesSstAprobadas</a></li><li><a href="global.html#obtenerInspeccionCompleta">obtenerInspeccionCompleta</a></li><li><a href="global.html#obtenerInspeccionPendienteParaReinicio">obtenerInspeccionPendienteParaReinicio</a></li><li><a href="global.html#obtenerInspecciones">obtenerInspecciones</a></li><li><a href="global.html#obtenerLinks">obtenerLinks</a></li><li><a href="global.html#obtenerLinksInspeccion">obtenerLinksInspeccion</a></li><li><a href="global.html#obtenerNumeroColumna">obtenerNumeroColumna</a></li><li><a href="global.html#obtenerOCrearHoja">obtenerOCrearHoja</a></li><li><a href="global.html#obtenerPerfil">obtenerPerfil</a></li><li><a href="global.html#obtenerPlanesAccion">obtenerPlanesAccion</a></li><li><a href="global.html#obtenerResumen">obtenerResumen</a></li><li><a href="global.html#obtenerResumenAprobacion">obtenerResumenAprobacion</a></li><li><a href="global.html#obtenerResumenEpp">obtenerResumenEpp</a></li><li><a href="global.html#obtenerResumenEstadisticas">obtenerResumenEstadisticas</a></li><li><a href="global.html#obtenerResumenInspeccionesSstAprobadas">obtenerResumenInspeccionesSstAprobadas</a></li><li><a href="global.html#obtenerRutaExcelEpp">obtenerRutaExcelEpp</a></li><li><a href="global.html#obtenerRutaExcelSst">obtenerRutaExcelSst</a></li><li><a href="global.html#obtenerSeguimientoEpp">obtenerSeguimientoEpp</a></li><li><a href="global.html#obtenerSeleccionCatalogoEpp">obtenerSeleccionCatalogoEpp</a></li><li><a href="global.html#obtenerSenalizacionesSstAprobadas">obtenerSenalizacionesSstAprobadas</a></li><li><a href="global.html#obtenerXml">obtenerXml</a></li><li><a href="global.html#ocultarEstadoValidacion">ocultarEstadoValidacion</a></li><li><a href="global.html#optimizarImagen">optimizarImagen</a></li><li><a href="global.html#optimizarPdf">optimizarPdf</a></li><li><a href="global.html#prepararElementosPredeterminadosEpp">prepararElementosPredeterminadosEpp</a></li><li><a href="global.html#presentarResultadoValidacion">presentarResultadoValidacion</a></li><li><a href="global.html#previsualizarAprobacion">previsualizarAprobacion</a></li><li><a href="global.html#query">query</a></li><li><a href="global.html#reemplazarFormulaCelda">reemplazarFormulaCelda</a></li><li><a href="global.html#reemplazarXml">reemplazarXml</a></li><li><a href="global.html#registrarAprobacion">registrarAprobacion</a></li><li><a href="global.html#registrarEstadisticas">registrarEstadisticas</a></li><li><a href="global.html#registrarEventosCatalogoEpp">registrarEventosCatalogoEpp</a></li><li><a href="global.html#registrarIntentoCodigoReinicio">registrarIntentoCodigoReinicio</a></li><li><a href="global.html#registrarOriginalConservado">registrarOriginalConservado</a></li><li><a href="global.html#reiniciarAprobaciones">reiniciarAprobaciones</a></li><li><a href="global.html#reiniciarAprobacionesPendientes">reiniciarAprobacionesPendientes</a></li><li><a href="global.html#renderAprobaciones">renderAprobaciones</a></li><li><a href="global.html#renderPaginaBotiquin">renderPaginaBotiquin</a></li><li><a href="global.html#renderPaginaCamilla">renderPaginaCamilla</a></li><li><a href="global.html#renderPaginaEquiposTecnologicos">renderPaginaEquiposTecnologicos</a></li><li><a href="global.html#renderPaginaSenalizacion">renderPaginaSenalizacion</a></li><li><a href="global.html#renderPaginasEvidenciasExtra">renderPaginasEvidenciasExtra</a></li><li><a href="global.html#requierePlanAccion">requierePlanAccion</a></li><li><a href="global.html#resolverCarpetaDestinoPdf">resolverCarpetaDestinoPdf</a></li><li><a href="global.html#resolverCorreoDestino">resolverCorreoDestino</a></li><li><a href="global.html#resolverCorreoDestinoEpp">resolverCorreoDestinoEpp</a></li><li><a href="global.html#resolverFechaEvidencia">resolverFechaEvidencia</a></li><li><a href="global.html#seleccionarFormatoSalida">seleccionarFormatoSalida</a></li><li><a href="global.html#sincronizarCatalogoEpp">sincronizarCatalogoEpp</a></li><li><a href="global.html#sincronizarCierresDesdeExcelEpp">sincronizarCierresDesdeExcelEpp</a></li><li><a href="global.html#sincronizarCierresExcelEpp">sincronizarCierresExcelEpp</a></li><li><a href="global.html#solicitarCodigoReinicioAprobaciones">solicitarCodigoReinicioAprobaciones</a></li><li><a href="global.html#subirArchivoOneDrive">subirArchivoOneDrive</a></li><li><a href="global.html#subirEvidenciasMultiples">subirEvidenciasMultiples</a></li><li><a href="global.html#subirPdfAOneDrive">subirPdfAOneDrive</a></li><li><a href="global.html#timeoutMs">timeoutMs</a></li><li><a href="global.html#uploadEvidenceToOneDrive">uploadEvidenceToOneDrive</a></li><li><a href="global.html#validarArchivo">validarArchivo</a></li><li><a href="global.html#validarBotiquines">validarBotiquines</a></li><li><a href="global.html#validarCamillas">validarCamillas</a></li><li><a href="global.html#validarCodigoReinicio">validarCodigoReinicio</a></li><li><a href="global.html#validarCorreo">validarCorreo</a></li><li><a href="global.html#validarEquiposTecnologicos">validarEquiposTecnologicos</a></li><li><a href="global.html#validarEvidenciaEpp">validarEvidenciaEpp</a></li><li><a href="global.html#validarEvidenciaTrabajador">validarEvidenciaTrabajador</a></li><li><a href="global.html#validarExtintores">validarExtintores</a></li><li><a href="global.html#validarInspeccion">validarInspeccion</a></li><li><a href="global.html#validarInspeccionEpp">validarInspeccionEpp</a></li><li><a href="global.html#validarMacrosExcel">validarMacrosExcel</a></li><li><a href="global.html#validarPdf">validarPdf</a></li><li><a href="global.html#validarResultado">validarResultado</a></li><li><a href="global.html#validarSenalizaciones">validarSenalizaciones</a></li><li><a href="global.html#validarTelefonoColombia">validarTelefonoColombia</a></li><li><a href="global.html#validarTrabajadoresEpp">validarTrabajadoresEpp</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.5</a>
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>
