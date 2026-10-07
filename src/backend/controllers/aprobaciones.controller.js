@@ -1,3 +1,4 @@
+// Ruta: src/backend/controllers/aprobaciones.controller.js
 /*
   aprobaciones.controller.js — Aprobación de la inspección (Inspector, Jefe de Área, COPASST).
 
@@ -10,23 +11,23 @@
     dibujada ni biométrica por restricción legal — es una firma electrónica
     simple (identidad declarada + registro de fecha/hora). Cuando las 3
     aprobaciones quedan completas, dispara finalizarInspeccion() en segundo plano.
-  - finalizarInspeccion(): descarga de OneDrive las evidencias ya subidas,
-    regenera el PDF con el nombre de cada rol incrustado, lo archiva
-    en OneDrive (Respuestas_PDF) y envía el correo — recién en este punto, no antes.
+  - finalizarInspeccion() vive en services/finalizacionInspeccion.service.js:
+    descarga de OneDrive las evidencias ya subidas, regenera el PDF con el
+    nombre de cada rol incrustado, lo archiva en OneDrive (Respuestas_PDF) y
+    envía el correo — recién en este punto, no antes.
 
   Cómo interactúa:
-  - Este controlador NO hace SQL directo: toda lectura/escritura del estado de
-    aprobación pasa por aprobaciones.model.js (obtenerContextoAprobacion,
-    guardarAprobacion, marcarInspeccionEnviada), y los datos de la inspección
-    por inspeccion.model.js (obtenerInspeccionCompleta, descargarEvidenciaOneDrive).
-  - Reutiliza crearPdfInspeccionExtintor / subirPdfAOneDrive / enviarCorreoPorGraph /
-    resolverCorreoDestino / construirHtmlCorreo de pdfInspeccion.controller.js.
-  - Es registrado en app.js como handler de /api/aprobaciones/:token.
+  - Este controlador NO hace SQL directo ni abre conexiones: toda lectura/escritura
+    del estado de aprobación pasa por aprobaciones.model.js (incluida la
+    transacción de reinicio mediante conectarTransaccion), y los datos de la
+    inspección por inspeccion.model.js (obtenerInspeccionCompleta).
+  - La orquestación del cierre (PDF, OneDrive, correo, Excel) está en
+    finalizacionInspeccion.service.js.
+  - Es registrado en routes/aprobaciones.routes.js.
 */
 const {
   obtenerContextoAprobacion,
   guardarAprobacion,
-  marcarInspeccionEnviada,
   reiniciarAprobacionesPendientes,
   obtenerInspeccionPendienteParaReinicio,
   invalidarCodigosReinicioActivos,
@@ -34,6 +35,7 @@ const {
   obtenerCodigoReinicioActivo,
   registrarIntentoCodigoReinicio,
   marcarCodigoReinicioUsado,
+  conectarTransaccion,
 } = require("../models/aprobaciones.model");
 
 const {
@@ -51,10 +53,7 @@ const crypto = require("node:crypto");
 
 const { obtenerInspeccionCompleta } = require("../models/inspeccion.model");
 
-const { pool } = require("../db/pool");
-
 const {
-  subirPdfAOneDrive,
   construirEvidenciasDesdeOneDrive,
   construirEvidenciasEppDesdeOneDrive,
 } = require("../services/evidencia.service");
@@ -62,30 +61,15 @@ const {
   generarPdfSstAprobacion,
 } = require("../services/pdfInspeccion.service");
 const {
-  enviarCorreoPorGraph,
-  resolverCorreoDestino,
-  construirHtmlCorreo,
-} = require("../services/correo.service");
-const {
   generarPdfEppAprobacion,
 } = require("../services/pdfInspeccionEpp.service");
 
-const {
-  resolverCorreoDestinoEpp,
-  construirHtmlCorreoEpp,
-} = require("../services/correoEpp.service");
-
-const {
-  actualizarExcelSeguimientoSstEnOneDrive,
-} = require("../services/seguimientoSstExcel.service");
-
-const {
-  actualizarExcelSeguimientoEppEnOneDrive,
-} = require("../services/seguimientoEppExcel.service");
-
 const { calcularResumenEpp } = require("../services/resumenEpp.service");
 
-const { optimizarPdf } = require("../utils/pdfOptimizer");
+const {
+  construirAprobaciones,
+  finalizarInspeccion,
+} = require("../services/finalizacionInspeccion.service");
 
 /**
  * Obtiene la información necesaria para mostrar una aprobación.
@@ -213,35 +197,6 @@ async function obtenerResumenAprobacion(req, res) {
       errores: [mensaje],
     });
   }
-}
-
-/**
- * Construye la información de los responsables que aprobaron la inspección.
- *
- * Normaliza los nombres almacenados para el inspector, jefe responsable y
- * representante de COPASST. Cuando una aprobación no existe, asigna una
- * cadena vacía.
- *
- * @param {Object} row Registro de la inspección obtenido desde la base de datos.
- * @returns {{
- *   inspector: {nombre: string},
- *   jefe: {nombre: string},
- *   copasst: {nombre: string}
- * }} Información normalizada de las aprobaciones.
- */
-
-function construirAprobaciones(row) {
-  return {
-    inspector: {
-      nombre: row.aprobacion_inspector_nombre || "",
-    },
-    jefe: {
-      nombre: row.aprobacion_jefe_nombre || "",
-    },
-    copasst: {
-      nombre: row.aprobacion_copasst_nombre || "",
-    },
-  };
 }
 
 /**
@@ -449,291 +404,6 @@ async function registrarAprobacion(req, res) {
 }
 
 /**
- * Ejecuta el cierre definitivo de una inspección aprobada.
- *
- * Verifica que la inspección tenga todas las aprobaciones, genera el PDF final
- * según sea SST o EPP, optimiza el documento, lo almacena en OneDrive y envía
- * el correo correspondiente. Después marca la inspección como enviada y
- * actualiza el archivo de seguimiento asociado a su tipo.
- *
- * La actualización del archivo Excel se gestiona de manera independiente:
- * si falla, el cierre principal de la inspección permanece realizado.
- *
- * @async
- * @param {string} inspeccionId Identificador único de la inspección.
- * @returns {Promise<void>} La promesa finaliza cuando se completa el proceso
- * principal de cierre y se intenta actualizar el seguimiento en Excel.
- * @throws {Error} Si la inspección no existe, no tiene todas las aprobaciones
- * o falla una etapa principal de generación, almacenamiento o envío.
- */
-
-async function finalizarInspeccion(inspeccionId) {
-  // =======================================================
-  // 1. OBTENER INSPECCIÓN COMPLETA
-  // =======================================================
-
-  const completa = await obtenerInspeccionCompleta(inspeccionId);
-
-  if (!completa) {
-    throw new Error(`Inspección ${inspeccionId} no encontrada`);
-  }
-
-  const row = completa.inspeccion;
-
-  // =======================================================
-  // 2. IDENTIFICAR TIPO
-  // =======================================================
-
-  const tipoInspeccion = String(row.tipo_inspeccion || "SST").toUpperCase();
-
-  // =======================================================
-  // 3. APROBACIONES
-  // =======================================================
-
-  const aprobaciones = construirAprobaciones(row);
-
-  // =======================================================
-  // 4. SEGURIDAD ADICIONAL
-  //
-  // guardarAprobacion() ya valida las 3 aprobaciones.
-  // Esta validación evita que finalizarInspeccion()
-  // genere un PDF final si fuese llamada manualmente.
-  // =======================================================
-
-  const aprobacionesCompletas = Boolean(
-    row.aprobacion_inspector_nombre &&
-    row.aprobacion_jefe_nombre &&
-    row.aprobacion_copasst_nombre,
-  );
-
-  if (!aprobacionesCompletas) {
-    throw new Error(
-      `La inspección ${row.inspeccion_id} todavía no tiene las 3 aprobaciones.`,
-    );
-  }
-
-  // =======================================================
-  // 5. GENERAR PDF SEGÚN TIPO
-  // =======================================================
-
-  let pdfGenerado;
-
-  // Guardaremos los trabajadores EPP aquí porque después
-  // los necesitaremos para construir el correo EPP.
-  let trabajadoresEpp = [];
-
-  // =======================================================
-  // EPP
-  // =======================================================
-
-  if (tipoInspeccion === "EPP") {
-    trabajadoresEpp = Array.isArray(completa.trabajadores)
-      ? completa.trabajadores
-      : [];
-
-    const evidenciasPorTrabajador =
-      await construirEvidenciasEppDesdeOneDrive(trabajadoresEpp);
-
-    const resultadoEpp = await generarPdfEppAprobacion(
-      completa,
-      row,
-      aprobaciones,
-      evidenciasPorTrabajador,
-    );
-
-    pdfGenerado = resultadoEpp.pdf;
-    trabajadoresEpp = resultadoEpp.trabajadores;
-  }
-
-  // =======================================================
-  // SST
-  // =======================================================
-  else {
-    pdfGenerado = await generarPdfSstAprobacion(completa, row, aprobaciones);
-  }
-
-  // =======================================================
-  // 6. OPTIMIZAR PDF
-  // =======================================================
-
-  const pdfFinal = await optimizarPdf(pdfGenerado, {
-    profile: "inspection",
-    fileName: `${row.inspeccion_id}.pdf`,
-  });
-
-  // =======================================================
-  // 7. SUBIR PDF FINAL A ONEDRIVE
-  // =======================================================
-
-  const webUrl = await subirPdfAOneDrive(
-    pdfFinal,
-    row.inspeccion_id,
-    row.sede_operacion,
-  );
-
-  // =======================================================
-  // 8. RESOLVER CORREO DESTINO
-  // =======================================================
-
-  const correoDestino =
-    tipoInspeccion === "EPP"
-      ? resolverCorreoDestinoEpp(row.sede_operacion, null)
-      : resolverCorreoDestino(row.sede_operacion, null);
-
-  // =======================================================
-  // 9. CONSTRUIR Y ENVIAR CORREO
-  // =======================================================
-
-  if (correoDestino) {
-    let html;
-
-    // =====================================================
-    // CORREO EPP
-    // =====================================================
-
-    if (tipoInspeccion === "EPP") {
-      // ---------------------------------------------------
-      // CALCULAR RESUMEN EPP
-      // ---------------------------------------------------
-
-      const resumenEpp = calcularResumenEpp(trabajadoresEpp);
-
-      const {
-        totalTrabajadores,
-        trabajadoresConNovedad,
-        trabajadoresSinNovedad,
-        totalNovedades,
-      } = resumenEpp;
-
-      // ---------------------------------------------------
-      // HTML EPP
-      // ---------------------------------------------------
-
-      html = construirHtmlCorreoEpp({
-        inspeccionId: row.inspeccion_id,
-
-        numInspeccion: Number(row.inspecciones_id),
-
-        fecha: row.fecha,
-
-        sedeOperacion: row.sede_operacion,
-
-        areaTrabajo: row.area_trabajo,
-
-        responsableInspeccion: row.responsable_inspeccion,
-
-        totalTrabajadores,
-
-        trabajadoresConNovedad,
-
-        trabajadoresSinNovedad,
-
-        totalNovedades,
-
-        aprobaciones,
-
-        webUrl,
-      });
-    }
-
-    // =====================================================
-    // CORREO SST
-    // =====================================================
-    else {
-      html = construirHtmlCorreo({
-        inspeccionId: row.inspeccion_id,
-
-        numInspeccion: Number(row.inspecciones_id),
-
-        fecha: row.fecha,
-
-        sedeOperacion: row.sede_operacion,
-
-        areaTrabajo: row.area_trabajo,
-
-        jefeResponsable: row.jefe_responsable,
-
-        responsableInspeccion: row.responsable_inspeccion,
-
-        cargoResponsable: row.cargo_responsable,
-
-        webUrl,
-
-        titulo: "Inspección SST aprobada",
-      });
-    }
-
-    // =====================================================
-    // ENVÍO GRAPH
-    // =====================================================
-
-    await enviarCorreoPorGraph({
-      to: correoDestino,
-
-      subject: `Inspección ${tipoInspeccion} aprobada N.° ${row.inspecciones_id} – ${row.inspeccion_id}`,
-
-      html,
-
-      pdfBuffer: pdfFinal,
-
-      nombre: `${row.inspeccion_id}.pdf`,
-    });
-  }
-
-  // =======================================================
-  // 10. MARCAR COMO ENVIADA
-  //
-  // Solo ocurre después de:
-  // - 3 aprobaciones
-  // - PDF generado
-  // - PDF optimizado
-  // - PDF subido a OneDrive
-  // - correo procesado
-  // =======================================================
-
-  await marcarInspeccionEnviada(row.inspeccion_id, webUrl);
-
-  if (tipoInspeccion === "SST") {
-    try {
-      const resultadoExcel = await actualizarExcelSeguimientoSstEnOneDrive();
-
-      console.log("[aprobaciones] Excel SST actualizado:", {
-        inspeccionId: row.inspeccion_id,
-        rutaExcel: resultadoExcel.rutaExcel,
-        extintores: resultadoExcel.extintores,
-        camillas: resultadoExcel.camillas,
-        senalizaciones: resultadoExcel.senalizaciones,
-        equiposTecnologicos: resultadoExcel.equiposTecnologicos,
-        botiquines: resultadoExcel.botiquines,
-        resumen: resultadoExcel.resumen,
-        general: resultadoExcel.general,
-      });
-    } catch (error) {
-      console.error(
-        `[aprobaciones] No se pudo actualizar el Excel SST para ${row.inspeccion_id}:`,
-        error,
-      );
-    }
-  } else if (tipoInspeccion === "EPP") {
-    try {
-      const resultadoExcel = await actualizarExcelSeguimientoEppEnOneDrive();
-
-      console.log("[aprobaciones] Excel EPP actualizado:", {
-        inspeccionId: row.inspeccion_id,
-        rutaExcel: resultadoExcel.rutaExcel,
-        estadoInspecciones: resultadoExcel.estadoInspecciones,
-        tamañoBytes: resultadoExcel.tamañoBytes,
-      });
-    } catch (error) {
-      console.error(
-        `[aprobaciones] No se pudo actualizar el Excel EPP para ${row.inspeccion_id}:`,
-        error,
-      );
-    }
-  }
-}
-
-/**
  * Reinicia directamente las aprobaciones de Jefe de Área y COPASST.
  *
  * Conserva la aprobación del inspector y permite reutilizar los enlaces
@@ -937,14 +607,14 @@ async function confirmarReinicioAprobaciones(req, res) {
     });
   }
 
-  const cliente = await pool.connect();
+  const transaccion = await conectarTransaccion();
   let transaccionIniciada = false;
 
   try {
-    await cliente.query("BEGIN");
+    await transaccion.iniciar();
     transaccionIniciada = true;
 
-    const ejecutarConsulta = cliente.query.bind(cliente);
+    const ejecutarConsulta = transaccion.ejecutarConsulta;
 
     const inspeccion = await obtenerInspeccionPendienteParaReinicio(
       inspeccionId,
@@ -952,7 +622,7 @@ async function confirmarReinicioAprobaciones(req, res) {
     );
 
     if (!inspeccion) {
-      await cliente.query("ROLLBACK");
+      await transaccion.revertir();
       transaccionIniciada = false;
 
       return res.status(409).json({
@@ -969,7 +639,7 @@ async function confirmarReinicioAprobaciones(req, res) {
     );
 
     if (!registroCodigo) {
-      await cliente.query("ROLLBACK");
+      await transaccion.revertir();
       transaccionIniciada = false;
 
       return res.status(404).json({
@@ -995,7 +665,7 @@ async function confirmarReinicioAprobaciones(req, res) {
           ejecutarConsulta,
         );
 
-        await cliente.query("COMMIT");
+        await transaccion.confirmar();
         transaccionIniciada = false;
 
         const agotado = intento?.intentos >= 5;
@@ -1009,7 +679,7 @@ async function confirmarReinicioAprobaciones(req, res) {
         });
       }
 
-      await cliente.query("ROLLBACK");
+      await transaccion.revertir();
       transaccionIniciada = false;
 
       const mensajes = {
@@ -1033,7 +703,7 @@ async function confirmarReinicioAprobaciones(req, res) {
     );
 
     if (!codigoUsado) {
-      await cliente.query("ROLLBACK");
+      await transaccion.revertir();
       transaccionIniciada = false;
 
       return res.status(409).json({
@@ -1048,7 +718,7 @@ async function confirmarReinicioAprobaciones(req, res) {
     );
 
     if (!inspeccionReiniciada) {
-      await cliente.query("ROLLBACK");
+      await transaccion.revertir();
       transaccionIniciada = false;
 
       return res.status(409).json({
@@ -1058,7 +728,7 @@ async function confirmarReinicioAprobaciones(req, res) {
       });
     }
 
-    await cliente.query("COMMIT");
+    await transaccion.confirmar();
     transaccionIniciada = false;
 
     return res.status(200).json({
@@ -1068,7 +738,7 @@ async function confirmarReinicioAprobaciones(req, res) {
     });
   } catch (error) {
     if (transaccionIniciada) {
-      await cliente.query("ROLLBACK");
+      await transaccion.revertir();
     }
 
     console.error("Error al confirmar reinicio de aprobaciones:", error);
@@ -1078,7 +748,7 @@ async function confirmarReinicioAprobaciones(req, res) {
       mensaje: "No fue posible confirmar el reinicio de aprobaciones.",
     });
   } finally {
-    cliente.release();
+    transaccion.liberar();
   }
 }
 

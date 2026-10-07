@@ -1,3 +1,4 @@
+// Ruta: src/backend/routes/inspecciones.routes.js
 /**
  * Rutas relacionadas con el registro y consulta de inspecciones.
  *
@@ -7,7 +8,8 @@
  */
 
 const { Router } = require("express");
-const multer = require("multer");
+
+const { upload } = require("../middlewares/upload.middleware");
 
 const {
   enviarExtintorOneDrive,
@@ -24,10 +26,6 @@ const {
 } = require("../controllers/pdfInspeccion.controller");
 
 const router = Router();
-
-const upload = multer({
-  storage: multer.memoryStorage(),
-});
 
 router.post(
   "/enviar-onedrive-extintor",

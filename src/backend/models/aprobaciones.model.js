@@ -1,3 +1,4 @@
+// Ruta: src/backend/models/aprobaciones.model.js
 /*
   aprobaciones.model.js — Acceso a datos del estado de aprobación de una inspección.
 
@@ -20,7 +21,7 @@
   - inspeccion.model.js maneja los datos de la inspección en sí (general +
     secciones); este archivo maneja solo el estado de aprobación.
 */
-const { query } = require("../db/pool");
+const { pool, query } = require("../db/pool");
 
 const ROLES = {
   inspector: {
@@ -429,6 +430,40 @@ async function crearCodigoReinicio({
   return rows[0];
 }
 
+/**
+ * Abre una conexión dedicada del pool para ejecutar una transacción.
+ *
+ * Encapsula el manejo del cliente de PostgreSQL para que los controladores
+ * no accedan directamente al pool. El llamador decide cuándo iniciar,
+ * confirmar o revertir la transacción y debe liberar siempre la conexión.
+ *
+ * `ejecutarConsulta` puede enviarse a las funciones de este modelo que
+ * aceptan el parámetro opcional del mismo nombre, para que sus consultas
+ * se ejecuten dentro de la transacción.
+ *
+ * @async
+ * @returns {Promise<{
+ *   ejecutarConsulta: Function,
+ *   iniciar: Function,
+ *   confirmar: Function,
+ *   revertir: Function,
+ *   liberar: Function
+ * }>} Operaciones disponibles sobre la conexión transaccional.
+ * @throws {Error} Si no es posible obtener una conexión del pool.
+ */
+
+async function conectarTransaccion() {
+  const cliente = await pool.connect();
+
+  return {
+    ejecutarConsulta: cliente.query.bind(cliente),
+    iniciar: () => cliente.query("BEGIN"),
+    confirmar: () => cliente.query("COMMIT"),
+    revertir: () => cliente.query("ROLLBACK"),
+    liberar: () => cliente.release(),
+  };
+}
+
 module.exports = {
   obtenerContextoAprobacion,
   guardarAprobacion,
@@ -440,4 +475,5 @@ module.exports = {
   obtenerCodigoReinicioActivo,
   registrarIntentoCodigoReinicio,
   marcarCodigoReinicioUsado,
+  conectarTransaccion,
 };
