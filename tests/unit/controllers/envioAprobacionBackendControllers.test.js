@@ -44,19 +44,19 @@ function crearRespuesta() {
 test("SST genera links públicos y devuelve el estado del envío", async () => {
   const rutaControlador = path.resolve(
     __dirname,
-    "../../../src/backend/controllers/inspeccion.controller.js",
+    "../../../src/backend/modules/inspecciones-sst/inspeccionSst.controller.js",
   );
 
   let datosEnvio;
 
   const controlador = cargarConMocks(rutaControlador, {
-    "../shared/utils/request.utils": {
+    "../../shared/utils/request.utils": {
       leerPayload() {
         return {};
       },
     },
 
-    "../models/inspeccion.model": {
+    "./inspeccionSst.model": {
       async guardarInspeccionEnDB() {
         return {
           inspeccionId: "INSP-SST-001",
@@ -73,13 +73,13 @@ test("SST genera links públicos y devuelve el estado del envío", async () => {
       },
     },
 
-    "../shared/services/evidencia.service": {
+    "../../shared/services/evidencia.service": {
       async subirEvidenciasMultiples() {
         return {};
       },
     },
 
-    "../validators/inspeccion.validator": {
+    "./validators/inspeccion.validator": {
       validarInspeccion() {
         return {
           ok: true,
@@ -100,7 +100,7 @@ test("SST genera links públicos y devuelve el estado del envío", async () => {
       },
     },
 
-    "../shared/services/correoAprobacion.service": {
+    "../../shared/services/correoAprobacion.service": {
       leerContactosAprobacion() {
         return {
           jefe: {
@@ -170,19 +170,19 @@ test("SST genera links públicos y devuelve el estado del envío", async () => {
 test("EPP genera links públicos y conserva tokens y estado", async () => {
   const rutaControlador = path.resolve(
     __dirname,
-    "../../../src/backend/controllers/inspeccionEpp.controller.js",
+    "../../../src/backend/modules/inspecciones-epp/inspeccionEpp.controller.js",
   );
 
   let datosEnvio;
 
   const controlador = cargarConMocks(rutaControlador, {
-    "../shared/utils/request.utils": {
+    "../../shared/utils/request.utils": {
       leerPayload() {
         return {};
       },
     },
 
-    "../validators/inspeccionEpp.validator": {
+    "./inspeccionEpp.validator": {
       validarInspeccionEpp() {
         return {
           ok: true,
@@ -206,7 +206,7 @@ test("EPP genera links públicos y conserva tokens y estado", async () => {
       },
     },
 
-    "../models/inspeccionEpp.model": {
+    "./inspeccionEpp.model": {
       async guardarInspeccionEppEnDB() {
         return {
           inspeccionId: "INSP-EPP-001",
@@ -219,19 +219,19 @@ test("EPP genera links públicos y conserva tokens y estado", async () => {
       },
     },
 
-    "../shared/services/evidencia.service": {
+    "../../shared/services/evidencia.service": {
       async uploadEvidenceToOneDrive() {
         return {};
       },
     },
 
-    "../shared/utils/fechaEvidencia": {
+    "../../shared/utils/fechaEvidencia": {
       async resolverFechaEvidencia() {
         return null;
       },
     },
 
-    "../shared/services/correoAprobacion.service": {
+    "../../shared/services/correoAprobacion.service": {
       leerContactosAprobacion() {
         return {
           jefe: {

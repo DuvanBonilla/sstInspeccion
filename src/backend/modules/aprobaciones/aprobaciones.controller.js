@@ -51,7 +51,7 @@ const {
 
 const crypto = require("node:crypto");
 
-const { obtenerInspeccionCompleta } = require("../../models/inspeccion.model");
+const { obtenerInspeccionCompleta } = require("../../shared/models/inspeccionCompleta.model");
 
 const {
   construirEvidenciasDesdeOneDrive,
@@ -59,12 +59,12 @@ const {
 } = require("../../shared/services/evidencia.service");
 const {
   generarPdfSstAprobacion,
-} = require("../../services/pdfInspeccion.service");
+} = require("../inspecciones-sst/pdfInspeccionSst.service");
 const {
   generarPdfEppAprobacion,
-} = require("../../services/pdfInspeccionEpp.service");
+} = require("../inspecciones-epp/pdfInspeccionEpp.service");
 
-const { calcularResumenEpp } = require("../../services/resumenEpp.service");
+const { calcularResumenEpp } = require("../inspecciones-epp/resumenEpp.service");
 
 const {
   construirAprobaciones,

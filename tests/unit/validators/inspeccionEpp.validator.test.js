@@ -12,7 +12,7 @@ const {
   validarInspeccionEpp,
   validarEvidenciaTrabajador,
 } = require(
-  "../../../src/backend/validators/inspeccionEpp.validator"
+  "../../../src/backend/modules/inspecciones-epp/inspeccionEpp.validator"
 );
 
 const {

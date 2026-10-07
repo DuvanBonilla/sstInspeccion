@@ -20,7 +20,7 @@ const {
   marcarInspeccionEnviada,
 } = require("./aprobaciones.model");
 
-const { obtenerInspeccionCompleta } = require("../../models/inspeccion.model");
+const { obtenerInspeccionCompleta } = require("../../shared/models/inspeccionCompleta.model");
 
 const {
   subirPdfAOneDrive,
@@ -28,7 +28,7 @@ const {
 } = require("../../shared/services/evidencia.service");
 const {
   generarPdfSstAprobacion,
-} = require("../../services/pdfInspeccion.service");
+} = require("../inspecciones-sst/pdfInspeccionSst.service");
 const {
   enviarCorreoPorGraph,
   resolverCorreoDestino,
@@ -36,22 +36,22 @@ const {
 } = require("../../shared/services/correo.service");
 const {
   generarPdfEppAprobacion,
-} = require("../../services/pdfInspeccionEpp.service");
+} = require("../inspecciones-epp/pdfInspeccionEpp.service");
 
 const {
   resolverCorreoDestinoEpp,
   construirHtmlCorreoEpp,
-} = require("../../services/correoEpp.service");
+} = require("../inspecciones-epp/correoEpp.service");
 
 const {
   actualizarExcelSeguimientoSstEnOneDrive,
-} = require("../../services/seguimientoSstExcel.service");
+} = require("../inspecciones-sst/excel/seguimientoSstExcel.service");
 
 const {
   actualizarExcelSeguimientoEppEnOneDrive,
-} = require("../../services/seguimientoEppExcel.service");
+} = require("../inspecciones-epp/excel/seguimientoEppExcel.service");
 
-const { calcularResumenEpp } = require("../../services/resumenEpp.service");
+const { calcularResumenEpp } = require("../inspecciones-epp/resumenEpp.service");
 
 const { optimizarPdf } = require("../../shared/utils/pdfOptimizer");
 
