@@ -9,7 +9,7 @@ const assert = require("node:assert/strict");
 
 const {
   normalizarTexto,
-} = require("../../../src/backend/utils/texto.util");
+} = require("../../../src/backend/shared/utils/texto.util");
 
 test("normalizarTexto elimina espacios al inicio y al final", () => {
   const resultado = normalizarTexto("  Cargoban  ");

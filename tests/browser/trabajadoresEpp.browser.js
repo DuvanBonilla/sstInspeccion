@@ -12,7 +12,7 @@ const path = require("node:path");
 const express = require("express");
 const { chromium } = require("playwright");
 
-const paginasRoutes = require("../../src/backend/routes/paginas.routes");
+const paginasRoutes = require("../../src/backend/modules/paginas/paginas.routes");
 
 let server;
 let browser;

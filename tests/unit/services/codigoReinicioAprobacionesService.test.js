@@ -7,7 +7,7 @@ const {
   compararCodigoReinicio,
   calcularVencimientoCodigo,
   validarCodigoReinicio,
-} = require("../../../src/backend/services/codigoReinicioAprobaciones.service");
+} = require("../../../src/backend/modules/aprobaciones/codigoReinicioAprobaciones.service");
 
 test("genera un código temporal de seis dígitos", () => {
   const codigo = generarCodigoReinicio();

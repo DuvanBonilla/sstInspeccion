@@ -10,7 +10,7 @@ const assert = require("node:assert/strict");
 
 const {
   validarInspeccion,
-} = require("../../../src/backend/validators/inspeccion.validator");
+} = require("../../../src/backend/modules/inspecciones-sst/validators/inspeccion.validator");
 
 const {
   crearInspeccionSstValida,

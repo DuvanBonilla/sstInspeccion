@@ -1,5 +1,5 @@
 require("dotenv").config();
-const { pool } = require("./pool");
+const { pool } = require("../config/database");
 
 const DDL = `
 CREATE TABLE IF NOT EXISTS inspecciones (

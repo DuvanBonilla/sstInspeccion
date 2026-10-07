@@ -4,7 +4,7 @@ const assert = require("node:assert/strict");
 const {
   leerContactosAprobacion,
   enviarSolicitudesAprobacion,
-} = require("../../../src/backend/services/correoAprobacion.service");
+} = require("../../../src/backend/shared/services/correoAprobacion.service");
 
 const links = {
   jefe: "https://ejemplo.com/aprobar/token-jefe",

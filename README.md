@@ -109,14 +109,31 @@ El proyecto utiliza una arquitectura MVC modular.
 
 ### Backend
 
+El backend está organizado por módulos de negocio. Cada módulo agrupa sus rutas, controladores, modelos, servicios y validadores; lo que usan varios módulos vive en `shared/`.
+
 - `src/backend/app.js`: configuración de Express, archivos estáticos y rutas.
-- `src/backend/controllers/`: coordinación de solicitudes HTTP y respuestas.
-- `src/backend/models/`: consultas PostgreSQL y operaciones transaccionales.
-- `src/backend/services/`: PDF, correo, Microsoft Graph y seguimiento Excel.
-- `src/backend/validators/`: normalización y reglas de validación SST/EPP.
-- `src/backend/middlewares/`: autorización de procesos protegidos.
-- `src/backend/utils/`: optimización PDF, fechas, solicitudes y manipulación XML.
-- `src/backend/db/`: conexión y migraciones de PostgreSQL.
+- `src/backend/server.js`: carga de variables de entorno e inicio del servidor.
+- `src/backend/routes/index.js`: monta el router de cada módulo. Es el único archivo que conoce todos los módulos.
+- `src/backend/config/database.js`: conexión compartida a PostgreSQL.
+- `src/backend/db/`: script y archivos de migración.
+- `src/backend/modules/`:
+  - `paginas/`: entrega de las vistas HTML.
+  - `inspecciones-sst/`: registro SST, PDF SST, PDF de prueba, validadores y seguimiento Excel SST (`excel/`).
+  - `inspecciones-epp/`: registro EPP, PDF, correo y resumen EPP, catálogo de EPP (`catalogo/`) y seguimiento y sincronización Excel EPP (`excel/`).
+  - `aprobaciones/`: flujo de aprobación, reinicio con código y cierre de la inspección.
+  - `estadisticas/`: consultas y endpoints de los paneles SST y EPP.
+  - `excel/`: endpoints para actualizar y sincronizar los Excel de seguimiento.
+- `src/backend/shared/`:
+  - `models/`: lectura de la inspección completa (SST o EPP).
+  - `services/`: Microsoft Graph, correo, evidencias en OneDrive, utilidades Excel y solicitudes de aprobación.
+  - `middlewares/`: recepción de archivos y autorización de procesos protegidos.
+  - `utils/`: optimización PDF, fechas de evidencias, lectura de solicitudes, XML y texto.
+
+Reglas de dependencia:
+
+- Un módulo puede usar `shared/` y `config/`.
+- Lo que necesitan dos o más módulos se ubica en `shared/`.
+- `aprobaciones` y `excel` coordinan SST y EPP, por eso usan servicios de `inspecciones-sst` e `inspecciones-epp`. La dependencia va en un solo sentido: los módulos de inspección no importan nada de otros módulos.
 
 ### Frontend
 
@@ -155,21 +172,38 @@ sstInspeccion/
 ├── src/
 │   ├── backend/
 │   │   ├── app.js
-│   │   ├── controllers/
+│   │   ├── server.js
+│   │   ├── config/
+│   │   │   └── database.js
 │   │   ├── db/
+│   │   │   ├── migrate.js
 │   │   │   └── migrations/
-│   │   ├── middlewares/
-│   │   ├── models/
-│   │   ├── services/
-│   │   │   ├── seguimientoEppExcel/
-│   │   │   └── seguimientoSstExcel/
-│   │   ├── utils/
-│   │   └── validators/
+│   │   ├── routes/
+│   │   │   └── index.js
+│   │   ├── modules/
+│   │   │   ├── paginas/
+│   │   │   ├── inspecciones-sst/
+│   │   │   │   ├── validators/
+│   │   │   │   └── excel/
+│   │   │   │       └── hojas/
+│   │   │   ├── inspecciones-epp/
+│   │   │   │   ├── catalogo/
+│   │   │   │   └── excel/
+│   │   │   │       └── hojas/
+│   │   │   ├── aprobaciones/
+│   │   │   ├── estadisticas/
+│   │   │   └── excel/
+│   │   └── shared/
+│   │       ├── middlewares/
+│   │       ├── models/
+│   │       ├── services/
+│   │       └── utils/
 │   └── views/
 │       ├── css/
 │       ├── html/
 │       ├── img/
 │       └── js/
+├── tests/
 ├── package.json
 └── README.md
 ```
@@ -405,7 +439,7 @@ Comprueba que el token exista, corresponda con la inspección esperada y no haya
 
 ## Mantenimiento
 
-1. Identifica si el cambio corresponde a SST, EPP o código compartido.
+1. Identifica si el cambio corresponde a SST, EPP o código compartido, y ubícalo en su módulo (`src/backend/modules/`) o en `src/backend/shared/`.
 2. Verifica las validaciones en frontend y backend.
 3. Prueba las aprobaciones cuando cambien controladores, modelos, PDF o correo.
 4. Prueba ambos módulos cuando se modifiquen servicios compartidos.
