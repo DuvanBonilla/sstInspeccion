@@ -14,7 +14,7 @@ const {
 
 const {
   autorizarAzureEpp,
-} = require("../middlewares/autorizarAzureEpp.middleware");
+} = require("../shared/middlewares/autorizarAzureEpp.middleware");
 
 const router = Router();
 

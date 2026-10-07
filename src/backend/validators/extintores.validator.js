@@ -1,4 +1,4 @@
-const { normalizarTexto } = require("../utils/texto.util");
+const { normalizarTexto } = require("../shared/utils/texto.util");
 const ESTADOS_VALIDOS = new Set(["B", "R", "M", "NC", "NA"]);
 
 const CAMPOS_CONDICION = [

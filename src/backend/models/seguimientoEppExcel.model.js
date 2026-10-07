@@ -1,4 +1,4 @@
-const { pool } = require("../db/pool");
+const { pool } = require("../config/database");
 
 /**
  * Construye los filtros SQL utilizados por el seguimiento EPP.

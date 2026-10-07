@@ -16,13 +16,13 @@ const {
   construirHojaPlanesAccion,
 } = require("./seguimientoEppExcel/planesAccion.service");
 
-const { crearWorkbook, generarBuffer } = require("./excel.service");
+const { crearWorkbook, generarBuffer } = require("../shared/services/excel.service");
 
 const {
   subirArchivoOneDrive,
   descartarCheckoutOneDrive,
   hacerCheckinOneDrive,
-} = require("./graph.service");
+} = require("../shared/services/graph.service");
 
 const {
   construirHojaResumenEpp,

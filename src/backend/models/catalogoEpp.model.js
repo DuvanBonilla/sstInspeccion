@@ -1,4 +1,4 @@
-const { query } = require("../db/pool");
+const { query } = require("../config/database");
 
 /**
  * Consulta todos los elementos activos del catálogo EPP.

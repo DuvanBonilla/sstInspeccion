@@ -1,18 +1,18 @@
-const { leerPayload } = require("../utils/request.utils");
+const { leerPayload } = require("../shared/utils/request.utils");
 
 const {
   guardarInspeccionEnDB,
   obtenerLinksInspeccion,
 } = require("../models/inspeccion.model");
 
-const { subirEvidenciasMultiples } = require("../services/evidencia.service");
+const { subirEvidenciasMultiples } = require("../shared/services/evidencia.service");
 
 const { validarInspeccion } = require("../validators/inspeccion.validator");
 
 const {
   leerContactosAprobacion,
   enviarSolicitudesAprobacion,
-} = require("../services/correoAprobacion.service");
+} = require("../shared/services/correoAprobacion.service");
 
 /**
  * Registra una inspección SST con sus elementos y evidencias.

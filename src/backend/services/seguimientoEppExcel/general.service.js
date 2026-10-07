@@ -1,4 +1,4 @@
-const { obtenerOCrearHoja } = require("../excel.service");
+const { obtenerOCrearHoja } = require("../../shared/services/excel.service");
 
 const COLORES = {
   azulPrincipal: "FF102A5C",

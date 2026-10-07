@@ -21,7 +21,7 @@
   - inspeccion.model.js maneja los datos de la inspección en sí (general +
     secciones); este archivo maneja solo el estado de aprobación.
 */
-const { pool, query } = require("../db/pool");
+const { pool, query } = require("../config/database");
 
 const ROLES = {
   inspector: {

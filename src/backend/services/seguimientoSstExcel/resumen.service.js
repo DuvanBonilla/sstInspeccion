@@ -6,7 +6,7 @@ const {
   obtenerXml,
   reemplazarXml,
   actualizarFilasHojaXml,
-} = require("../../utils/excelXml.util");
+} = require("../../shared/utils/excelXml.util");
 
 const RUTA_HOJA_RESUMEN =
   "xl/worksheets/sheet6.xml";

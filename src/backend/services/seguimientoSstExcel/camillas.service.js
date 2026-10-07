@@ -8,7 +8,7 @@ const {
 
   actualizarFilasHojaXml,
   actualizarRangoTablaXml,
-} = require("../../utils/excelXml.util");
+} = require("../../shared/utils/excelXml.util");
 
 const RUTA_HOJA_CAMILLAS = "xl/worksheets/sheet3.xml";
 

@@ -3,9 +3,9 @@ const AdmZip = require("adm-zip");
 const {
   descargarArchivoOneDrive,
   subirArchivoOneDrive,
-} = require("./graph.service");
+} = require("../shared/services/graph.service");
 
-const { generarBufferExcel } = require("../utils/excelXml.util");
+const { generarBufferExcel } = require("../shared/utils/excelXml.util");
 
 const {
   actualizarExtintores,

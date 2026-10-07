@@ -7,7 +7,7 @@ const {
   reemplazarXml,
   actualizarFilasHojaXml,
   actualizarRangoTablaXml,
-} = require("../../utils/excelXml.util");
+} = require("../../shared/utils/excelXml.util");
 
 const RUTA_HOJA_BOTIQUINES =
   "xl/worksheets/sheet7.xml";

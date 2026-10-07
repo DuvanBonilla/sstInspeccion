@@ -1,25 +1,25 @@
 const {
   normalizarExtintores: normalizarExtintoresSeccion,
   validarExtintores,
-} = require("../validators/extintores.validator");
+} = require("./extintores.validator");
 const {
   normalizarCamillas: normalizarCamillasSeccion,
   validarCamillas,
-} = require("../validators/camillas.validator");
+} = require("./camillas.validator");
 const {
   normalizarSenalizaciones: normalizarSenalizacionesSeccion,
   validarSenalizaciones,
-} = require("../validators/senalizaciones.validator");
+} = require("./senalizaciones.validator");
 const {
   normalizarEquiposTecnologicos: normalizarEquiposTecnologicosSeccion,
   validarEquiposTecnologicos,
-} = require("../validators/equiposTecnologicos.validator");
+} = require("./equiposTecnologicos.validator");
 const {
   normalizarBotiquines: normalizarBotiquinesSeccion,
   validarBotiquines,
-} = require("../validators/botiquines.validator");
+} = require("./botiquines.validator");
 
-const { normalizarTexto } = require("../utils/texto.util");
+const { normalizarTexto } = require("../shared/utils/texto.util");
 
 /**
  * Normaliza y valida la información de una inspección SST.

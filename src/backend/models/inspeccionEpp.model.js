@@ -10,8 +10,8 @@
   - Guardar las evaluaciones de cada trabajador en `detalle_evaluacion_epp`.
   - Ejecutar todo el guardado dentro de una transacción.
 */
-const { normalizarTexto } = require("../utils/texto.util");
-const { pool } = require("../db/pool");
+const { normalizarTexto } = require("../shared/utils/texto.util");
+const { pool } = require("../config/database");
 
 /* =========================================================
    UTILIDADES

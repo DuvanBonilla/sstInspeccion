@@ -25,7 +25,7 @@ const { obtenerInspeccionCompleta } = require("../models/inspeccion.model");
 const {
   subirPdfAOneDrive,
   construirEvidenciasEppDesdeOneDrive,
-} = require("./evidencia.service");
+} = require("../shared/services/evidencia.service");
 const {
   generarPdfSstAprobacion,
 } = require("./pdfInspeccion.service");
@@ -33,7 +33,7 @@ const {
   enviarCorreoPorGraph,
   resolverCorreoDestino,
   construirHtmlCorreo,
-} = require("./correo.service");
+} = require("../shared/services/correo.service");
 const {
   generarPdfEppAprobacion,
 } = require("./pdfInspeccionEpp.service");
@@ -53,7 +53,7 @@ const {
 
 const { calcularResumenEpp } = require("./resumenEpp.service");
 
-const { optimizarPdf } = require("../utils/pdfOptimizer");
+const { optimizarPdf } = require("../shared/utils/pdfOptimizer");
 
 /**
  * Construye la información de los responsables que aprobaron la inspección.

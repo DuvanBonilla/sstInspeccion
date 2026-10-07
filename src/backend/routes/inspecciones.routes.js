@@ -9,7 +9,7 @@
 
 const { Router } = require("express");
 
-const { upload } = require("../middlewares/upload.middleware");
+const { upload } = require("../shared/middlewares/upload.middleware");
 
 const {
   enviarExtintorOneDrive,

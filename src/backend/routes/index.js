@@ -9,12 +9,12 @@
 
 const { Router } = require("express");
 
-const paginasRoutes = require("./paginas.routes");
+const paginasRoutes = require("../modules/paginas/paginas.routes");
 const inspeccionesRoutes = require("./inspecciones.routes");
-const aprobacionesRoutes = require("./aprobaciones.routes");
-const estadisticasRoutes = require("./estadisticas.routes");
+const aprobacionesRoutes = require("../modules/aprobaciones/aprobaciones.routes");
+const estadisticasRoutes = require("../modules/estadisticas/estadisticas.routes");
 const excelRoutes = require("./excel.routes");
-const catalogosRoutes = require("./catalogos.routes");
+const catalogosRoutes = require("../modules/inspecciones-epp/catalogo/catalogoEpp.routes");
 
 const router = Router();
 

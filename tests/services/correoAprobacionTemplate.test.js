@@ -3,7 +3,7 @@ const assert = require("node:assert/strict");
 
 const {
   construirHtmlSolicitudAprobacion,
-} = require("../../src/backend/services/correoAprobacion.template");
+} = require("../../src/backend/shared/services/correoAprobacion.template");
 
 test("genera una solicitud SST con su enlace personal", () => {
   const html = construirHtmlSolicitudAprobacion({

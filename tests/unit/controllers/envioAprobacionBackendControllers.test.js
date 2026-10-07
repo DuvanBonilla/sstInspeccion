@@ -50,7 +50,7 @@ test("SST genera links públicos y devuelve el estado del envío", async () => {
   let datosEnvio;
 
   const controlador = cargarConMocks(rutaControlador, {
-    "../utils/request.utils": {
+    "../shared/utils/request.utils": {
       leerPayload() {
         return {};
       },
@@ -73,7 +73,7 @@ test("SST genera links públicos y devuelve el estado del envío", async () => {
       },
     },
 
-    "../services/evidencia.service": {
+    "../shared/services/evidencia.service": {
       async subirEvidenciasMultiples() {
         return {};
       },
@@ -100,7 +100,7 @@ test("SST genera links públicos y devuelve el estado del envío", async () => {
       },
     },
 
-    "../services/correoAprobacion.service": {
+    "../shared/services/correoAprobacion.service": {
       leerContactosAprobacion() {
         return {
           jefe: {
@@ -176,7 +176,7 @@ test("EPP genera links públicos y conserva tokens y estado", async () => {
   let datosEnvio;
 
   const controlador = cargarConMocks(rutaControlador, {
-    "../utils/request.utils": {
+    "../shared/utils/request.utils": {
       leerPayload() {
         return {};
       },
@@ -219,19 +219,19 @@ test("EPP genera links públicos y conserva tokens y estado", async () => {
       },
     },
 
-    "../services/evidencia.service": {
+    "../shared/services/evidencia.service": {
       async uploadEvidenceToOneDrive() {
         return {};
       },
     },
 
-    "../utils/fechaEvidencia": {
+    "../shared/utils/fechaEvidencia": {
       async resolverFechaEvidencia() {
         return null;
       },
     },
 
-    "../services/correoAprobacion.service": {
+    "../shared/services/correoAprobacion.service": {
       leerContactosAprobacion() {
         return {
           jefe: {

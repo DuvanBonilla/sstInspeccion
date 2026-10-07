@@ -1,4 +1,4 @@
-const { leerPayload } = require("../utils/request.utils");
+const { leerPayload } = require("../shared/utils/request.utils");
 
 const {
   validarInspeccionEpp,
@@ -7,14 +7,14 @@ const {
 
 const { guardarInspeccionEppEnDB } = require("../models/inspeccionEpp.model");
 
-const { uploadEvidenceToOneDrive } = require("../services/evidencia.service");
+const { uploadEvidenceToOneDrive } = require("../shared/services/evidencia.service");
 
-const { resolverFechaEvidencia } = require("../utils/fechaEvidencia");
+const { resolverFechaEvidencia } = require("../shared/utils/fechaEvidencia");
 
 const {
   leerContactosAprobacion,
   enviarSolicitudesAprobacion,
-} = require("../services/correoAprobacion.service");
+} = require("../shared/services/correoAprobacion.service");
 
 /**
  * Obtiene los archivos adjuntos recibidos en la solicitud.

@@ -6,7 +6,7 @@ const {
   aplicarFormatoFecha,
   aplicarEstiloEncabezado,
   aplicarFormatoCuerpo,
-} = require("../excel.service");
+} = require("../../shared/services/excel.service");
 
 /**
  * Construye la hoja principal de inspecciones EPP dentro del libro de seguimiento.

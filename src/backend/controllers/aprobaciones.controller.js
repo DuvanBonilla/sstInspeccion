@@ -56,7 +56,7 @@ const { obtenerInspeccionCompleta } = require("../models/inspeccion.model");
 const {
   construirEvidenciasDesdeOneDrive,
   construirEvidenciasEppDesdeOneDrive,
-} = require("../services/evidencia.service");
+} = require("../shared/services/evidencia.service");
 const {
   generarPdfSstAprobacion,
 } = require("../services/pdfInspeccion.service");

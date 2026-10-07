@@ -1,4 +1,4 @@
-const { normalizarTexto } = require("../utils/texto.util");
+const { normalizarTexto } = require("../shared/utils/texto.util");
 
 const TIPOS_IMAGEN_PERMITIDOS = new Set([
   "image/jpeg",

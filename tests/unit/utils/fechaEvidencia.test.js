@@ -12,7 +12,7 @@ const {
   extraerFechaExif,
   formatearFechaMs,
   resolverFechaEvidencia,
-} = require("../../../src/backend/utils/fechaEvidencia");
+} = require("../../../src/backend/shared/utils/fechaEvidencia");
 
 function crearFechaLocal() {
   return new Date(2026, 8, 11, 8, 5);

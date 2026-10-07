@@ -1,4 +1,4 @@
-const { enviarCorreoPorGraph } = require("./correo.service");
+const { enviarCorreoPorGraph } = require("../shared/services/correo.service");
 
 const {
   construirHtmlSolicitudAprobacion,

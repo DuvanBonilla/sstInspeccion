@@ -9,7 +9,7 @@ const assert = require("node:assert/strict");
 
 const {
   leerPayload,
-} = require("../../../src/backend/utils/request.utils");
+} = require("../../../src/backend/shared/utils/request.utils");
 
 test("leerPayload convierte un payload JSON en un objeto", () => {
   const req = {

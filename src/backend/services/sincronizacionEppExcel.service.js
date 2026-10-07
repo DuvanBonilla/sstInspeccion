@@ -1,6 +1,6 @@
 const ExcelJS = require("exceljs");
 
-const { descargarArchivoOneDrive } = require("./graph.service");
+const { descargarArchivoOneDrive } = require("../shared/services/graph.service");
 
 const { obtenerRutaExcelEpp } = require("./seguimientoEppExcel/ruta.service");
 

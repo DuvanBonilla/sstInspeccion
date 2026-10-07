@@ -1,12 +1,12 @@
-const { leerPayload } = require("../utils/request.utils");
-const { subirPdfAOneDrive } = require("../services/evidencia.service");
+const { leerPayload } = require("../shared/utils/request.utils");
+const { subirPdfAOneDrive } = require("../shared/services/evidencia.service");
 const {
   enviarCorreoPorGraph,
   resolverCorreoDestino,
   construirHtmlCorreo,
-} = require("../services/correo.service");
+} = require("../shared/services/correo.service");
 
-const { optimizarPdf } = require("../utils/pdfOptimizer");
+const { optimizarPdf } = require("../shared/utils/pdfOptimizer");
 const {
   extraerEvidenciasPorIndex,
   crearPdfInspeccionExtintor,

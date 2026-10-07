@@ -1,9 +1,9 @@
 const path = require("node:path");
 const PDFDocument = require("pdfkit");
 
-const { construirEvidenciasDesdeOneDrive } = require("./evidencia.service");
+const { construirEvidenciasDesdeOneDrive } = require("../shared/services/evidencia.service");
 
-const { resolverFechaEvidencia } = require("../utils/fechaEvidencia");
+const { resolverFechaEvidencia } = require("../shared/utils/fechaEvidencia");
 
 const CONFIG_EVIDENCIA_SST = {
   // Cajas normales de evidencia

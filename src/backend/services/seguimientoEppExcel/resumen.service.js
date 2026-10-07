@@ -4,7 +4,7 @@ const {
   obtenerOCrearHoja,
   configurarColumnas,
   aplicarFormatoFecha,
-} = require("../excel.service");
+} = require("../../shared/services/excel.service");
 
 /**
  * Normaliza una fecha a su representación local sin componente de hora.

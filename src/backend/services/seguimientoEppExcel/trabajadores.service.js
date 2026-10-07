@@ -7,7 +7,7 @@ const {
   aplicarEstiloEncabezado,
   aplicarFormatoCuerpo,
   aplicarColorPorValor,
-} = require("../excel.service");
+} = require("../../shared/services/excel.service");
 
 const { COLORES_RESULTADO } = require("./estilos.service");
 

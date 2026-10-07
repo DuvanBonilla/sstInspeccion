@@ -2,7 +2,7 @@ const {
   obtenerXml,
   reemplazarXml,
   escaparXml,
-} = require("../../utils/excelXml.util");
+} = require("../../shared/utils/excelXml.util");
 
 const RUTA_HOJA_GENERAL =
   "xl/worksheets/sheet1.xml";

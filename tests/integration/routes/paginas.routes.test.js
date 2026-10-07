@@ -15,7 +15,7 @@ const assert = require("node:assert/strict");
 const express = require("express");
 
 const paginasRoutes = require(
-  "../../../src/backend/routes/paginas.routes"
+  "../../../src/backend/modules/paginas/paginas.routes"
 );
 
 let server;

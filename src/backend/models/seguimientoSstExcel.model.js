@@ -1,4 +1,4 @@
-const { query } = require("../db/pool");
+const { query } = require("../config/database");
 
 /**
  * Consulta los extintores pertenecientes a inspecciones SST enviadas.
