@@ -13,25 +13,21 @@ const {
   diagnosticarTablaExtintores: diagnosticarTablaExtintoresModulo,
 } = require("./hojas/extintores.service");
 
-const {
-  actualizarCamillas,
-} = require("./hojas/camillas.service");
+const { actualizarCamillas } = require("./hojas/camillas.service");
 
-const {
-  actualizarSenalizaciones,
-} = require("./hojas/senalizaciones.service");
+const { actualizarSenalizaciones } = require("./hojas/senalizaciones.service");
 
 const {
   actualizarEquiposTecnologicos,
 } = require("./hojas/equiposTecnologicos.service");
 
-const {
-  actualizarBotiquines,
-} = require("./hojas/botiquines.service");
+const { actualizarBotiquines } = require("./hojas/botiquines.service");
 
 const { actualizarResumen } = require("./hojas/resumen.service");
 
 const { actualizarGeneral } = require("./hojas/general.service");
+
+const { actualizarInicio } = require("./hojas/inicio.service");
 
 const CONTENT_TYPE_XLSM = "application/vnd.ms-excel.sheet.macroEnabled.12";
 
@@ -65,6 +61,11 @@ function obtenerRutaExcelSst() {
 
 async function cargarExcelSst() {
   const rutaExcel = obtenerRutaExcelSst();
+
+  console.log("[Excel SST] Configuración:", {
+    usuario: JSON.stringify(process.env.ONEDRIVE_USER_ID),
+    ruta: JSON.stringify(rutaExcel),
+  });
 
   const buffer = await descargarArchivoOneDrive(rutaExcel);
 
@@ -212,6 +213,8 @@ async function actualizarExcelSeguimientoSstEnMemoria() {
 
   const general = await actualizarGeneral(zip);
 
+  const inicio = actualizarInicio(zip);
+
   const macrosConservadas = validarMacrosExcel(zip);
 
   return {
@@ -232,6 +235,8 @@ async function actualizarExcelSeguimientoSstEnMemoria() {
     resumen,
 
     general,
+
+    inicio,
   };
 }
 

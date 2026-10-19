@@ -10,6 +10,8 @@ const {
   actualizarRangoTablaXml,
 } = require("../../../../shared/utils/excelXml.util");
 
+const { aplicarFormatoHojaDatos } = require("./formatoHojas.service");
+
 const RUTA_HOJA_SENALIZACIONES =
   "xl/worksheets/sheet4.xml";
 
@@ -171,6 +173,14 @@ async function actualizarSenalizaciones(zip) {
     RUTA_TABLA_SENALIZACIONES,
     tablaActualizada.xml,
   );
+
+  aplicarFormatoHojaDatos(zip, {
+    ruta: RUTA_HOJA_SENALIZACIONES,
+    ultimaColumna: ULTIMA_COLUMNA_SENALIZACIONES,
+    columnasFecha: ["C"],
+    calificaciones: { desde: "M", hasta: "N" },
+    filaFinalCalificaciones: 1000,
+  });
 
   return {
     totalSenalizaciones:

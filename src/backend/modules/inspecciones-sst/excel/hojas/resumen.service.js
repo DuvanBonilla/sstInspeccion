@@ -8,6 +8,8 @@ const {
   actualizarFilasHojaXml,
 } = require("../../../../shared/utils/excelXml.util");
 
+const { aplicarFormatoFechaColumnas } = require("./formatoHojas.service");
+
 const RUTA_HOJA_RESUMEN =
   "xl/worksheets/sheet6.xml";
 
@@ -120,6 +122,8 @@ async function actualizarResumen(zip) {
     RUTA_HOJA_RESUMEN,
     hojaXmlActualizada,
   );
+
+  aplicarFormatoFechaColumnas(zip, RUTA_HOJA_RESUMEN, ["B"]);
 
   return {
     totalInspecciones:

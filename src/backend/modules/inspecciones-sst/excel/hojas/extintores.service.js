@@ -10,6 +10,8 @@ const {
   actualizarRangoTablaXml,
 } = require("../../../../shared/utils/excelXml.util");
 
+const { aplicarFormatoHojaDatos } = require("./formatoHojas.service");
+
 const RUTA_HOJA_EXTINTORES = "xl/worksheets/sheet2.xml";
 
 const RUTA_TABLA_EXTINTORES = "xl/tables/table1.xml";
@@ -269,6 +271,14 @@ async function actualizarExtintores(zip) {
   reemplazarXml(zip, RUTA_HOJA_EXTINTORES, hojaActualizada);
 
   reemplazarXml(zip, RUTA_TABLA_EXTINTORES, tablaActualizada.xml);
+
+  aplicarFormatoHojaDatos(zip, {
+    ruta: RUTA_HOJA_EXTINTORES,
+    ultimaColumna: ULTIMA_COLUMNA_EXTINTORES,
+    columnasFecha: ["C"],
+    calificaciones: { desde: "S", hasta: "AK" },
+    filaFinalCalificaciones: 1500,
+  });
 
   return {
     totalExtintores: filasExtintores.length,

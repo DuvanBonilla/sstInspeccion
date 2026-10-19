@@ -9,6 +9,8 @@ const {
   actualizarRangoTablaXml,
 } = require("../../../../shared/utils/excelXml.util");
 
+const { aplicarFormatoHojaDatos } = require("./formatoHojas.service");
+
 const RUTA_HOJA_BOTIQUINES =
   "xl/worksheets/sheet7.xml";
 
@@ -168,6 +170,14 @@ async function actualizarBotiquines(zip) {
     RUTA_TABLA_BOTIQUINES,
     tablaXmlActualizada,
   );
+
+  aplicarFormatoHojaDatos(zip, {
+    ruta: RUTA_HOJA_BOTIQUINES,
+    ultimaColumna: ULTIMA_COLUMNA_BOTIQUINES,
+    columnasFecha: ["D", "P", "R"],
+    calificaciones: { desde: "O", hasta: "O" },
+    filaFinalCalificaciones: 3000,
+  });
 
   return {
     totalBotiquinItems: filas.length,

@@ -9,6 +9,8 @@ const {
   actualizarRangoTablaXml,
 } = require("../../../../shared/utils/excelXml.util");
 
+const { aplicarFormatoHojaDatos } = require("./formatoHojas.service");
+
 const RUTA_HOJA_EQUIPOS_TECNOLOGICOS = "xl/worksheets/sheet5.xml";
 
 const RUTA_TABLA_EQUIPOS_TECNOLOGICOS = "xl/tables/table4.xml";
@@ -107,6 +109,14 @@ async function actualizarEquiposTecnologicos(zip) {
   reemplazarXml(zip, RUTA_HOJA_EQUIPOS_TECNOLOGICOS, hojaXmlActualizada);
 
   reemplazarXml(zip, RUTA_TABLA_EQUIPOS_TECNOLOGICOS, tablaXmlActualizada);
+
+  aplicarFormatoHojaDatos(zip, {
+    ruta: RUTA_HOJA_EQUIPOS_TECNOLOGICOS,
+    ultimaColumna: ULTIMA_COLUMNA_EQUIPOS_TECNOLOGICOS,
+    columnasFecha: ["C"],
+    calificaciones: { desde: "M", hasta: "N" },
+    filaFinalCalificaciones: 1000,
+  });
 
   return {
     totalEquiposTecnologicos: filas.length,

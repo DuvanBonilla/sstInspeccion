@@ -10,6 +10,8 @@ const {
   actualizarRangoTablaXml,
 } = require("../../../../shared/utils/excelXml.util");
 
+const { aplicarFormatoHojaDatos } = require("./formatoHojas.service");
+
 const RUTA_HOJA_CAMILLAS = "xl/worksheets/sheet3.xml";
 
 const RUTA_TABLA_CAMILLAS = "xl/tables/table2.xml";
@@ -139,6 +141,14 @@ async function actualizarCamillas(zip) {
   reemplazarXml(zip, RUTA_HOJA_CAMILLAS, hojaActualizada);
 
   reemplazarXml(zip, RUTA_TABLA_CAMILLAS, tablaActualizada.xml);
+
+  aplicarFormatoHojaDatos(zip, {
+    ruta: RUTA_HOJA_CAMILLAS,
+    ultimaColumna: ULTIMA_COLUMNA_CAMILLAS,
+    columnasFecha: ["C"],
+    calificaciones: { desde: "L", hasta: "R" },
+    filaFinalCalificaciones: 1000,
+  });
 
   return {
     totalCamillas: filasCamillas.length,
