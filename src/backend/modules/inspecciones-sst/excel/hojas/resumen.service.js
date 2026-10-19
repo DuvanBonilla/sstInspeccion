@@ -10,8 +10,11 @@ const {
 
 const { aplicarFormatoFechaColumnas } = require("./formatoHojas.service");
 
-const RUTA_HOJA_RESUMEN =
-  "xl/worksheets/sheet6.xml";
+const {
+  obtenerRutaHoja,
+} = require("../rutasLibroExcel");
+
+const NOMBRE_HOJA_RESUMEN = "_RESUMEN";
 
 const ULTIMA_COLUMNA_RESUMEN = "F";
 
@@ -93,9 +96,11 @@ async function actualizarResumen(zip) {
   const filas =
     await obtenerFilasResumenSstAprobadas();
 
+  const rutaHoja = obtenerRutaHoja(zip, NOMBRE_HOJA_RESUMEN);
+
   const hojaXml = obtenerXml(
     zip,
-    RUTA_HOJA_RESUMEN,
+    rutaHoja,
   );
 
   const hojaXmlActualizada =
@@ -119,11 +124,11 @@ async function actualizarResumen(zip) {
 
   reemplazarXml(
     zip,
-    RUTA_HOJA_RESUMEN,
+    rutaHoja,
     hojaXmlActualizada,
   );
 
-  aplicarFormatoFechaColumnas(zip, RUTA_HOJA_RESUMEN, ["B"]);
+  aplicarFormatoFechaColumnas(zip, rutaHoja, ["B"]);
 
   return {
     totalInspecciones:

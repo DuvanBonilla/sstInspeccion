@@ -29,6 +29,8 @@ const { actualizarGeneral } = require("./hojas/general.service");
 
 const { actualizarInicio } = require("./hojas/inicio.service");
 
+const { corregirEncabezados } = require("./hojas/encabezados.service");
+
 const CONTENT_TYPE_XLSM = "application/vnd.ms-excel.sheet.macroEnabled.12";
 
 /**
@@ -209,6 +211,8 @@ async function actualizarExcelSeguimientoSstEnMemoria() {
 
   const botiquines = await actualizarBotiquines(zip);
 
+  const encabezados = corregirEncabezados(zip);
+
   const resumen = await actualizarResumen(zip);
 
   const general = await actualizarGeneral(zip);
@@ -235,6 +239,8 @@ async function actualizarExcelSeguimientoSstEnMemoria() {
     resumen,
 
     general,
+
+    encabezados,
 
     inicio,
   };
@@ -284,6 +290,10 @@ async function actualizarExcelSeguimientoSstEnOneDrive() {
     resumen: resultado.resumen,
 
     general: resultado.general,
+
+    encabezados: resultado.encabezados,
+
+    inicio: resultado.inicio,
   };
 }
 

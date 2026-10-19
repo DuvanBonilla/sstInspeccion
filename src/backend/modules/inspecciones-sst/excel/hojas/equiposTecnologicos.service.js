@@ -11,9 +11,12 @@ const {
 
 const { aplicarFormatoHojaDatos } = require("./formatoHojas.service");
 
-const RUTA_HOJA_EQUIPOS_TECNOLOGICOS = "xl/worksheets/sheet5.xml";
+const {
+  obtenerRutaHoja,
+  obtenerRutaTabla,
+} = require("../rutasLibroExcel");
 
-const RUTA_TABLA_EQUIPOS_TECNOLOGICOS = "xl/tables/table4.xml";
+const NOMBRE_HOJA_EQUIPOS_TECNOLOGICOS = "Equipo_T.A.D.E";
 
 const ULTIMA_COLUMNA_EQUIPOS_TECNOLOGICOS = "Q";
 
@@ -87,9 +90,13 @@ async function obtenerFilasEquiposTecnologicosSstAprobados() {
 async function actualizarEquiposTecnologicos(zip) {
   const filas = await obtenerFilasEquiposTecnologicosSstAprobados();
 
-  const hojaXml = obtenerXml(zip, RUTA_HOJA_EQUIPOS_TECNOLOGICOS);
+  const rutaHoja = obtenerRutaHoja(zip, NOMBRE_HOJA_EQUIPOS_TECNOLOGICOS);
 
-  const tablaXml = obtenerXml(zip, RUTA_TABLA_EQUIPOS_TECNOLOGICOS);
+  const rutaTabla = obtenerRutaTabla(zip, rutaHoja);
+
+  const hojaXml = obtenerXml(zip, rutaHoja);
+
+  const tablaXml = obtenerXml(zip, rutaTabla);
 
   const hojaXmlActualizada = actualizarFilasHojaXml({
     hojaXml,
@@ -106,16 +113,16 @@ async function actualizarEquiposTecnologicos(zip) {
     cantidadFilas: filas.length,
   });
 
-  reemplazarXml(zip, RUTA_HOJA_EQUIPOS_TECNOLOGICOS, hojaXmlActualizada);
+  reemplazarXml(zip, rutaHoja, hojaXmlActualizada);
 
-  reemplazarXml(zip, RUTA_TABLA_EQUIPOS_TECNOLOGICOS, tablaXmlActualizada);
+  reemplazarXml(zip, rutaTabla, tablaXmlActualizada);
 
   aplicarFormatoHojaDatos(zip, {
-    ruta: RUTA_HOJA_EQUIPOS_TECNOLOGICOS,
+    ruta: rutaHoja,
     ultimaColumna: ULTIMA_COLUMNA_EQUIPOS_TECNOLOGICOS,
     columnasFecha: ["C"],
     calificaciones: { desde: "M", hasta: "N" },
-    filaFinalCalificaciones: 1000,
+    filaFinal: 1000,
   });
 
   return {

@@ -1,3 +1,15 @@
+const fs = require("fs");
+
+const path = require("path");
+
+const {
+  buscarRutaHoja,
+  leerRelaciones,
+  normalizarDestino,
+} = require("../rutasLibroExcel");
+
+const { leerTextoCelda } = require("./encabezados.service");
+
 const {
   obtenerXml,
   reemplazarXml,
@@ -12,7 +24,11 @@ const {
   RegistroEstilos,
 } = require("../seguimientoSstExcel.estilos");
 
-const { construirGraficoXml, construirDibujoXml } = require("./inicio.grafico");
+const {
+  COLUMNAS_DATOS_GRAFICO,
+  construirGraficoXml,
+  construirDibujoXml,
+} = require("./inicio.grafico");
 
 const { LienzoHoja } = require("./inicio.lienzo");
 
@@ -35,26 +51,34 @@ const FILAS_ALERTA = 10;
 const FILAS_ULTIMAS_INSPECCIONES = 10;
 
 /**
+ * La hoja se dibuja en una cuadrícula de 25 columnas del mismo ancho (B a Z):
+ * un bloque izquierdo de 12 columnas, una columna central y un bloque derecho
+ * de 12. Las cinco tarjetas de indicadores ocupan 5 columnas cada una.
+ */
+
+const ULTIMA_COLUMNA = "Z";
+
+/**
  * Columnas ocultas de la hoja Inicio que calculan, fila por fila, el estado de
  * cada registro de las hojas de datos. La fila auxiliar coincide con la fila
  * de origen, por lo que `ROW()` identifica el registro.
  */
 
 const AUXILIARES = {
-  extintorDias: "AA",
-  extintorResultado: "AB",
-  extintorEstado: "AC",
-  extintorClave: "AD",
-  botiquinFaltante: "AF",
-  botiquinDias: "AG",
-  botiquinResultado: "AH",
-  botiquinEstado: "AI",
-  botiquinClave: "AJ",
-  camillaResultado: "AL",
-  senalResultado: "AN",
-  equipoResultado: "AP",
-  indiceAlertaExtintor: "AR",
-  indiceAlertaBotiquin: "AS",
+  extintorDias: "AH",
+  extintorResultado: "AI",
+  extintorEstado: "AJ",
+  extintorClave: "AK",
+  botiquinFaltante: "AL",
+  botiquinDias: "AM",
+  botiquinResultado: "AN",
+  botiquinEstado: "AO",
+  botiquinClave: "AP",
+  camillaResultado: "AQ",
+  senalResultado: "AR",
+  equipoResultado: "AS",
+  indiceAlertaExtintor: "AT",
+  indiceAlertaBotiquin: "AU",
 };
 
 const BORDE = { estilo: "thin", color: COLORES.borde };
@@ -94,7 +118,7 @@ const ESTILOS = {
     alineacion: { horizontal: "center" },
   },
   icono: {
-    fuente: { nombre: FUENTES.iconos, tamano: 22 },
+    fuente: { nombre: FUENTES.iconos, tamano: 18 },
     alineacion: { horizontal: "center", vertical: "center" },
   },
   iconoGrande: {
@@ -155,11 +179,11 @@ function dibujarPanel(lienzo, rango, referenciaTitulo, titulo) {
 function dibujarEncabezado(lienzo) {
   lienzo.alto(2, 34).alto(3, 20);
 
-  lienzo.estilo("B2:R3", ESTILOS.banda);
+  lienzo.estilo(`B2:${ULTIMA_COLUMNA}3`, ESTILOS.banda);
 
   lienzo.texto("B2", "TABLERO DE ELEMENTOS DE EMERGENCIA", ESTILOS.titulo);
 
-  lienzo.texto("R2", "SISTEMA DE GESTIÓN SST", ESTILOS.sistema);
+  lienzo.texto(`${ULTIMA_COLUMNA}2`, "SISTEMA DE GESTIÓN SST", ESTILOS.sistema);
 
   lienzo.texto(
     "B3",
@@ -169,19 +193,19 @@ function dibujarEncabezado(lienzo) {
 
   lienzo.texto("B5", "Fecha de corte", ESTILOS.etiquetaMeta);
 
-  lienzo.combinar("D5:E5").formula("D5", "TODAY()", { ...ESTILOS.valorMeta, formato: FORMATOS.fecha });
+  lienzo.combinar("E5:F5").formula("E5", "TODAY()", { ...ESTILOS.valorMeta, formato: FORMATOS.fecha });
 
-  lienzo.texto("F5", "Última inspección", ESTILOS.etiquetaMeta);
+  lienzo.texto("G5", "Última inspección", ESTILOS.etiquetaMeta);
 
-  lienzo.combinar("H5:I5").formula(
-    "H5",
+  lienzo.combinar("J5:K5").formula(
+    "J5",
     'IFERROR(IF(MAX(_RESUMEN!B2:B10000)=0,"—",MAX(_RESUMEN!B2:B10000)),"—")',
     { ...ESTILOS.valorMeta, formato: FORMATOS.fecha },
   );
 
-  lienzo.texto("K5", "Inspecciones registradas", ESTILOS.etiquetaMeta);
+  lienzo.texto("O5", "Inspecciones registradas", ESTILOS.etiquetaMeta);
 
-  lienzo.combinar("N5:O5").formula("N5", "COUNTA(_RESUMEN!A2:A10000)", ESTILOS.valorMeta);
+  lienzo.combinar("S5:T5").formula("S5", "COUNTA(_RESUMEN!A2:A10000)", ESTILOS.valorMeta);
 }
 
 /**
@@ -194,14 +218,14 @@ function dibujarNavegacion(lienzo) {
   lienzo.alto(6, 22);
 
   const botones = [
-    { rango: "B6:C6", texto: "Extintores", hoja: "Extintores" },
-    { rango: "D6:E6", texto: "Botiquines", hoja: "Botiquin" },
-    { rango: "F6:G6", texto: "Camillas", hoja: "Camillas" },
-    { rango: "H6:I6", texto: "Señalización", hoja: "Señalizacion" },
-    { rango: "K6:L6", texto: "Equipos", hoja: "Equipo_T.A.D.E" },
-    { rango: "M6:N6", texto: "Buscar por ID", hoja: "General" },
+    { rango: "B6:D6", texto: "Extintores", hoja: "Extintores" },
+    { rango: "E6:G6", texto: "Botiquines", hoja: "Botiquin" },
+    { rango: "H6:J6", texto: "Camillas", hoja: "Camillas" },
+    { rango: "K6:M6", texto: "Señalización", hoja: "Señalizacion" },
+    { rango: "O6:Q6", texto: "Equipos", hoja: "Equipo_T.A.D.E" },
+    { rango: "R6:T6", texto: "Buscar por ID", hoja: "General" },
     {
-      rango: "O6:Q6",
+      rango: "U6:X6",
       texto: "Datos del aplicativo",
       hoja: "Extintores",
       estilo: ESTILOS.botonDatos,
@@ -220,13 +244,20 @@ function dibujarNavegacion(lienzo) {
 }
 
 /**
- * Dibuja una tarjeta de indicador de cuatro columnas en las filas 8 a 12.
+ * Dibuja una tarjeta de indicador en las filas 8 a 12.
+ *
+ * La primera columna de la tarjeta lleva el ícono; la cifra ocupa el resto del
+ * ancho de la fila 9 y los detalles se extienden por toda la tarjeta.
+ *
+ * @param {LienzoHoja} lienzo Hoja en construcción.
+ * @param {{primera: string, ultima: string}} columnas Columnas inicial y final.
+ * @param {Object} contenido Textos y fórmulas de la tarjeta.
  */
 
-function dibujarTarjeta(lienzo, columnas, contenido) {
-  const [c1, c2, , c4] = columnas;
+function dibujarTarjeta(lienzo, { primera, ultima }, contenido) {
+  const segunda = String.fromCharCode(primera.charCodeAt(0) + 1);
 
-  const rango = `${c1}8:${c4}12`;
+  const rango = `${primera}8:${ultima}12`;
 
   lienzo.estilo(rango, ESTILOS.tarjeta).contorno(rango, {
     superior: BORDE_ACENTO,
@@ -235,17 +266,19 @@ function dibujarTarjeta(lienzo, columnas, contenido) {
     inferior: BORDE,
   });
 
-  lienzo.combinar(`${c2}8:${c4}8`).texto(`${c2}8`, contenido.etiqueta, ESTILOS.etiquetaTarjeta);
+  lienzo.combinar(`${segunda}8:${ultima}8`).texto(`${segunda}8`, contenido.etiqueta, ESTILOS.etiquetaTarjeta);
 
-  lienzo.texto(`${c1}9`, contenido.icono, ESTILOS.icono);
+  if (contenido.icono) {
+    lienzo.texto(`${primera}9`, contenido.icono, ESTILOS.icono);
+  }
 
-  lienzo.combinar(`${c2}9:${c4}9`).formula(`${c2}9`, contenido.cifra, ESTILOS.cifra);
+  lienzo.combinar(`${segunda}9:${ultima}9`).formula(`${segunda}9`, contenido.cifra, ESTILOS.cifra);
 
-  lienzo.combinar(`${c1}10:${c4}10`).formula(`${c1}10`, contenido.detalle1, ESTILOS.detalle);
+  lienzo.combinar(`${primera}10:${ultima}10`).formula(`${primera}10`, contenido.detalle1, ESTILOS.detalle);
 
-  lienzo.combinar(`${c1}11:${c4}11`).formula(`${c1}11`, contenido.detalle2, ESTILOS.detalle);
+  lienzo.combinar(`${primera}11:${ultima}11`).formula(`${primera}11`, contenido.detalle2, ESTILOS.detalle);
 
-  lienzo.combinar(`${c1}12:${c4}12`).formula(`${c1}12`, contenido.conformidad, ESTILOS.conformidad);
+  lienzo.combinar(`${primera}12:${ultima}12`).formula(`${primera}12`, contenido.conformidad, ESTILOS.conformidad);
 }
 
 function rangoAux(columna, limite) {
@@ -256,13 +289,24 @@ function contar(columna, limite, valor) {
   return `COUNTIF(${rangoAux(columna, limite)},"${valor}")`;
 }
 
+/**
+ * Dibuja las cinco tarjetas de indicadores. Ocupan todo el ancho del tablero
+ * en el mismo orden que los botones de navegación: la tercera abarca la
+ * columna separadora central, de modo que quedan dos tarjetas a cada lado.
+ */
+
 function dibujarIndicadores(lienzo) {
   lienzo.alto(9, 36);
 
-  const { extintorEstado, botiquinEstado, camillaResultado, senalResultado } =
-    AUXILIARES;
+  const {
+    extintorEstado,
+    botiquinEstado,
+    camillaResultado,
+    senalResultado,
+    equipoResultado,
+  } = AUXILIARES;
 
-  dibujarTarjeta(lienzo, ["B", "C", "D", "E"], {
+  dibujarTarjeta(lienzo, { primera: "B", ultima: "F" }, {
     etiqueta: "EXTINTORES",
     icono: "🧯",
     cifra: "COUNTA(Extintores!J2:J10000)",
@@ -277,9 +321,9 @@ function dibujarIndicadores(lienzo) {
       "/COUNTA(Extintores!J2:J10000),0)",
   });
 
-  dibujarTarjeta(lienzo, ["F", "G", "H", "I"], {
+  dibujarTarjeta(lienzo, { primera: "G", ultima: "K" }, {
     etiqueta: "BOTIQUINES",
-    icono: "🩹",
+    icono: "",
     cifra: "COUNTIF(Botiquin!C2:C10000,1)",
     detalle1: `"Insumos conformes: "&${contar(botiquinEstado, LIMITES.botiquin, "Conforme")}`,
     detalle2:
@@ -290,9 +334,9 @@ function dibujarIndicadores(lienzo) {
       "/COUNTA(Botiquin!L2:L10000),0)",
   });
 
-  dibujarTarjeta(lienzo, ["K", "L", "M", "N"], {
+  dibujarTarjeta(lienzo, { primera: "L", ultima: "P" }, {
     etiqueta: "CAMILLAS",
-    icono: "🚑",
+    icono: "",
     cifra: "COUNTA(Camillas!J2:J10000)",
     detalle1: `"Conformes: "&${contar(camillaResultado, LIMITES.camillas, "Conforme")}`,
     detalle2:
@@ -303,7 +347,7 @@ function dibujarIndicadores(lienzo) {
       "/COUNTA(Camillas!J2:J10000),0)",
   });
 
-  dibujarTarjeta(lienzo, ["O", "P", "Q", "R"], {
+  dibujarTarjeta(lienzo, { primera: "Q", ultima: "U" }, {
     etiqueta: "SEÑALES INSTALADAS",
     icono: "⚠️",
     cifra: "SUM(Señalizacion!L2:L10000)",
@@ -315,6 +359,19 @@ function dibujarIndicadores(lienzo) {
       `IFERROR(${contar(senalResultado, LIMITES.senalizacion, "Conforme")}` +
       "/COUNTA(Señalizacion!J2:J10000),0)",
   });
+
+  dibujarTarjeta(lienzo, { primera: "V", ultima: "Z" }, {
+    etiqueta: "EQUIPOS T.A.D.E",
+    icono: "📡",
+    cifra: "COUNTA('Equipo_T.A.D.E'!J2:J10000)",
+    detalle1:
+      `"Conformes: "&${contar(equipoResultado, LIMITES.equipos, "Conforme")}` +
+      `&"   Obs.: "&${contar(equipoResultado, LIMITES.equipos, "Con observaciones")}`,
+    detalle2: `"No conformes: "&${contar(equipoResultado, LIMITES.equipos, "No conforme")}`,
+    conformidad:
+      `IFERROR(${contar(equipoResultado, LIMITES.equipos, "Conforme")}` +
+      "/COUNTA('Equipo_T.A.D.E'!J2:J10000),0)",
+  });
 }
 
 /**
@@ -323,12 +380,14 @@ function dibujarIndicadores(lienzo) {
  */
 
 function dibujarEstadoGeneral(lienzo) {
-  dibujarPanel(lienzo, "B14:I27", "B14", "Estado general por tipo de elemento");
+  dibujarPanel(lienzo, "B14:M27", "B14", "Estado general por tipo de elemento");
 
-  lienzo.texto("U13", "Datos del gráfico (desde la hoja General)", ESTILOS.datosGrafico);
+  const [seccion] = COLUMNAS_DATOS_GRAFICO;
+
+  lienzo.texto(`${seccion}13`, "Datos del gráfico (desde la hoja General)", ESTILOS.datosGrafico);
 
   ["Sección", "Bueno", "Regular", "Malo", "No cumple"].forEach((texto, indice) => {
-    lienzo.texto(`${"UVWXY"[indice]}14`, texto, ESTILOS.datosGrafico);
+    lienzo.texto(`${COLUMNAS_DATOS_GRAFICO[indice]}14`, texto, ESTILOS.datosGrafico);
   });
 
   for (let fila = 15; fila <= 19; fila += 1) {
@@ -336,7 +395,7 @@ function dibujarEstadoGeneral(lienzo) {
 
     ["B", "F", "G", "H", "I"].forEach((columnaGeneral, indice) => {
       lienzo.formula(
-        `${"UVWXY"[indice]}${fila}`,
+        `${COLUMNAS_DATOS_GRAFICO[indice]}${fila}`,
         `General!${columnaGeneral}${filaGeneral}`,
         ESTILOS.datosGrafico,
       );
@@ -345,13 +404,13 @@ function dibujarEstadoGeneral(lienzo) {
 }
 
 function dibujarAgentes(lienzo) {
-  dibujarPanel(lienzo, "K14:R27", "K14", "Extintores por tipo de agente");
+  dibujarPanel(lienzo, "O14:Z27", "O14", "Extintores por tipo de agente");
 
   const agentes = [
-    { columnas: ["K", "L"], color: COLORES.ambar, nombre: "Solkaflam", origen: "L" },
-    { columnas: ["M", "N"], color: COLORES.gris, nombre: "CO2", origen: "M" },
-    { columnas: ["O", "P"], color: COLORES.rojo, nombre: "Multipropósito", origen: "N" },
-    { columnas: ["Q", "R"], color: COLORES.verdeAgua, nombre: "Agua", origen: "O" },
+    { columnas: ["O", "Q"], color: COLORES.ambar, nombre: "Solkaflam", origen: "L" },
+    { columnas: ["R", "T"], color: COLORES.gris, nombre: "CO2", origen: "M" },
+    { columnas: ["U", "W"], color: COLORES.rojo, nombre: "Multipropósito", origen: "N" },
+    { columnas: ["X", "Z"], color: COLORES.verdeAgua, nombre: "Agua", origen: "O" },
   ];
 
   for (const { columnas, color, nombre, origen } of agentes) {
@@ -368,7 +427,7 @@ function dibujarAgentes(lienzo) {
       .formula(`${desde}21`, `COUNTIF(Extintores!${origen}2:${origen}10000,"SI")`, ESTILOS.cifraMediana);
   }
 
-  lienzo.texto("K24", "Conteo de registros por agente en la hoja Extintores.", ESTILOS.detalle);
+  lienzo.texto("O24", "Conteo de registros por agente en la hoja Extintores.", ESTILOS.detalle);
 }
 
 /**
@@ -377,23 +436,23 @@ function dibujarAgentes(lienzo) {
  */
 
 function dibujarAlertas(lienzo) {
-  dibujarPanel(lienzo, "B29:I41", "B29", "Alertas de extintores");
+  dibujarPanel(lienzo, "B29:M41", "B29", "Alertas de extintores");
 
-  dibujarPanel(lienzo, "K29:R41", "K29", "Alertas de botiquines");
+  dibujarPanel(lienzo, "O29:Z41", "O29", "Alertas de botiquines");
 
   const columnasExtintor = [
-    { rango: "B", titulo: "Código", origen: "Extintores!$J:$J" },
-    { rango: "C:D", titulo: "Sede", origen: "Extintores!$D:$D", izquierda: true },
-    { rango: "E:F", titulo: "Ubicación", origen: "Extintores!$K:$K", izquierda: true },
-    { rango: "G", titulo: "Vence", fecha: true },
-    { rango: "H:I", titulo: "Estado", origen: `$${AUXILIARES.extintorEstado}:$${AUXILIARES.extintorEstado}`, izquierda: true },
+    { rango: "B:C", titulo: "Código", origen: "Extintores!$J:$J" },
+    { rango: "D:F", titulo: "Sede", origen: "Extintores!$D:$D", izquierda: true },
+    { rango: "G:I", titulo: "Ubicación", origen: "Extintores!$K:$K", izquierda: true },
+    { rango: "J:K", titulo: "Vence", fecha: true },
+    { rango: "L:M", titulo: "Estado", origen: `$${AUXILIARES.extintorEstado}:$${AUXILIARES.extintorEstado}`, izquierda: true },
   ];
 
   const columnasBotiquin = [
-    { rango: "K", titulo: "Bot.", origen: "Botiquin!$K:$K" },
-    { rango: "L:N", titulo: "Ítem", origen: "Botiquin!$L:$L", izquierda: true },
-    { rango: "O:P", titulo: "Vence", origen: "Botiquin!$P:$P", izquierda: true, fecha: true },
-    { rango: "Q:R", titulo: "Estado", origen: `$${AUXILIARES.botiquinEstado}:$${AUXILIARES.botiquinEstado}`, izquierda: true },
+    { rango: "O:P", titulo: "Bot.", origen: "Botiquin!$K:$K" },
+    { rango: "Q:T", titulo: "Ítem", origen: "Botiquin!$L:$L", izquierda: true },
+    { rango: "U:W", titulo: "Vence", origen: "Botiquin!$P:$P", izquierda: true, fecha: true },
+    { rango: "X:Z", titulo: "Estado", origen: `$${AUXILIARES.botiquinEstado}:$${AUXILIARES.botiquinEstado}`, izquierda: true },
   ];
 
   const tablas = [
@@ -456,11 +515,11 @@ function dibujarAlertas(lienzo) {
 
   lienzo.texto("B41", nota, ESTILOS.detalle);
 
-  lienzo.texto("K41", nota, ESTILOS.detalle);
+  lienzo.texto("O41", nota, ESTILOS.detalle);
 }
 
 function dibujarCumplimiento(lienzo) {
-  dibujarPanel(lienzo, "B43:I50", "B43", "Cumplimiento por sección (% de elementos conformes)");
+  dibujarPanel(lienzo, "B43:M50", "B43", "Cumplimiento por sección (% de elementos conformes)");
 
   const secciones = [
     { nombre: "Extintores", columna: AUXILIARES.extintorResultado, limite: LIMITES.extintores },
@@ -479,24 +538,24 @@ function dibujarCumplimiento(lienzo) {
       `(${conformes}+${contar(columna, limite, "Con observaciones")}` +
       `+${contar(columna, limite, "No conforme")})`;
 
-    lienzo.combinar(`B${fila}:C${fila}`).texto(`B${fila}`, nombre, ESTILOS.seccion);
+    lienzo.combinar(`B${fila}:E${fila}`).texto(`B${fila}`, nombre, ESTILOS.seccion);
 
     lienzo
-      .combinar(`D${fila}:H${fila}`)
-      .formula(`D${fila}`, `IFERROR(${conformes}/${evaluados},0)`, ESTILOS.porcentaje);
+      .combinar(`F${fila}:K${fila}`)
+      .formula(`F${fila}`, `IFERROR(${conformes}/${evaluados},0)`, ESTILOS.porcentaje);
 
-    lienzo.formula(`I${fila}`, `${conformes}&" de "&${evaluados}`, ESTILOS.detalle);
+    lienzo.combinar(`L${fila}:M${fila}`).formula(`L${fila}`, `${conformes}&" de "&${evaluados}`, ESTILOS.detalle);
   });
 }
 
 function dibujarUltimasInspecciones(lienzo) {
-  dibujarPanel(lienzo, "K43:R54", "K43", "Últimas inspecciones registradas");
+  dibujarPanel(lienzo, "O43:Z54", "O43", "Últimas inspecciones registradas");
 
   const columnas = [
-    { rango: "K:L", titulo: "Fecha", origen: "B", fecha: true },
-    { rango: "M:O", titulo: "Id inspección", origen: "A" },
-    { rango: "P", titulo: "Sede", origen: "C" },
-    { rango: "Q:R", titulo: "Responsable", origen: "E" },
+    { rango: "O:Q", titulo: "Fecha", origen: "B", fecha: true },
+    { rango: "R:U", titulo: "Id inspección", origen: "A" },
+    { rango: "V:W", titulo: "Sede", origen: "C" },
+    { rango: "X:Z", titulo: "Responsable", origen: "E" },
   ];
 
   for (const { rango, titulo } of columnas) {
@@ -528,7 +587,17 @@ function dibujarUltimasInspecciones(lienzo) {
   }
 }
 
+/**
+ * Crédito de los íconos descargados de Flaticon, exigido por su licencia
+ * gratuita. Cuando se conozcan los autores se agregan aquí.
+ */
+
+const CREDITOS_ICONOS =
+  "Íconos creados por apien (botiquín) y pongsakornRed (camilla) - Flaticon (www.flaticon.es).";
+
 function dibujarNotas(lienzo) {
+  lienzo.texto("B58", CREDITOS_ICONOS, ESTILOS.nota);
+
   lienzo.texto(
     "B56",
     "Leyenda:  B Bueno · R Regular · M Malo · NC No cumple · NA No aplica",
@@ -652,8 +721,8 @@ function construirFormatoCondicionalXml(registro) {
     `<color rgb="FF${COLORES.verde}"/></dataBar></cfRule>`;
 
   return (
-    `<conditionalFormatting sqref="H31:H40 Q31:Q40">${reglasEstado}</conditionalFormatting>` +
-    `<conditionalFormatting sqref="D45:D49">${barraDatos}</conditionalFormatting>`
+    `<conditionalFormatting sqref="L31:L40 X31:X40">${reglasEstado}</conditionalFormatting>` +
+    `<conditionalFormatting sqref="F45:F49">${barraDatos}</conditionalFormatting>`
   );
 }
 
@@ -669,12 +738,9 @@ function construirHojaInicioXml(registro) {
 
   lienzo
     .ancho("A", 2)
-    .ancho("B:I", 9.5)
-    .ancho("J", 3)
-    .ancho("K:R", 9.5)
-    .ancho("T", 3)
-    .ancho("U:Y", 11)
-    .ancho("AA:AS", 12, { oculta: true });
+    .ancho(`B:${ULTIMA_COLUMNA}`, 6.2)
+    .ancho("AB:AF", 11)
+    .ancho("AH:AU", 12, { oculta: true });
 
   dibujarEncabezado(lienzo);
 
@@ -740,6 +806,35 @@ const RUTAS = {
 
 const ID_RELACION_INICIO = "rIdInicioSst";
 
+/**
+ * Íconos que se dibujan sobre las tarjetas de botiquines y camillas. Los
+ * emojis disponibles no representan un botiquín ni una camilla de rescate,
+ * por lo que se usan imágenes propias guardadas en `excel/recursos`.
+ */
+
+const DIRECTORIO_RECURSOS = path.join(__dirname, "..", "recursos");
+
+const IMAGENES_INICIO = [
+  {
+    idRelacion: "rId2",
+    archivo: "icono-botiquin.png",
+    parte: "iconoBotiquin.png",
+    nombre: "Botiquín",
+    descripcion: "Ícono de botiquín",
+    columna: 6,
+    fila: 8,
+  },
+  {
+    idRelacion: "rId3",
+    archivo: "icono-camilla.png",
+    parte: "iconoCamilla.png",
+    nombre: "Camilla",
+    descripcion: "Ícono de camilla de rescate",
+    columna: 11,
+    fila: 8,
+  },
+];
+
 const TIPOS = {
   hoja: "application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml",
   dibujo: "application/vnd.openxmlformats-officedocument.drawing+xml",
@@ -750,7 +845,16 @@ const RELACIONES = {
   hoja: "http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet",
   dibujo: "http://schemas.openxmlformats.org/officeDocument/2006/relationships/drawing",
   grafico: "http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart",
+  imagen: "http://schemas.openxmlformats.org/officeDocument/2006/relationships/image",
 };
+
+function escribirBinario(zip, ruta, buffer) {
+  if (zip.getEntry(ruta)) {
+    zip.updateFile(ruta, buffer);
+  } else {
+    zip.addFile(ruta, buffer);
+  }
+}
 
 function escribirArchivo(zip, ruta, contenido) {
   const buffer = Buffer.from(contenido, "utf8");
@@ -776,6 +880,17 @@ function construirRelacionesXml(relaciones) {
   );
 }
 
+function registrarExtensionPng(tiposXml) {
+  if (/<Default\b[^>]*Extension="png"/i.test(tiposXml)) {
+    return tiposXml;
+  }
+
+  return tiposXml.replace(
+    /(<Types\b[^>]*>)/,
+    '$1<Default Extension="png" ContentType="image/png"/>',
+  );
+}
+
 function registrarTipoContenido(tiposXml, parte, tipo) {
   if (tiposXml.includes(`PartName="${parte}"`)) {
     return tiposXml;
@@ -788,30 +903,65 @@ function registrarTipoContenido(tiposXml, parte, tipo) {
 }
 
 /**
+ * Celda y texto con los que se reconoce la hoja Inicio de este módulo aunque
+ * Excel u OneDrive hayan cambiado los identificadores internos del libro.
+ */
+
+const FIRMAS_INICIO = [
+  // Diseño anterior, con las columnas auxiliares a partir de AA.
+  { celda: "AD1", texto: "Ext. clave alerta" },
+  { celda: `${AUXILIARES.extintorClave}1`, texto: "Ext. clave alerta" },
+];
+
+/**
+ * Consulta el estado de la hoja Inicio dentro del libro.
+ *
+ * Reconoce como propia la hoja creada por este módulo por su identificador o,
+ * si Excel u OneDrive lo cambiaron al guardar, por el texto de una celda
+ * auxiliar que solo escribe este módulo.
+ *
+ * @param {AdmZip} zip Archivo XLSM abierto como contenedor ZIP.
+ * @returns {{estado: "ausente"|"propia"|"ajena", rutaHoja: string|null}}
+ * Estado de la hoja y su ruta interna actual.
+ */
+
+function consultarEstadoInicio(zip) {
+  const workbookXml = obtenerXml(zip, RUTAS.workbook);
+
+  const hoja = workbookXml.match(
+    new RegExp(`<sheet\\b[^>]*name="${NOMBRE_HOJA_INICIO}"[^>]*/>`),
+  )?.[0];
+
+  if (!hoja) {
+    return { estado: "ausente", rutaHoja: null };
+  }
+
+  const rutaHoja = buscarRutaHoja(zip, NOMBRE_HOJA_INICIO);
+
+  const porIdentificador = hoja.includes(`r:id="${ID_RELACION_INICIO}"`);
+
+  const porContenido =
+    Boolean(rutaHoja) &&
+    Boolean(zip.getEntry(rutaHoja)) &&
+    FIRMAS_INICIO.some(
+      ({ celda, texto }) => leerTextoCelda(zip, rutaHoja, celda) === texto,
+    );
+
+  return {
+    estado: porIdentificador || porContenido ? "propia" : "ajena",
+    rutaHoja,
+  };
+}
+
+/**
  * Registra la hoja Inicio como primera pestaña del libro.
  *
- * Si la hoja ya existe en la ubicación de la presentación, se conserva su
- * registro y solo se regenera su contenido.
- *
- * @throws {Error} Si existe una hoja Inicio que no fue creada por este módulo.
+ * @param {AdmZip} zip Archivo XLSM abierto como contenedor ZIP.
+ * @returns {void}
  */
 
 function registrarHojaInicio(zip) {
   let workbookXml = obtenerXml(zip, RUTAS.workbook);
-
-  const hojaExistente = workbookXml.match(
-    new RegExp(`<sheet\\b[^>]*name="${NOMBRE_HOJA_INICIO}"[^>]*/>`),
-  )?.[0];
-
-  if (hojaExistente) {
-    if (!hojaExistente.includes(`r:id="${ID_RELACION_INICIO}"`)) {
-      throw new Error(
-        "El libro ya tiene una hoja Inicio que no fue creada por la presentación SST",
-      );
-    }
-
-    return false;
-  }
 
   const identificadores = [...workbookXml.matchAll(/<sheet\b[^>]*\bsheetId="(\d+)"/g)].map(
     (coincidencia) => Number(coincidencia[1]),
@@ -832,7 +982,7 @@ function registrarHojaInicio(zip) {
 
   const areaImpresion =
     `<definedName name="_xlnm.Print_Area" localSheetId="0">` +
-    `'${NOMBRE_HOJA_INICIO}'!$A$1:$S$57</definedName>`;
+    `'${NOMBRE_HOJA_INICIO}'!$A$1:$AA$58</definedName>`;
 
   if (/<definedNames>/.test(workbookXml)) {
     workbookXml = workbookXml.replace("<definedNames>", `<definedNames>${areaImpresion}`);
@@ -858,8 +1008,98 @@ function registrarHojaInicio(zip) {
       `<Relationship Id="${ID_RELACION_INICIO}" Type="${RELACIONES.hoja}" Target="worksheets/sheetInicio.xml"/></Relationships>`,
     ),
   );
+}
 
-  return true;
+function obtenerRutaRelaciones(ruta) {
+  return path.posix.join(
+    path.posix.dirname(ruta),
+    "_rels",
+    `${path.posix.basename(ruta)}.rels`,
+  );
+}
+
+function estaReferenciada(zip, ruta, excluirRelaciones) {
+  return zip
+    .getEntries()
+    .filter(
+      ({ entryName }) =>
+        entryName.endsWith(".rels") && !excluirRelaciones.includes(entryName),
+    )
+    .some(({ entryName }) => {
+      const directorioOrigen = path.posix.dirname(path.posix.dirname(entryName));
+
+      return leerRelaciones(zip, entryName).some(
+        ({ destino }) => normalizarDestino(destino, directorioOrigen) === ruta,
+      );
+    });
+}
+
+/**
+ * Elimina el dibujo, el gráfico y las imágenes que una versión anterior de la
+ * hoja Inicio dejó en el libro, para volver a escribirlos sin dejar partes
+ * huérfanas. Excel los renombra al guardar, por lo que se buscan siguiendo
+ * las relaciones de la hoja.
+ *
+ * @param {AdmZip} zip Archivo XLSM abierto como contenedor ZIP.
+ * @param {string} rutaHoja Ruta interna actual de la hoja Inicio.
+ * @returns {void}
+ */
+
+function limpiarPartesAnteriores(zip, rutaHoja) {
+  const relacionesHoja = obtenerRutaRelaciones(rutaHoja);
+
+  const directorioHoja = path.posix.dirname(rutaHoja);
+
+  const eliminar = new Set();
+
+  for (const dibujo of leerRelaciones(zip, relacionesHoja).filter(({ tipo }) =>
+    tipo.endsWith("/drawing"),
+  )) {
+    const rutaDibujo = normalizarDestino(dibujo.destino, directorioHoja);
+
+    const relacionesDibujo = obtenerRutaRelaciones(rutaDibujo);
+
+    for (const relacion of leerRelaciones(zip, relacionesDibujo)) {
+      const destino = normalizarDestino(relacion.destino, path.posix.dirname(rutaDibujo));
+
+      if (
+        relacion.tipo.endsWith("/chart") ||
+        (relacion.tipo.endsWith("/image") &&
+          !estaReferenciada(zip, destino, [relacionesDibujo]))
+      ) {
+        eliminar.add(destino);
+      }
+    }
+
+    eliminar.add(rutaDibujo);
+
+    eliminar.add(relacionesDibujo);
+  }
+
+  const partesQueSeReescriben = new Set([
+    RUTAS.dibujoInicio,
+    RUTAS.relacionesDibujoInicio,
+    RUTAS.graficoInicio,
+    ...IMAGENES_INICIO.map(({ parte }) => `xl/media/${parte}`),
+  ]);
+
+  for (const ruta of eliminar) {
+    if (!partesQueSeReescriben.has(ruta) && zip.getEntry(ruta)) {
+      zip.deleteFile(ruta);
+    }
+  }
+
+  const tiposXml = obtenerXml(zip, RUTAS.tiposContenido);
+
+  reemplazarXml(
+    zip,
+    RUTAS.tiposContenido,
+    tiposXml.replace(/<Override\b[^>]*\/>/g, (elemento) => {
+      const parte = elemento.match(/\bPartName="([^"]*)"/)?.[1]?.replace(/^\//, "");
+
+      return eliminar.has(parte) && !zip.getEntry(parte) ? "" : elemento;
+    }),
+  );
 }
 
 /**
@@ -867,11 +1107,11 @@ function registrarHojaInicio(zip) {
  * Inicio sin agrupar hojas.
  */
 
-function deseleccionarOtrasHojas(zip) {
+function deseleccionarOtrasHojas(zip, rutaInicio) {
   for (const entrada of zip.getEntries()) {
     const ruta = entrada.entryName;
 
-    if (!/^xl\/worksheets\/[^/]+\.xml$/.test(ruta) || ruta === RUTAS.hojaInicio) {
+    if (!/^xl\/worksheets\/[^/]+\.xml$/.test(ruta) || ruta === rutaInicio) {
       continue;
     }
 
@@ -883,32 +1123,47 @@ function deseleccionarOtrasHojas(zip) {
   }
 }
 
-function escribirPartesInicio(zip, registro) {
-  escribirArchivo(zip, RUTAS.hojaInicio, construirHojaInicioXml(registro));
+function escribirPartesInicio(zip, partes, rutaHoja) {
+  escribirArchivo(zip, rutaHoja, partes.hojaXml);
 
   escribirArchivo(
     zip,
-    RUTAS.relacionesHojaInicio,
+    obtenerRutaRelaciones(rutaHoja),
     construirRelacionesXml([
       { id: "rId1", tipo: RELACIONES.dibujo, destino: "../drawings/drawingInicio.xml" },
     ]),
   );
 
-  escribirArchivo(zip, RUTAS.dibujoInicio, construirDibujoXml());
+  escribirArchivo(zip, RUTAS.dibujoInicio, partes.dibujoXml);
 
   escribirArchivo(
     zip,
     RUTAS.relacionesDibujoInicio,
     construirRelacionesXml([
       { id: "rId1", tipo: RELACIONES.grafico, destino: "../charts/chartInicio.xml" },
+      ...IMAGENES_INICIO.map(({ idRelacion, parte }) => ({
+        id: idRelacion,
+        tipo: RELACIONES.imagen,
+        destino: `../media/${parte}`,
+      })),
     ]),
   );
 
-  escribirArchivo(zip, RUTAS.graficoInicio, construirGraficoXml(NOMBRE_HOJA_INICIO));
+  for (const { archivo, parte } of IMAGENES_INICIO) {
+    escribirBinario(
+      zip,
+      `xl/media/${parte}`,
+      fs.readFileSync(path.join(DIRECTORIO_RECURSOS, archivo)),
+    );
+  }
+
+  escribirArchivo(zip, RUTAS.graficoInicio, partes.graficoXml);
 
   let tiposXml = obtenerXml(zip, RUTAS.tiposContenido);
 
-  tiposXml = registrarTipoContenido(tiposXml, `/${RUTAS.hojaInicio}`, TIPOS.hoja);
+  tiposXml = registrarExtensionPng(tiposXml);
+
+  tiposXml = registrarTipoContenido(tiposXml, `/${rutaHoja}`, TIPOS.hoja);
 
   tiposXml = registrarTipoContenido(tiposXml, `/${RUTAS.dibujoInicio}`, TIPOS.dibujo);
 
@@ -923,11 +1178,20 @@ function escribirPartesInicio(zip, registro) {
  * La hoja se ubica como primera pestaña y resume las demás hojas con
  * indicadores, gráfico, alertas de vencimiento, cumplimiento por sección,
  * últimas inspecciones y accesos a cada hoja. Sus cálculos usan únicamente
- * los datos existentes en el libro. Puede ejecutarse en cada actualización
- * sin duplicar la hoja ni sus estilos.
+ * los datos existentes en el libro.
+ *
+ * En cada actualización se regenera en su lugar, incluso si Excel u OneDrive
+ * renombraron sus archivos internos al guardar, para que los cambios de diseño
+ * lleguen a los libros ya existentes sin duplicar la hoja ni sus estilos.
+ *
+ * Si el libro ya trae una hoja Inicio que no es la de este módulo, la
+ * conserva sin cambios y lo informa en el resultado. Todo el contenido se
+ * construye antes de modificar el libro, de modo que un error no deja
+ * referencias a partes inexistentes.
  *
  * @param {AdmZip} zip Archivo XLSM abierto como contenedor ZIP.
- * @returns {{creada: boolean}} Indica si la hoja se creó en esta ejecución.
+ * @returns {{creada: boolean, omitida: boolean, motivo?: string}} Indica si
+ * la hoja se creó en esta ejecución o si se omitió.
  */
 
 function actualizarInicio(zip) {
@@ -935,51 +1199,42 @@ function actualizarInicio(zip) {
     throw new Error("Se requiere el archivo Excel cargado en memoria");
   }
 
-  const registro = new RegistroEstilos(zip);
+  const { estado, rutaHoja: rutaActual } = consultarEstadoInicio(zip);
 
-  const creada = registrarHojaInicio(zip);
-
-  escribirPartesInicio(zip, registro);
-
-  deseleccionarOtrasHojas(zip);
-
-  registro.guardar();
-
-  return { creada };
-}
-
-module.exports = {
-  NOMBRE_HOJA_INICIO,
-  actualizarInicio,
-};/**
- * Construye o regenera la hoja Inicio del seguimiento SST.
- *
- * La hoja se ubica como primera pestaña y resume las demás hojas con
- * indicadores, gráfico, alertas de vencimiento, cumplimiento por sección,
- * últimas inspecciones y accesos a cada hoja. Sus cálculos usan únicamente
- * los datos existentes en el libro. Puede ejecutarse en cada actualización
- * sin duplicar la hoja ni sus estilos.
- *
- * @param {AdmZip} zip Archivo XLSM abierto como contenedor ZIP.
- * @returns {{creada: boolean}} Indica si la hoja se creó en esta ejecución.
- */
-
-function actualizarInicio(zip) {
-  if (!zip) {
-    throw new Error("Se requiere el archivo Excel cargado en memoria");
+  if (estado === "ajena") {
+    return {
+      creada: false,
+      omitida: true,
+      motivo:
+        "El libro ya tiene una hoja Inicio que no es la de la presentación SST; se conservó sin cambios.",
+    };
   }
 
   const registro = new RegistroEstilos(zip);
 
-  const creada = registrarHojaInicio(zip);
+  const partes = {
+    hojaXml: construirHojaInicioXml(registro),
+    dibujoXml: construirDibujoXml(IMAGENES_INICIO),
+    graficoXml: construirGraficoXml(NOMBRE_HOJA_INICIO),
+  };
 
-  escribirPartesInicio(zip, registro);
+  const creada = estado === "ausente";
 
-  deseleccionarOtrasHojas(zip);
+  if (creada) {
+    registrarHojaInicio(zip);
+  } else {
+    limpiarPartesAnteriores(zip, rutaActual);
+  }
+
+  const rutaHoja = creada ? RUTAS.hojaInicio : rutaActual;
+
+  escribirPartesInicio(zip, partes, rutaHoja);
+
+  deseleccionarOtrasHojas(zip, rutaHoja);
 
   registro.guardar();
 
-  return { creada };
+  return { creada, omitida: false };
 }
 
 module.exports = {

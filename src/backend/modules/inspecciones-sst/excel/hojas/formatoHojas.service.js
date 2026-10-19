@@ -13,14 +13,27 @@ const {
   RegistroEstilos,
 } = require("../seguimientoSstExcel.estilos");
 
+const { leerEncabezados } = require("./encabezados.service");
+
+/**
+ * Límites de ancho de columna, en caracteres, y reserva para el botón de
+ * filtro que Excel dibuja dentro de la celda del encabezado.
+ */
+
 const ANCHOS = {
-  identificador: 22,
-  numero: 11,
-  compacta: 13,
-  estandar: 18,
+  minimo: 12,
+  maximo: 45,
+  identificador: 26,
+  textoLargo: 32,
+  reservaFiltro: 5,
 };
 
 const ALTO_ENCABEZADO = 42;
+
+const ALTO_FILA_DATOS = 20;
+
+const COLUMNAS_TEXTO_LARGO =
+  /OBSERVACION|EVIDENCIA|UBICACI[OÓ]N|[IÍ]TEM|PLAN_|AFECTACI[OÓ]N|PRODUCTIVIDAD|EQUIPO TECNOL/i;
 
 const BORDE_CELDA = { estilo: "thin", color: COLORES.borde };
 
@@ -134,14 +147,47 @@ function clasificarColumnas(configuracion) {
   return tipos;
 }
 
-function calcularAncho(columna, tipo) {
-  if (columna === 1) return ANCHOS.identificador;
+/**
+ * Calcula el ancho de una columna a partir del texto de su encabezado.
+ *
+ * Excel solo parte los títulos en los espacios, así que las palabras largas
+ * (por ejemplo `INTEGRIDAD_EMPAQUE`) deben caber enteras. Los títulos con
+ * espacios pueden ocupar dos líneas.
+ *
+ * @param {string} texto Texto del encabezado.
+ * @returns {number} Ancho en caracteres, sin incluir los mínimos por contenido.
+ */
 
-  if (columna === 2) return ANCHOS.numero;
+function calcularAnchoEncabezado(texto) {
+  const limpio = String(texto || "").trim();
 
-  if (tipo === "fecha" || tipo === "calificacion") return ANCHOS.compacta;
+  if (!limpio) {
+    return ANCHOS.minimo;
+  }
 
-  return ANCHOS.estandar;
+  const palabras = limpio.split(/\s+/);
+
+  const palabraMasLarga = Math.max(...palabras.map((palabra) => palabra.length));
+
+  const lineas = palabras.length > 1 && limpio.length > 12 ? 2 : 1;
+
+  const ancho =
+    Math.max(palabraMasLarga * 1.25, Math.ceil(limpio.length / lineas) * 1.2) +
+    ANCHOS.reservaFiltro;
+
+  return Math.min(ANCHOS.maximo, Math.max(ANCHOS.minimo, Math.ceil(ancho)));
+}
+
+function calcularAncho(columna, texto) {
+  let ancho = calcularAnchoEncabezado(texto);
+
+  if (columna === 1) ancho = Math.max(ancho, ANCHOS.identificador);
+
+  if (COLUMNAS_TEXTO_LARGO.test(String(texto || ""))) {
+    ancho = Math.max(ancho, ANCHOS.textoLargo);
+  }
+
+  return Math.min(ANCHOS.maximo, ancho);
 }
 
 /**
@@ -149,7 +195,7 @@ function calcularAncho(columna, tipo) {
  * conservando la definición original de las columnas posteriores.
  */
 
-function actualizarColumnasXml(hojaXml, tipos) {
+function actualizarColumnasXml(hojaXml, tipos, textos) {
   const definiciones = new Map();
 
   const bloque = hojaXml.match(/<cols>([\s\S]*?)<\/cols>/)?.[1] || "";
@@ -170,7 +216,7 @@ function actualizarColumnasXml(hojaXml, tipos) {
     }
   }
 
-  for (const [columna, tipo] of tipos) {
+  for (const columna of tipos.keys()) {
     const original = definiciones.get(columna) || "";
 
     const atributosConservados = original
@@ -179,7 +225,7 @@ function actualizarColumnasXml(hojaXml, tipos) {
 
     definiciones.set(
       columna,
-      `width="${calcularAncho(columna, tipo)}" customWidth="1"` +
+      `width="${calcularAncho(columna, textos.get(columna))}" customWidth="1"` +
         (atributosConservados ? ` ${atributosConservados}` : ""),
     );
   }
@@ -241,6 +287,21 @@ function actualizarColorPestanaXml(hojaXml, color) {
     /(<worksheet\b[^>]*>)/,
     `$1<sheetPr>${tabColor}</sheetPr>`,
   );
+}
+
+/**
+ * Define el alto predeterminado de las filas de datos para que no se vean
+ * apretadas. Las filas con alto propio conservan el suyo.
+ */
+
+function actualizarAltoFilasXml(hojaXml) {
+  const formato = `<sheetFormatPr defaultRowHeight="${ALTO_FILA_DATOS}" customHeight="1"/>`;
+
+  if (/<sheetFormatPr\b[^>]*\/>/.test(hojaXml)) {
+    return hojaXml.replace(/<sheetFormatPr\b[^>]*\/>/, formato);
+  }
+
+  return hojaXml.replace(/(<cols>|<sheetData\b)/, `${formato}$1`);
 }
 
 /**
@@ -337,15 +398,70 @@ function actualizarFilasXml(hojaXml, tipos, estilos) {
       // las celdas creadas.
       let atributosFila = atributos.replace(/\s*\bspans="[^"]*"/, "");
 
-      if (esEncabezado) {
-        atributosFila = atributosFila
-          .replace(/\s*\b(ht|customHeight)="[^"]*"/g, "")
-          .concat(` ht="${ALTO_ENCABEZADO}" customHeight="1"`);
-      }
+      // Todas las filas de datos tienen el mismo alto.
+      atributosFila = atributosFila.replace(/\s*\b(ht|customHeight)="[^"]*"/g, "");
+
+      atributosFila += ` ht="${esEncabezado ? ALTO_ENCABEZADO : ALTO_FILA_DATOS}" customHeight="1"`;
 
       return `<row${atributosFila}>${contenidoActualizado}</row>`;
     },
   );
+}
+
+function construirFilaVaciaXml(numeroFila, tipos, estilos) {
+  const celdas = [...tipos].map(
+    ([columna, tipo]) =>
+      `<c r="${obtenerLetraColumna(columna)}${numeroFila}" s="${estilos[tipo]}"></c>`,
+  );
+
+  return `<row r="${numeroFila}" ht="${ALTO_FILA_DATOS}" customHeight="1">${celdas.join("")}</row>`;
+}
+
+/**
+ * Extiende el formato de las celdas de datos hasta la fila final de la hoja.
+ *
+ * Crea las filas que faltan entre la fila 2 y `filaFinal`, con todas las
+ * columnas de la tabla en blanco y con su estilo, de modo que la hoja se vea
+ * igual de formateada tenga o no datos. Las filas existentes no se tocan.
+ *
+ * @param {string} hojaXml Contenido XML de la hoja.
+ * @param {Map<number, string>} tipos Tipo de cada columna de la tabla.
+ * @param {Object} estilos Índices de estilo por tipo de celda.
+ * @param {number} filaFinal Última fila con formato.
+ * @returns {string} XML de la hoja con las filas completas y su dimensión.
+ */
+
+function completarFilasXml(hojaXml, tipos, estilos, filaFinal) {
+  const filas = new Map();
+
+  for (const coincidencia of hojaXml.matchAll(
+    /<row\b([^>]*?)(?:\/>|>[\s\S]*?<\/row>)/g,
+  )) {
+    filas.set(Number(coincidencia[1].match(/\br="(\d+)"/)[1]), coincidencia[0]);
+  }
+
+  for (let fila = 2; fila <= filaFinal; fila += 1) {
+    if (!filas.has(fila)) {
+      filas.set(fila, construirFilaVaciaXml(fila, tipos, estilos));
+    }
+  }
+
+  const datos = [...filas.keys()]
+    .sort((a, b) => a - b)
+    .map((fila) => filas.get(fila))
+    .join("");
+
+  const ultimaFila = Math.max(...filas.keys());
+
+  return hojaXml
+    .replace(/<sheetData>[\s\S]*?<\/sheetData>|<sheetData\/>/, () => `<sheetData>${datos}</sheetData>`)
+    .replace(
+      /<dimension ref="([A-Z]+\d+):([A-Z]+)(\d+)"\/>/,
+      (coincidencia, inicio, columna, fila) =>
+        Number(fila) >= ultimaFila
+          ? coincidencia
+          : `<dimension ref="${inicio}:${columna}${ultimaFila}"/>`,
+    );
 }
 
 function construirFormatoCondicionalXml(rango, diferenciales) {
@@ -448,7 +564,7 @@ function aplicarFormatoFechaXml(hojaXml, columnas, registro) {
  * @param {string[]} configuracion.columnasFecha Columnas con fechas.
  * @param {{desde: string, hasta: string}} configuracion.calificaciones
  * Columnas con calificaciones `B`, `R`, `M`, `NC` y `NA`.
- * @param {number} configuracion.filaFinalCalificaciones Última fila que cubre
+ * @param {number} configuracion.filaFinal Última fila que cubre
  * el formato condicional de las calificaciones.
  * @returns {void}
  */
@@ -475,15 +591,19 @@ function aplicarFormatoHojaDatos(zip, configuracion) {
 
   hojaXml = actualizarVistaHojaXml(hojaXml);
 
-  hojaXml = actualizarColumnasXml(hojaXml, tipos);
+  hojaXml = actualizarColumnasXml(hojaXml, tipos, leerEncabezados(zip, configuracion.ruta));
+
+  hojaXml = actualizarAltoFilasXml(hojaXml);
 
   hojaXml = actualizarFilasXml(hojaXml, tipos, estilos);
+
+  hojaXml = completarFilasXml(hojaXml, tipos, estilos, configuracion.filaFinal);
 
   const { desde, hasta } = configuracion.calificaciones;
 
   hojaXml = actualizarFormatoCondicionalXml(
     hojaXml,
-    `${desde}2:${hasta}${configuracion.filaFinalCalificaciones}`,
+    `${desde}2:${hasta}${configuracion.filaFinal}`,
     diferenciales,
   );
 
@@ -524,6 +644,7 @@ function aplicarFormatoFechaColumnas(zip, ruta, columnas) {
 }
 
 module.exports = {
+  calcularAnchoEncabezado,
   aplicarFormatoHojaDatos,
   aplicarColorPestana,
   aplicarFormatoFechaColumnas,

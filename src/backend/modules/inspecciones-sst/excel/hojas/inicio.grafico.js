@@ -1,10 +1,17 @@
 const { COLORES } = require("../seguimientoSstExcel.estilos");
 
+/**
+ * Columnas de la tabla de datos del gráfico: sección, bueno, regular, malo y
+ * no cumple. Están a la derecha de la cuadrícula del tablero.
+ */
+
+const COLUMNAS_DATOS_GRAFICO = ["AB", "AC", "AD", "AE", "AF"];
+
 const SERIES = [
-  { titulo: "V14", valores: "V", color: COLORES.serieBueno },
-  { titulo: "W14", valores: "W", color: COLORES.serieRegular },
-  { titulo: "X14", valores: "X", color: COLORES.serieMalo },
-  { titulo: "Y14", valores: "Y", color: COLORES.serieNoCumple },
+  { titulo: "AC14", valores: "AC", color: COLORES.serieBueno },
+  { titulo: "AD14", valores: "AD", color: COLORES.serieRegular },
+  { titulo: "AE14", valores: "AE", color: COLORES.serieMalo },
+  { titulo: "AF14", valores: "AF", color: COLORES.serieNoCumple },
 ];
 
 const PROPIEDADES_TEXTO =
@@ -31,7 +38,7 @@ function construirGraficoXml(nombreHoja) {
       `<c:tx><c:strRef><c:f>${hoja}!$${titulo.replace(/(\d+)/, "$$$1")}</c:f></c:strRef></c:tx>` +
       `<c:spPr><a:solidFill><a:srgbClr val="${color}"/></a:solidFill><a:ln><a:noFill/></a:ln></c:spPr>` +
       '<c:invertIfNegative val="0"/>' +
-      `<c:cat><c:strRef><c:f>${hoja}!$U$15:$U$19</c:f></c:strRef></c:cat>` +
+      `<c:cat><c:strRef><c:f>${hoja}!$AB$15:$AB$19</c:f></c:strRef></c:cat>` +
       `<c:val><c:numRef><c:f>${hoja}!$${valores}$15:$${valores}$19</c:f></c:numRef></c:val>` +
       "</c:ser>",
   ).join("");
@@ -82,16 +89,57 @@ function construirGraficoXml(nombreHoja) {
   );
 }
 
+const EMU_POR_PIXEL = 9525;
+
+const TAMANO_ICONO = 40 * EMU_POR_PIXEL;
+
+/**
+ * Construye el anclaje de una imagen dentro de una celda. La imagen se centra
+ * en una celda de unos 71 x 48 píxeles y se mueve con ella.
+ *
+ * @param {Object} imagen Datos de la imagen.
+ * @param {string} imagen.idRelacion Identificador de la relación con el archivo.
+ * @param {string} imagen.nombre Nombre de la imagen en el dibujo.
+ * @param {string} imagen.descripcion Texto alternativo.
+ * @param {number} imagen.columna Columna de la celda, a partir de 0.
+ * @param {number} imagen.fila Fila de la celda, a partir de 0.
+ * @param {number} indice Posición de la imagen, para numerar su identificador.
+ * @returns {string} Contenido XML del anclaje.
+ */
+
+function construirImagenXml(imagen, indice) {
+  const identificador = 10 + indice;
+
+  return (
+    "<xdr:oneCellAnchor>" +
+    `<xdr:from><xdr:col>${imagen.columna}</xdr:col><xdr:colOff>${4 * EMU_POR_PIXEL}</xdr:colOff>` +
+    `<xdr:row>${imagen.fila}</xdr:row><xdr:rowOff>${4 * EMU_POR_PIXEL}</xdr:rowOff></xdr:from>` +
+    `<xdr:ext cx="${TAMANO_ICONO}" cy="${TAMANO_ICONO}"/>` +
+    "<xdr:pic>" +
+    "<xdr:nvPicPr>" +
+    `<xdr:cNvPr id="${identificador}" name="${imagen.nombre}" descr="${imagen.descripcion}"/>` +
+    '<xdr:cNvPicPr><a:picLocks noChangeAspect="1"/></xdr:cNvPicPr>' +
+    "</xdr:nvPicPr>" +
+    `<xdr:blipFill><a:blip r:embed="${imagen.idRelacion}"/><a:stretch><a:fillRect/></a:stretch></xdr:blipFill>` +
+    '<xdr:spPr><a:xfrm><a:off x="0" y="0"/>' +
+    `<a:ext cx="${TAMANO_ICONO}" cy="${TAMANO_ICONO}"/></a:xfrm>` +
+    '<a:prstGeom prst="rect"><a:avLst/></a:prstGeom></xdr:spPr>' +
+    "</xdr:pic>" +
+    "<xdr:clientData/>" +
+    "</xdr:oneCellAnchor>"
+  );
+}
+
 /**
  * Construye el dibujo que ubica el gráfico dentro del panel de estado general.
  *
  * @returns {string} Contenido XML del dibujo.
  */
 
-function construirDibujoXml() {
+function construirDibujoXml(imagenes = []) {
   const desde = { columna: 1, fila: 14 };
 
-  const hasta = { columna: 9, fila: 26 };
+  const hasta = { columna: 13, fila: 26 };
 
   const marcador = (nombre, { columna, fila }, desplazamiento) =>
     `<xdr:${nombre}><xdr:col>${columna}</xdr:col><xdr:colOff>${desplazamiento}</xdr:colOff>` +
@@ -100,7 +148,8 @@ function construirDibujoXml() {
   return (
     '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
     '<xdr:wsDr xmlns:xdr="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing" ' +
-    'xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">' +
+    'xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" ' +
+    'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">' +
     '<xdr:twoCellAnchor editAs="oneCell">' +
     marcador("from", desde, 38100) +
     marcador("to", hasta, 0) +
@@ -114,11 +163,13 @@ function construirDibujoXml() {
     "</xdr:graphicFrame>" +
     "<xdr:clientData/>" +
     "</xdr:twoCellAnchor>" +
+    imagenes.map(construirImagenXml).join("") +
     "</xdr:wsDr>"
   );
 }
 
 module.exports = {
+  COLUMNAS_DATOS_GRAFICO,
   construirGraficoXml,
   construirDibujoXml,
 };

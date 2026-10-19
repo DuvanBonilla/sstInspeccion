@@ -12,9 +12,12 @@ const {
 
 const { aplicarFormatoHojaDatos } = require("./formatoHojas.service");
 
-const RUTA_HOJA_EXTINTORES = "xl/worksheets/sheet2.xml";
+const {
+  obtenerRutaHoja,
+  obtenerRutaTabla,
+} = require("../rutasLibroExcel");
 
-const RUTA_TABLA_EXTINTORES = "xl/tables/table1.xml";
+const NOMBRE_HOJA_EXTINTORES = "Extintores";
 
 const ULTIMA_COLUMNA_EXTINTORES = "AN";
 
@@ -203,9 +206,13 @@ function actualizarRangoTablaExtintores(tablaXml, cantidadFilas) {
  */
 
 function diagnosticarTablaExtintores(zip) {
-  const tablaXml = obtenerXml(zip, RUTA_TABLA_EXTINTORES);
+  const rutaHoja = obtenerRutaHoja(zip, NOMBRE_HOJA_EXTINTORES);
 
-  const hojaXml = obtenerXml(zip, RUTA_HOJA_EXTINTORES);
+  const rutaTabla = obtenerRutaTabla(zip, rutaHoja);
+
+  const tablaXml = obtenerXml(zip, rutaTabla);
+
+  const hojaXml = obtenerXml(zip, rutaHoja);
 
   const rango = tablaXml.match(/<table\b[^>]*\bref="([^"]+)"/)?.[1] || null;
 
@@ -254,9 +261,13 @@ async function actualizarExtintores(zip) {
 
   const filasExtintores = await obtenerFilasExtintoresSstAprobados();
 
-  const hojaXml = obtenerXml(zip, RUTA_HOJA_EXTINTORES);
+  const rutaHoja = obtenerRutaHoja(zip, NOMBRE_HOJA_EXTINTORES);
 
-  const tablaXml = obtenerXml(zip, RUTA_TABLA_EXTINTORES);
+  const rutaTabla = obtenerRutaTabla(zip, rutaHoja);
+
+  const hojaXml = obtenerXml(zip, rutaHoja);
+
+  const tablaXml = obtenerXml(zip, rutaTabla);
 
   const hojaActualizada = actualizarFilasExtintoresXml(
     hojaXml,
@@ -268,16 +279,16 @@ async function actualizarExtintores(zip) {
     filasExtintores.length,
   );
 
-  reemplazarXml(zip, RUTA_HOJA_EXTINTORES, hojaActualizada);
+  reemplazarXml(zip, rutaHoja, hojaActualizada);
 
-  reemplazarXml(zip, RUTA_TABLA_EXTINTORES, tablaActualizada.xml);
+  reemplazarXml(zip, rutaTabla, tablaActualizada.xml);
 
   aplicarFormatoHojaDatos(zip, {
-    ruta: RUTA_HOJA_EXTINTORES,
+    ruta: rutaHoja,
     ultimaColumna: ULTIMA_COLUMNA_EXTINTORES,
     columnasFecha: ["C"],
     calificaciones: { desde: "S", hasta: "AK" },
-    filaFinalCalificaciones: 1500,
+    filaFinal: 1500,
   });
 
   return {
