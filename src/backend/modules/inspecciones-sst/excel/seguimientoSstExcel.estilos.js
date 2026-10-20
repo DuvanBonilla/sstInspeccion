@@ -1,56 +1,16 @@
 const { escaparXml } = require("../../../shared/utils/excelXml.util");
 
 /**
- * Paleta, tipografías y dimensiones utilizadas en la presentación visual del
- * libro de seguimiento SST.
- *
- * Todos los colores se expresan en hexadecimal RGB sin el canal alfa.
+ * La paleta, las tipografías y los formatos viven en `shared/utils` porque los
+ * comparte el tablero EPP; aquí se reexportan para el resto del módulo SST.
  */
 
-const COLORES = {
-  verde: "1E9E57",
-  verdeOscuro: "137A42",
-  verdeSuave: "D9F2E3",
-  crema: "FFF7DC",
-  blanco: "FFFFFF",
-  texto: "1F2937",
-  textoSecundario: "6B7280",
-  borde: "D5DBE1",
-  gris: "9CA3AF",
-  grisSuave: "EDEFF2",
-  ambar: "F2C94C",
-  ambarTexto: "9A6700",
-  ambarSuave: "FFF0C2",
-  rojo: "D64545",
-  rojoTexto: "B42318",
-  rojoSuave: "FAD4D4",
-  verdeAgua: "2E9E5B",
-  serieBueno: "1E9E57",
-  serieRegular: "F2B33D",
-  serieMalo: "E0533D",
-  serieNoCumple: "8B1E1E",
-};
-
-const FUENTES = {
-  principal: "Calibri",
-  iconos: "Segoe UI Emoji",
-};
-
-const FORMATOS = {
-  fecha: "dd/mm/yyyy",
-  porcentaje: "0%",
-  conformidad: '"Conformidad "0%',
-};
-
-/**
- * Colores de las pestañas según el rol de cada hoja.
- */
-
-const COLORES_PESTANA = {
-  inicio: COLORES.verde,
-  general: COLORES.verdeOscuro,
-  datos: COLORES.gris,
-};
+const {
+  COLORES,
+  FUENTES,
+  FORMATOS,
+  COLORES_PESTANA,
+} = require("../../../shared/utils/paletaExcel.util");
 
 /**
  * Formato condicional aplicado a las calificaciones `B`, `R`, `M`, `NC` y

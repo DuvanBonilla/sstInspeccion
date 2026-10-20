@@ -32,6 +32,18 @@ const {
   construirHojaGeneralEpp,
 } = require("./hojas/general.service");
 
+const {
+  construirHojaInicioEpp,
+} = require("./hojas/inicio.service");
+
+const {
+  protegerHojasEppSeguro,
+} = require("./hojas/proteccion.service");
+
+const {
+  normalizarDibujosXlsx,
+} = require("../../../shared/utils/imagenesExcel.util");
+
 const { obtenerRutaExcelEpp } = require("./hojas/ruta.service");
 
 const {
@@ -47,7 +59,8 @@ const CONTENT_TYPE_XLSX =
  *
  * Consulta en paralelo las inspecciones, los trabajadores evaluados y los
  * planes de acción. Con esta información construye las hojas de inspecciones,
- * seguimiento por trabajador, planes de acción, resumen e información general.
+ * seguimiento por trabajador, planes de acción, resumen, información general
+ * e inicio. Al final protege las hojas alimentadas por la base de datos.
  *
  * Esta función crea el archivo en memoria, pero no lo carga en OneDrive.
  *
@@ -94,14 +107,21 @@ async function generarExcelSeguimientoEpp(filtros = {}) {
     planes,
   );
 
+  construirHojaInicioEpp(workbook, { inspecciones, planes });
+
+  const proteccion = await protegerHojasEppSeguro(workbook);
+
   console.log("[EPP Excel] Resumen generado:", {
     totalInspecciones: resumen.totalInspecciones,
     totalTrabajadores: resumen.totalTrabajadores,
     totalPlanes: resumen.totalPlanes,
     rango: resumen.rango,
+    proteccion,
   });
 
-  return generarBuffer(workbook);
+  // ExcelJS repite el identificador de creación de las imágenes y Excel en la
+  // web solo muestra una; se corrige el dibujo antes de entregar el archivo.
+  return normalizarDibujosXlsx(await generarBuffer(workbook));
 }
 
 /**

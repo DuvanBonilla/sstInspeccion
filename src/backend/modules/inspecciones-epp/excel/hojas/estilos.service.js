@@ -1,39 +1,39 @@
 const COLORES_RESULTADO = {
   "CON NOVEDAD": {
-    fondo: "FFFCE8E6",
+    fondo: "FFFAD4D4",
     texto: "FFB42318",
   },
 
   "SIN NOVEDAD": {
-    fondo: "FFEAF7EE",
-    texto: "FF16794B",
+    fondo: "FFD9F2E3",
+    texto: "FF137A42",
   },
 
   "SIN EVALUACIÓN": {
-    fondo: "FFF2F4F7",
-    texto: "FF667085",
+    fondo: "FFEDEFF2",
+    texto: "FF6B7280",
   },
 };
 
 const COLORES_EVALUACION = {
   B: {
-    fondo: "FFEAF7EE",
-    texto: "FF16794B",
+    fondo: "FFD9F2E3",
+    texto: "FF137A42",
   },
 
   R: {
-    fondo: "FFFFF4E5",
-    texto: "FFB54708",
+    fondo: "FFFFF0C2",
+    texto: "FF9A6700",
   },
 
   M: {
-    fondo: "FFFCE8E6",
+    fondo: "FFFAD4D4",
     texto: "FFB42318",
   },
 
   NA: {
-    fondo: "FFF2F4F7",
-    texto: "FF667085",
+    fondo: "FFEDEFF2",
+    texto: "FF6B7280",
   },
 };
 

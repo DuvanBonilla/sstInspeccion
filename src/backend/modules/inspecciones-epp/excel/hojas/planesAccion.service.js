@@ -6,6 +6,7 @@ const {
   aplicarFormatoFecha,
   aplicarEstiloEncabezado,
   aplicarFormatoCuerpo,
+  completarFormatoHojaDatos,
   aplicarColorPorValor,
 } = require("../../../../shared/services/excel.service");
 
@@ -273,6 +274,17 @@ function construirHojaPlanesAccion(workbook, planes) {
      RANGO DINÁMICO
   ========================================================= */
 
+  /* =========================================================
+     Una tabla de Excel necesita al menos una fila de datos. Sin planes
+     en la BD, el archivo quedaría con una tabla solo de encabezado y Excel
+     lo "repara" al abrirlo; por eso se deja una fila vacía, que la
+     sincronización de cierres ignora porque no está cumplida.
+  ========================================================= */
+
+  if (hoja.rowCount < 2) {
+    hoja.addRow({});
+  }
+
   const ultimaFila = hoja.rowCount;
 
   /* =========================================================
@@ -365,7 +377,7 @@ function construirHojaPlanesAccion(workbook, planes) {
               type: "pattern",
               pattern: "solid",
               bgColor: {
-                argb: "FFFCE8E6",
+                argb: "FFFAD4D4",
               },
             },
             font: {
@@ -386,7 +398,7 @@ function construirHojaPlanesAccion(workbook, planes) {
               type: "pattern",
               pattern: "solid",
               bgColor: {
-                argb: "FFFCE8E6",
+                argb: "FFFAD4D4",
               },
             },
             font: {
@@ -411,13 +423,13 @@ function construirHojaPlanesAccion(workbook, planes) {
               type: "pattern",
               pattern: "solid",
               bgColor: {
-                argb: "FFFFF4E5",
+                argb: "FFFFF0C2",
               },
             },
             font: {
               bold: true,
               color: {
-                argb: "FFB54708",
+                argb: "FF9A6700",
               },
             },
           },
@@ -436,13 +448,13 @@ function construirHojaPlanesAccion(workbook, planes) {
               type: "pattern",
               pattern: "solid",
               bgColor: {
-                argb: "FFEAF7EE",
+                argb: "FFD9F2E3",
               },
             },
             font: {
               bold: true,
               color: {
-                argb: "FF16794B",
+                argb: "FF137A42",
               },
             },
           },
@@ -461,13 +473,13 @@ function construirHojaPlanesAccion(workbook, planes) {
               type: "pattern",
               pattern: "solid",
               bgColor: {
-                argb: "FFEAF7EE",
+                argb: "FFD9F2E3",
               },
             },
             font: {
               bold: true,
               color: {
-                argb: "FF16794B",
+                argb: "FF137A42",
               },
             },
           },
@@ -496,13 +508,13 @@ function construirHojaPlanesAccion(workbook, planes) {
               type: "pattern",
               pattern: "solid",
               bgColor: {
-                argb: "FFEAF7EE",
+                argb: "FFD9F2E3",
               },
             },
             font: {
               bold: true,
               color: {
-                argb: "FF16794B",
+                argb: "FF137A42",
               },
             },
           },
@@ -521,13 +533,13 @@ function construirHojaPlanesAccion(workbook, planes) {
               type: "pattern",
               pattern: "solid",
               bgColor: {
-                argb: "FFFFF4E5",
+                argb: "FFFFF0C2",
               },
             },
             font: {
               bold: true,
               color: {
-                argb: "FFB54708",
+                argb: "FF9A6700",
               },
             },
           },
@@ -539,6 +551,8 @@ function construirHojaPlanesAccion(workbook, planes) {
   /* =========================================================
      NAVEGACIÓN
   ========================================================= */
+
+  completarFormatoHojaDatos(hoja, 19);
 
   congelarEncabezado(hoja, 1);
 

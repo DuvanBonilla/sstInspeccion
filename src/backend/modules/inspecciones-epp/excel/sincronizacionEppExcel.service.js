@@ -10,6 +10,20 @@ const {
 
 const NOMBRE_HOJA_PLANES = "03 - Planes de Acción";
 
+/**
+ * Hojas que genera el seguimiento EPP. Si el archivo no tiene ninguna, no es un
+ * seguimiento EPP sino un libro en blanco, como el que crea OneDrive al
+ * iniciar el archivo desde cero.
+ */
+
+const NOMBRES_HOJAS_EPP = [
+  "Inicio",
+  "01 - Inspecciones",
+  "02 - Seguimiento EPP",
+  NOMBRE_HOJA_PLANES,
+  "General",
+];
+
 function normalizarTextoExcel(valor) {
   return String(valor || "")
     .normalize("NFD")
@@ -90,7 +104,8 @@ function exigirColumna(encabezados, nombre) {
  * @async
  * @param {Object} [opciones={}] Configuración de la lectura.
  * @param {boolean} [opciones.permitirArchivoInexistente=false] Permite devolver
- * un resultado vacío cuando el archivo no está disponible.
+ * un resultado vacío cuando el archivo no está disponible o es un libro en
+ * blanco sin ninguna hoja del seguimiento EPP.
  * @returns {Promise<Object>} Ruta del archivo, cantidad de filas revisadas,
  * cierres válidos encontrados y errores de validación.
  * @throws {Error} Si no se puede descargar el archivo, falta la hoja requerida
@@ -122,6 +137,19 @@ async function leerCierresDesdeExcelEpp({
   await workbook.xlsx.load(buffer);
 
   const hoja = workbook.getWorksheet(NOMBRE_HOJA_PLANES);
+
+  const esLibroEnBlanco = !NOMBRES_HOJAS_EPP.some((nombre) =>
+    workbook.getWorksheet(nombre),
+  );
+
+  if (!hoja && esLibroEnBlanco && permitirArchivoInexistente) {
+    return {
+      rutaExcel,
+      filasRevisadas: 0,
+      cierres: [],
+      errores: [],
+    };
+  }
 
   if (!hoja) {
     throw new Error(

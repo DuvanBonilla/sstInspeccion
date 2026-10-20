@@ -6,6 +6,7 @@ const {
   aplicarFormatoFecha,
   aplicarEstiloEncabezado,
   aplicarFormatoCuerpo,
+  completarFormatoHojaDatos,
   aplicarColorPorValor,
 } = require("../../../../shared/services/excel.service");
 
@@ -194,6 +195,8 @@ function construirHojaSeguimientoEpp(workbook, seguimiento) {
       }
     }
   }
+
+  completarFormatoHojaDatos(hoja, 14);
 
   congelarEncabezado(hoja, 1);
 
