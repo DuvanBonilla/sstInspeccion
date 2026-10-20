@@ -305,7 +305,7 @@ Crea un archivo `.env` en la raíz. No almacenes credenciales reales en el repos
 | `ONEDRIVE_EPP_EXCEL_PATH` | Para EPP | Ruta `.xlsx` del seguimiento EPP |
 | `ONEDRIVE_EVIDENCIAS_PATH` | Opcional | Ruta base personalizada para evidencias |
 | `EXCEL_SST_CLAVE_PROTECCION` | Opcional | Contraseña de protección de las hojas del seguimiento SST; si se omite, se protegen sin contraseña |
-| `EXCEL_EPP_CLAVE_PROTECCION` | Opcional | Contraseña de protección de las hojas del seguimiento EPP, excepto `03 - Planes de Acción`; si se omite, se protegen sin contraseña |
+| `EXCEL_EPP_CLAVE_PROTECCION` | Opcional | Contraseña de protección de las hojas del seguimiento EPP; en `03 - Planes de Acción` solo quedan libres Responsable del Cierre y Fecha de Cierre. Si se omite, se protegen sin contraseña |
 | `APP_URL` | Recomendada | URL pública utilizada para construir enlaces |
 | `AZURE_EPP_SYNC_SECRET` | Para sincronización | Secreto Bearer del endpoint de cierres EPP |
 | `GRAPH_EMAIL_TO_TEST` | Opcional | Destinatario de pruebas de correo |

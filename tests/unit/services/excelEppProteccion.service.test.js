@@ -11,7 +11,7 @@ const {
 function crearLibro() {
   const workbook = new ExcelJS.Workbook();
 
-  for (const nombre of [...HOJAS_PROTEGIDAS, "03 - Planes de Acción"]) {
+  for (const nombre of HOJAS_PROTEGIDAS) {
     workbook.addWorksheet(nombre).getCell("A1").value = "dato";
   }
 
@@ -20,7 +20,7 @@ function crearLibro() {
   return workbook;
 }
 
-test("protege las hojas alimentadas por la base de datos y deja libre la hoja 03", async () => {
+test("protege las hojas alimentadas por la base de datos, incluida la hoja 03", async () => {
   const workbook = crearLibro();
 
   const resultado = await protegerHojasEpp(workbook);
@@ -31,7 +31,25 @@ test("protege las hojas alimentadas por la base de datos y deja libre la hoja 03
     assert.equal(workbook.getWorksheet(nombre).sheetProtection.sheet, true, nombre);
   }
 
-  assert.ok(!workbook.getWorksheet("03 - Planes de Acción").sheetProtection);
+  assert.ok(HOJAS_PROTEGIDAS.includes("03 - Planes de Acción"));
+});
+
+test("en la hoja 03 solo quedan libres el responsable y la fecha de cierre", async () => {
+  const workbook = crearLibro();
+
+  await protegerHojasEpp(workbook);
+
+  const planes = workbook.getWorksheet("03 - Planes de Acción");
+
+  // R = Responsable del Cierre, S = Fecha de Cierre: todas las filas con formato.
+  for (const celda of ["R2", "S2", "R3", "S250", "R500", "S500"]) {
+    assert.equal(planes.getCell(celda).protection.locked, false, celda);
+  }
+
+  // El resto de las columnas, el encabezado y las filas posteriores quedan bloqueados.
+  for (const celda of ["A2", "P2", "Q2", "P500", "R1", "S1", "R501"]) {
+    assert.notEqual(planes.getCell(celda).protection?.locked, false, celda);
+  }
 });
 
 test("solo permite filtrar y seleccionar celdas; columnas y filas quedan bloqueadas", async () => {
@@ -101,7 +119,8 @@ test("la protección queda escrita en el archivo", async () => {
 
   assert.equal(leido.getWorksheet("Inicio").sheetProtection.sheet, true);
   assert.equal(leido.getWorksheet("General").getCell("C10").protection.locked, false);
-  assert.ok(!leido.getWorksheet("03 - Planes de Acción").sheetProtection);
+  assert.equal(leido.getWorksheet("03 - Planes de Acción").sheetProtection.sheet, true);
+  assert.equal(leido.getWorksheet("03 - Planes de Acción").getCell("S2").protection.locked, false);
 });
 
 test("una hoja ausente se omite", async () => {

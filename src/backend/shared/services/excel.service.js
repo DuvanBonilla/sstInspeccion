@@ -472,6 +472,7 @@ module.exports = {
   aplicarEstiloEncabezado,
   aplicarFormatoCuerpo,
   completarFormatoHojaDatos,
+  FILA_FINAL_FORMATO,
   centrarColumnas,
   alinearColumnasIzquierda,
 

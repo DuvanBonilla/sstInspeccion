@@ -1,29 +1,36 @@
 const { recorrerRango } = require("./inicio.lienzo");
 
+const { FILA_FINAL_FORMATO } = require("../../../../shared/services/excel.service");
+
 /**
  * Hojas del seguimiento EPP cuyos datos o fórmulas provienen de la base de
  * datos o del aplicativo. Se protegen para que no se editen desde Excel.
  *
- * La hoja `03 - Planes de Acción` queda sin proteger: ahí se registran a mano
- * el responsable y la fecha de cierre de cada plan, y el flujo de Power
- * Automate escribe en su tabla.
+ * En `03 - Planes de Acción` solo quedan libres las columnas Responsable del
+ * Cierre y Fecha de Cierre, donde se registra a mano el cierre de cada plan;
+ * todas las demás son de lectura.
  */
 
 const HOJAS_PROTEGIDAS = [
   "Inicio",
   "01 - Inspecciones",
   "02 - Seguimiento EPP",
+  "03 - Planes de Acción",
   "_RESUMEN",
   "General",
 ];
 
 /**
  * Celdas que el usuario sí puede escribir en hojas protegidas. En General se
- * escribe el identificador de la inspección que se quiere buscar.
+ * escribe el identificador de la inspección que se quiere buscar. En la hoja
+ * de planes se registran el responsable (columna R) y la fecha de cierre
+ * (columna S) en todas las filas con formato, para que los planes nuevos que
+ * se agreguen a la tabla también se puedan cerrar.
  */
 
 const RANGOS_LIBRES = {
   General: ["C10:F10"],
+  "03 - Planes de Acción": [`R2:S${FILA_FINAL_FORMATO}`],
 };
 
 /**
@@ -61,7 +68,7 @@ function desbloquearRango(hoja, rango) {
  *
  * Solo afecta lo que se puede editar desde Excel: el aplicativo genera el
  * archivo completo y no se ve afectado. El proceso que lee los cierres de la
- * hoja 03 tampoco, porque esa hoja no se protege.
+ * hoja 03 tampoco, porque las columnas de cierre quedan libres.
  *
  * @async
  * @param {ExcelJS.Workbook} workbook Libro del seguimiento EPP ya construido.
