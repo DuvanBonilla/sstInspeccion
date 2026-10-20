@@ -91,11 +91,10 @@ function construirGraficoXml(nombreHoja) {
 
 const EMU_POR_PIXEL = 9525;
 
-const TAMANO_ICONO = 40 * EMU_POR_PIXEL;
-
 /**
- * Construye el anclaje de una imagen dentro de una celda. La imagen se centra
- * en una celda de unos 71 x 48 píxeles y se mueve con ella.
+ * Construye el anclaje de una imagen dentro de una celda. Por defecto la
+ * imagen mide 40 x 40 píxeles y queda a 4 píxeles de los bordes superior e
+ * izquierdo de la celda; se mueve con ella.
  *
  * @param {Object} imagen Datos de la imagen.
  * @param {string} imagen.idRelacion Identificador de la relación con el archivo.
@@ -103,6 +102,9 @@ const TAMANO_ICONO = 40 * EMU_POR_PIXEL;
  * @param {string} imagen.descripcion Texto alternativo.
  * @param {number} imagen.columna Columna de la celda, a partir de 0.
  * @param {number} imagen.fila Fila de la celda, a partir de 0.
+ * @param {number} [imagen.tamano=40] Lado de la imagen en píxeles.
+ * @param {number} [imagen.margenX=4] Píxeles desde el borde izquierdo de la celda.
+ * @param {number} [imagen.margenY=4] Píxeles desde el borde superior de la celda.
  * @param {number} indice Posición de la imagen, para numerar su identificador.
  * @returns {string} Contenido XML del anclaje.
  */
@@ -110,11 +112,15 @@ const TAMANO_ICONO = 40 * EMU_POR_PIXEL;
 function construirImagenXml(imagen, indice) {
   const identificador = 10 + indice;
 
+  const { tamano = 40, margenX = 4, margenY = 4 } = imagen;
+
+  const lado = tamano * EMU_POR_PIXEL;
+
   return (
     "<xdr:oneCellAnchor>" +
-    `<xdr:from><xdr:col>${imagen.columna}</xdr:col><xdr:colOff>${4 * EMU_POR_PIXEL}</xdr:colOff>` +
-    `<xdr:row>${imagen.fila}</xdr:row><xdr:rowOff>${4 * EMU_POR_PIXEL}</xdr:rowOff></xdr:from>` +
-    `<xdr:ext cx="${TAMANO_ICONO}" cy="${TAMANO_ICONO}"/>` +
+    `<xdr:from><xdr:col>${imagen.columna}</xdr:col><xdr:colOff>${margenX * EMU_POR_PIXEL}</xdr:colOff>` +
+    `<xdr:row>${imagen.fila}</xdr:row><xdr:rowOff>${margenY * EMU_POR_PIXEL}</xdr:rowOff></xdr:from>` +
+    `<xdr:ext cx="${lado}" cy="${lado}"/>` +
     "<xdr:pic>" +
     "<xdr:nvPicPr>" +
     `<xdr:cNvPr id="${identificador}" name="${imagen.nombre}" descr="${imagen.descripcion}"/>` +
@@ -122,7 +128,7 @@ function construirImagenXml(imagen, indice) {
     "</xdr:nvPicPr>" +
     `<xdr:blipFill><a:blip r:embed="${imagen.idRelacion}"/><a:stretch><a:fillRect/></a:stretch></xdr:blipFill>` +
     '<xdr:spPr><a:xfrm><a:off x="0" y="0"/>' +
-    `<a:ext cx="${TAMANO_ICONO}" cy="${TAMANO_ICONO}"/></a:xfrm>` +
+    `<a:ext cx="${lado}" cy="${lado}"/></a:xfrm>` +
     '<a:prstGeom prst="rect"><a:avLst/></a:prstGeom></xdr:spPr>' +
     "</xdr:pic>" +
     "<xdr:clientData/>" +

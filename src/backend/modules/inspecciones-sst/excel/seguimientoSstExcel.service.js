@@ -31,6 +31,8 @@ const { actualizarInicio } = require("./hojas/inicio.service");
 
 const { corregirEncabezados } = require("./hojas/encabezados.service");
 
+const { protegerHojas } = require("./hojas/proteccion.service");
+
 const CONTENT_TYPE_XLSM = "application/vnd.ms-excel.sheet.macroEnabled.12";
 
 /**
@@ -183,6 +185,35 @@ async function actualizarExtintoresEnOneDrive() {
 }
 
 /**
+ * Protege las hojas alimentadas por la base de datos para que no se editen
+ * desde Excel. La contraseña es opcional y se toma de
+ * `EXCEL_SST_CLAVE_PROTECCION`.
+ *
+ * La protección es un cambio de presentación: si falla, no impide que se
+ * actualicen los datos del libro y el error queda en el resultado.
+ *
+ * @param {AdmZip} zip Archivo XLSM abierto como contenedor ZIP.
+ * @param {boolean} incluirInicio Si también se protege la hoja Inicio.
+ * @returns {Object} Hojas protegidas, o el motivo por el que no se aplicó.
+ */
+
+function protegerHojasSeguro(zip, incluirInicio) {
+  try {
+    return {
+      aplicada: true,
+      ...protegerHojas(zip, {
+        clave: process.env.EXCEL_SST_CLAVE_PROTECCION || "",
+        incluirInicio,
+      }),
+    };
+  } catch (error) {
+    console.error("[Excel SST] No se pudo proteger las hojas:", error);
+
+    return { aplicada: false, error: error.message };
+  }
+}
+
+/**
  * Actualiza en memoria todas las secciones del seguimiento SST.
  *
  * Descarga el archivo XLSM y actualiza los módulos de extintores, camillas,
@@ -219,6 +250,8 @@ async function actualizarExcelSeguimientoSstEnMemoria() {
 
   const inicio = actualizarInicio(zip);
 
+  const proteccion = protegerHojasSeguro(zip, !inicio.omitida);
+
   const macrosConservadas = validarMacrosExcel(zip);
 
   return {
@@ -243,6 +276,8 @@ async function actualizarExcelSeguimientoSstEnMemoria() {
     encabezados,
 
     inicio,
+
+    proteccion,
   };
 }
 
@@ -294,6 +329,8 @@ async function actualizarExcelSeguimientoSstEnOneDrive() {
     encabezados: resultado.encabezados,
 
     inicio: resultado.inicio,
+
+    proteccion: resultado.proteccion,
   };
 }
 

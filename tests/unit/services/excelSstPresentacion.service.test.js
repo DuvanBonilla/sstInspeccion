@@ -323,7 +323,7 @@ test("extiende el estilo de las celdas de datos hasta la fila final", () => {
   assert.match(hoja, /<row r="1" ht="42" customHeight="1">/);
 });
 
-test("la hoja Inicio dibuja imágenes de botiquín y camilla en lugar de emojis", () => {
+test("la hoja Inicio dibuja imágenes de extintores, botiquín y camilla en lugar de emojis", () => {
   const zip = crearLibroMinimo();
 
   actualizarInicio(zip);
@@ -336,11 +336,20 @@ test("la hoja Inicio dibuja imágenes de botiquín y camilla en lugar de emojis"
 
   const tipos = leer(zip, "[Content_Types].xml");
 
-  assert.doesNotMatch(hoja, /🩹|🚑/);
-  assert.match(hoja, /🧯/);
-  assert.equal((dibujo.match(/<xdr:pic>/g) || []).length, 2);
+  assert.doesNotMatch(hoja, /🩹|🚑|🧯/);
+  assert.equal((dibujo.match(/<xdr:pic>/g) || []).length, 7);
   assert.match(dibujo, /<xdr:col>6<\/xdr:col>/);
   assert.match(dibujo, /<xdr:col>11<\/xdr:col>/);
+
+  // Un extintor en la tarjeta y uno del color de cada tipo de agente.
+  assert.match(dibujo, /<xdr:col>1<\/xdr:col>[^]*?<xdr:row>8<\/xdr:row>/);
+
+  for (const [columna, icono] of [[14, "Solkaflam"], [17, "Co2"], [20, "Multiproposito"], [23, "Agua"]]) {
+    assert.match(dibujo, new RegExp(`<xdr:col>${columna}</xdr:col>[^]*?<xdr:row>16</xdr:row>`));
+    assert.match(relaciones, new RegExp(`Target="\\.\\./media/iconoExtintor${icono}\\.png"`));
+    assert.equal(zip.getEntry(`xl/media/iconoExtintor${icono}.png`).getData().subarray(1, 4).toString(), "PNG");
+  }
+
   assert.match(dibujo, /xmlns:r="http:\/\/schemas\.openxmlformats\.org\/officeDocument\/2006\/relationships"/);
   assert.match(relaciones, /Id="rId2"[^>]*Target="\.\.\/media\/iconoBotiquin\.png"/);
   assert.match(relaciones, /Id="rId3"[^>]*Target="\.\.\/media\/iconoCamilla\.png"/);

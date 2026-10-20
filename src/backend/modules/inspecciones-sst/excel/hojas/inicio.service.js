@@ -121,10 +121,6 @@ const ESTILOS = {
     fuente: { nombre: FUENTES.iconos, tamano: 18 },
     alineacion: { horizontal: "center", vertical: "center" },
   },
-  iconoGrande: {
-    fuente: { nombre: FUENTES.iconos, tamano: 26 },
-    alineacion: { horizontal: "center", vertical: "center" },
-  },
   cifra: {
     fuente: fuente(24, { negrita: true }),
     alineacion: { horizontal: "center", vertical: "center" },
@@ -308,7 +304,7 @@ function dibujarIndicadores(lienzo) {
 
   dibujarTarjeta(lienzo, { primera: "B", ultima: "F" }, {
     etiqueta: "EXTINTORES",
-    icono: "🧯",
+    icono: "",
     cifra: "COUNTA(Extintores!J2:J10000)",
     detalle1:
       `"Conformes: "&${contar(extintorEstado, LIMITES.extintores, "Conforme")}` +
@@ -403,22 +399,28 @@ function dibujarEstadoGeneral(lienzo) {
   }
 }
 
+/**
+ * Bloques del panel de extintores por tipo de agente. `icono` es el sufijo de
+ * la imagen del extintor, del mismo color que la franja del bloque.
+ */
+
+const EXTINTORES_POR_AGENTE = [
+  { columnas: ["O", "Q"], color: COLORES.ambar, nombre: "Solkaflam", origen: "L", icono: "solkaflam" },
+  { columnas: ["R", "T"], color: COLORES.gris, nombre: "CO2", origen: "M", icono: "co2" },
+  { columnas: ["U", "W"], color: COLORES.rojo, nombre: "Multipropósito", origen: "N", icono: "multiproposito" },
+  { columnas: ["X", "Z"], color: COLORES.verdeAgua, nombre: "Agua", origen: "O", icono: "agua" },
+];
+
 function dibujarAgentes(lienzo) {
   dibujarPanel(lienzo, "O14:Z27", "O14", "Extintores por tipo de agente");
 
-  const agentes = [
-    { columnas: ["O", "Q"], color: COLORES.ambar, nombre: "Solkaflam", origen: "L" },
-    { columnas: ["R", "T"], color: COLORES.gris, nombre: "CO2", origen: "M" },
-    { columnas: ["U", "W"], color: COLORES.rojo, nombre: "Multipropósito", origen: "N" },
-    { columnas: ["X", "Z"], color: COLORES.verdeAgua, nombre: "Agua", origen: "O" },
-  ];
-
-  for (const { columnas, color, nombre, origen } of agentes) {
+  for (const { columnas, color, nombre, origen } of EXTINTORES_POR_AGENTE) {
     const [desde, hasta] = columnas;
 
     lienzo.estilo(`${desde}16:${hasta}16`, { relleno: color });
 
-    lienzo.combinar(`${desde}17:${hasta}19`).texto(`${desde}17`, "🧯", ESTILOS.iconoGrande);
+    // La imagen del extintor se dibuja encima de estas celdas.
+    lienzo.combinar(`${desde}17:${hasta}19`);
 
     lienzo.combinar(`${desde}20:${hasta}20`).texto(`${desde}20`, nombre, ESTILOS.etiquetaAgente);
 
@@ -807,9 +809,11 @@ const RUTAS = {
 const ID_RELACION_INICIO = "rIdInicioSst";
 
 /**
- * Íconos que se dibujan sobre las tarjetas de botiquines y camillas. Los
- * emojis disponibles no representan un botiquín ni una camilla de rescate,
- * por lo que se usan imágenes propias guardadas en `excel/recursos`.
+ * Íconos que se dibujan sobre las tarjetas de extintores, botiquines y
+ * camillas, y sobre cada bloque de extintores por tipo de agente. Los emojis
+ * disponibles no representan un botiquín ni una camilla de rescate, ni
+ * distinguen el color de cada extintor, por lo que se usan imágenes propias
+ * guardadas en `excel/recursos`.
  */
 
 const DIRECTORIO_RECURSOS = path.join(__dirname, "..", "recursos");
@@ -833,6 +837,28 @@ const IMAGENES_INICIO = [
     columna: 11,
     fila: 8,
   },
+  {
+    idRelacion: "rId4",
+    archivo: "icono-extintor-multiproposito.png",
+    parte: "iconoExtintorMultiproposito.png",
+    nombre: "Extintor",
+    descripcion: "Ícono de extintor",
+    columna: 1,
+    fila: 8,
+  },
+  ...EXTINTORES_POR_AGENTE.map(({ columnas, nombre, icono }, indice) => ({
+    idRelacion: `rId${5 + indice}`,
+    archivo: `icono-extintor-${icono}.png`,
+    parte: `iconoExtintor${icono[0].toUpperCase()}${icono.slice(1)}.png`,
+    nombre: `Extintor ${nombre}`,
+    descripcion: `Ícono de extintor de ${nombre}`,
+    columna: columnas[0].charCodeAt(0) - "A".charCodeAt(0),
+    // Bloque de 3 columnas (unos 144 px) y filas 17 a 19 (60 px): centrado.
+    fila: 16,
+    tamano: 56,
+    margenX: 44,
+    margenY: 2,
+  })),
 ];
 
 const TIPOS = {
