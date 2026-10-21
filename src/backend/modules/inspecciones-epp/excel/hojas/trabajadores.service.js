@@ -10,6 +10,10 @@ const {
   aplicarColorPorValor,
 } = require("../../../../shared/services/excel.service");
 
+const {
+  resolverUrlEvidencia,
+} = require("../../../../shared/utils/urlEvidencia.util");
+
 const { COLORES_RESULTADO } = require("./estilos.service");
 
 /**
@@ -39,6 +43,7 @@ const { COLORES_RESULTADO } = require("./estilos.service");
  *   hallazgos_epp: string,
  *   observaciones: string,
  *   evidencia_url: string|null,
+ *   evidencia_ruta: string|null,
  *   evidencia_fecha: string|Date|null
  * }>} seguimiento - Registros de seguimiento obtenidos desde la base de datos.
  * @returns { @returns {ExcelJS.Worksheet}
@@ -128,6 +133,13 @@ function construirHojaSeguimientoEpp(workbook, seguimiento) {
   ]);
 
   seguimiento.forEach((fila) => {
+    // El enlace guardado puede apuntar a una carpeta con otro nombre; se
+    // reconstruye con la ruta vigente de la evidencia.
+    const enlaceEvidencia = resolverUrlEvidencia(
+      fila.evidencia_url,
+      fila.evidencia_ruta,
+    );
+
     const row = hoja.addRow({
       inspeccionId: fila.inspeccion_id || "",
       fecha: fila.fecha || "",
@@ -145,10 +157,10 @@ function construirHojaSeguimientoEpp(workbook, seguimiento) {
       hallazgos: fila.hallazgos_epp || "",
       observaciones: fila.observaciones || "",
 
-      evidencia: fila.evidencia_url
+      evidencia: enlaceEvidencia
         ? {
             text: "Ver evidencia",
-            hyperlink: fila.evidencia_url,
+            hyperlink: enlaceEvidencia,
           }
         : "",
 

@@ -297,6 +297,7 @@ async function obtenerSeguimientoEpp(filtros = {}) {
 
       t.observaciones,
       t.evidencia_url,
+      t.evidencia_ruta,
       t.evidencia_fecha
 
       FROM evaluaciones_epp t
@@ -326,6 +327,7 @@ async function obtenerSeguimientoEpp(filtros = {}) {
       t.cargo,
       t.observaciones,
       t.evidencia_url,
+      t.evidencia_ruta,
       t.evidencia_fecha
 
     ORDER BY
