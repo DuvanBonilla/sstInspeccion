@@ -513,3 +513,36 @@ test("reconoce y regenera una hoja Inicio con el diseño anterior", () => {
   assert.match(leer(zip, "xl/worksheets/sheet9.xml"), /<c r="AK1"[^>]*t="inlineStr"><is><t[^>]*>Ext\. clave alerta<\/t>/);
   assert.doesNotMatch(leer(zip, "xl/worksheets/sheet9.xml"), /<c r="AD1"[^>]*>\s*<is><t[^>]*>Ext\. clave alerta/);
 });
+
+test("la tabla de datos del gráfico de Inicio tiene formato de tabla y las cantidades centradas", () => {
+  const zip = crearLibroMinimo();
+
+  actualizarInicio(zip);
+
+  const hoja = leer(zip, "xl/worksheets/sheetInicio.xml");
+
+  const estilo = (referencia) => {
+    const celda = hoja.match(new RegExp(`<c r="${referencia}"[^>]*>`));
+
+    assert.ok(celda, `falta la celda ${referencia}`);
+
+    return celda[0].match(/ s="(\d+)"/)[1];
+  };
+
+  // Encabezado: el mismo estilo (verde, centrado) en las cinco columnas.
+  for (const columna of ["AC", "AD", "AE", "AF"]) {
+    assert.equal(estilo(`${columna}14`), estilo("AB14"), columna);
+  }
+
+  // Cantidades: mismo estilo en todas las filas y columnas, distinto del de la
+  // sección, que va a la izquierda.
+  for (const columna of ["AC", "AD", "AE", "AF"]) {
+    for (const fila of [15, 17, 19]) {
+      assert.equal(estilo(`${columna}${fila}`), estilo("AC15"), `${columna}${fila}`);
+    }
+  }
+
+  assert.notEqual(estilo("AC15"), estilo("AB15"));
+  assert.equal(estilo("AB15"), estilo("AB19"));
+  assert.match(hoja, /<col min="28" max="28" width="18"/);
+});

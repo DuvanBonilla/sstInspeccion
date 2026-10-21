@@ -60,25 +60,25 @@ test("el encabezado es verde con letra blanca, como en las hojas de datos del SS
   }
 });
 
-test("las filas de datos son crema con bordes finos y alto de 20 puntos", () => {
+test("las filas de datos son blancas con bordes finos y alto de 20 puntos", () => {
   const [hoja] = crearHojas();
 
   const celda = hoja.getCell("A2");
 
-  assert.equal(celda.fill.fgColor.argb, aArgb(COLORES.crema));
+  assert.equal(celda.fill.fgColor.argb, aArgb(COLORES.blanco));
   assert.equal(celda.font.color.argb, aArgb(COLORES.texto));
   assert.equal(celda.border.bottom.style, "thin");
   assert.equal(hoja.getRow(2).height, 20);
 });
 
-test("el formato crema llega hasta la fila 500 aunque no haya registros", () => {
+test("el formato de filas llega hasta la fila 500 aunque no haya registros", () => {
   for (const hoja of crearHojas()) {
     const ultimaColumna = hoja.getRow(1).cellCount;
 
     for (const referencia of [`A500`, `${String.fromCharCode(64 + Math.min(ultimaColumna, 26))}500`]) {
       assert.equal(
         hoja.getCell(referencia).fill.fgColor.argb,
-        aArgb(COLORES.crema),
+        aArgb(COLORES.blanco),
         `${hoja.name} ${referencia}`,
       );
     }
@@ -100,16 +100,16 @@ test("las hojas se escriben y se vuelven a leer sin perder el formato", async ()
   const hoja = leido.getWorksheet("01 - Inspecciones");
 
   assert.equal(hoja.getCell("A1").fill.fgColor.argb, aArgb(COLORES.verde));
-  assert.equal(hoja.getCell("A300").fill.fgColor.argb, aArgb(COLORES.crema));
+  assert.equal(hoja.getCell("A300").fill.fgColor.argb, aArgb(COLORES.blanco));
 });
 
-test("sin planes, la fila vacía de la tabla de la hoja 03 también lleva el formato crema", () => {
+test("sin planes, la fila vacía de la tabla de la hoja 03 también lleva el formato de datos", () => {
   const workbook = new ExcelJS.Workbook();
 
   const hoja = construirHojaPlanesAccion(workbook, []);
 
   for (const referencia of ["A2", "J2", "S2"]) {
-    assert.equal(hoja.getCell(referencia).fill.fgColor.argb, aArgb(COLORES.crema), referencia);
+    assert.equal(hoja.getCell(referencia).fill.fgColor.argb, aArgb(COLORES.blanco), referencia);
     assert.equal(hoja.getCell(referencia).border.bottom.style, "thin", referencia);
   }
 });

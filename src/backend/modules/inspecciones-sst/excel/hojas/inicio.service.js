@@ -153,7 +153,6 @@ const ESTILOS = {
   },
   seccion: { fuente: fuente(10, { negrita: true }) },
   porcentaje: { fuente: fuente(9, { negrita: true }), formato: FORMATOS.porcentaje },
-  datosGrafico: { fuente: fuente(8, { color: COLORES.textoSecundario }) },
   nota: { fuente: fuente(9, { color: COLORES.textoSecundario }) },
 };
 
@@ -380,20 +379,26 @@ function dibujarEstadoGeneral(lienzo) {
 
   const [seccion] = COLUMNAS_DATOS_GRAFICO;
 
-  lienzo.texto(`${seccion}13`, "Datos del gráfico (desde la hoja General)", ESTILOS.datosGrafico);
+  lienzo.texto(`${seccion}13`, "Datos del gráfico (desde la hoja General)", ESTILOS.seccion);
 
   ["Sección", "Bueno", "Regular", "Malo", "No cumple"].forEach((texto, indice) => {
-    lienzo.texto(`${COLUMNAS_DATOS_GRAFICO[indice]}14`, texto, ESTILOS.datosGrafico);
+    lienzo.estilo(`${COLUMNAS_DATOS_GRAFICO[indice]}14`, ESTILOS.encabezadoTabla);
+
+    lienzo.texto(`${COLUMNAS_DATOS_GRAFICO[indice]}14`, texto);
   });
 
   for (let fila = 15; fila <= 19; fila += 1) {
     const filaGeneral = fila + 9;
 
     ["B", "F", "G", "H", "I"].forEach((columnaGeneral, indice) => {
+      // La sección va a la izquierda; las cantidades, centradas.
       lienzo.formula(
         `${COLUMNAS_DATOS_GRAFICO[indice]}${fila}`,
         `General!${columnaGeneral}${filaGeneral}`,
-        ESTILOS.datosGrafico,
+        {
+          ...ESTILOS.filaTabla,
+          ...(indice === 0 ? ESTILOS.filaTablaIzquierda : { formato: "0" }),
+        },
       );
     });
   }
@@ -741,7 +746,8 @@ function construirHojaInicioXml(registro) {
   lienzo
     .ancho("A", 2)
     .ancho(`B:${ULTIMA_COLUMNA}`, 6.2)
-    .ancho("AB:AF", 11)
+    .ancho("AB", 18)
+    .ancho("AC:AF", 11)
     .ancho("AH:AU", 12, { oculta: true });
 
   dibujarEncabezado(lienzo);

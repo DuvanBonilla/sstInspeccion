@@ -10,7 +10,6 @@ const COLORES = {
   verde: "1E9E57",
   verdeOscuro: "137A42",
   verdeSuave: "D9F2E3",
-  crema: "FFF7DC",
   blanco: "FFFFFF",
   texto: "1F2937",
   textoSecundario: "6B7280",

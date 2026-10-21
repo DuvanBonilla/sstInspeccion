@@ -9,7 +9,7 @@ const {
 
 /**
  * Formato de las hojas de datos de los seguimientos, igual al de las hojas de
- * datos del tablero SST: encabezado verde, filas en crema y bordes suaves.
+ * datos del tablero SST: encabezado verde, filas blancas y bordes suaves.
  */
 
 const ALTO_ENCABEZADO = 42;
@@ -39,7 +39,7 @@ const FUENTE_DATOS = {
 const RELLENO_DATOS = {
   type: "pattern",
   pattern: "solid",
-  fgColor: { argb: aArgb(COLORES.crema) },
+  fgColor: { argb: aArgb(COLORES.blanco) },
 };
 
 /**
@@ -242,7 +242,7 @@ function aplicarEstiloEncabezado(worksheet, fila = 1) {
 
 /**
  * Da a una celda de datos el estilo de las hojas de datos: fuente del tablero,
- * relleno crema, bordes finos y alineación vertical centrada.
+ * relleno blanco, bordes finos y alineación vertical centrada.
  *
  * @param {ExcelJS.Cell} cell Celda que recibe el estilo.
  * @returns {void}

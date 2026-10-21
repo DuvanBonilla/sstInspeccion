@@ -101,7 +101,7 @@ function estiloEncabezado() {
 function estiloDato({ centrado = false, formato = null } = {}) {
   return {
     fuente: { nombre: FUENTES.principal, tamano: 10, color: COLORES.texto },
-    relleno: COLORES.crema,
+    relleno: COLORES.blanco,
     borde: {
       izquierdo: BORDE_CELDA,
       derecho: BORDE_CELDA,
