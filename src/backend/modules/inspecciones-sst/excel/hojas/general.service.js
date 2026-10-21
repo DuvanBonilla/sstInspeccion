@@ -4,8 +4,15 @@ const {
   escaparXml,
 } = require("../../../../shared/utils/excelXml.util");
 
-const RUTA_HOJA_GENERAL =
-  "xl/worksheets/sheet1.xml";
+const { COLORES_PESTANA } = require("../seguimientoSstExcel.estilos");
+
+const { aplicarColorPestana } = require("./formatoHojas.service");
+
+const {
+  obtenerRutaHoja,
+} = require("../rutasLibroExcel");
+
+const NOMBRE_HOJA_GENERAL = "General";
 
 const RUTA_WORKBOOK =
   "xl/workbook.xml";
@@ -459,9 +466,11 @@ function eliminarCadenaCalculo(zip) {
  */
 
 function actualizarGeneral(zip) {
+  const rutaHoja = obtenerRutaHoja(zip, NOMBRE_HOJA_GENERAL);
+
   const hojaXml = obtenerXml(
     zip,
-    RUTA_HOJA_GENERAL,
+    rutaHoja,
   );
 
   const workbookXml = obtenerXml(
@@ -493,7 +502,7 @@ function actualizarGeneral(zip) {
 
   reemplazarXml(
     zip,
-    RUTA_HOJA_GENERAL,
+    rutaHoja,
     hojaListaParaRecalcular,
   );
 
@@ -505,6 +514,8 @@ function actualizarGeneral(zip) {
 
   const cadenaCalculoEliminada =
   eliminarCadenaCalculo(zip);
+
+  aplicarColorPestana(zip, rutaHoja, COLORES_PESTANA.general);
 
   return {
     hoja:

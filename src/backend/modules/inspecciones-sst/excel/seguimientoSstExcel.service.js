@@ -13,25 +13,25 @@ const {
   diagnosticarTablaExtintores: diagnosticarTablaExtintoresModulo,
 } = require("./hojas/extintores.service");
 
-const {
-  actualizarCamillas,
-} = require("./hojas/camillas.service");
+const { actualizarCamillas } = require("./hojas/camillas.service");
 
-const {
-  actualizarSenalizaciones,
-} = require("./hojas/senalizaciones.service");
+const { actualizarSenalizaciones } = require("./hojas/senalizaciones.service");
 
 const {
   actualizarEquiposTecnologicos,
 } = require("./hojas/equiposTecnologicos.service");
 
-const {
-  actualizarBotiquines,
-} = require("./hojas/botiquines.service");
+const { actualizarBotiquines } = require("./hojas/botiquines.service");
 
 const { actualizarResumen } = require("./hojas/resumen.service");
 
 const { actualizarGeneral } = require("./hojas/general.service");
+
+const { actualizarInicio } = require("./hojas/inicio.service");
+
+const { corregirEncabezados } = require("./hojas/encabezados.service");
+
+const { protegerHojas } = require("./hojas/proteccion.service");
 
 const CONTENT_TYPE_XLSM = "application/vnd.ms-excel.sheet.macroEnabled.12";
 
@@ -65,6 +65,11 @@ function obtenerRutaExcelSst() {
 
 async function cargarExcelSst() {
   const rutaExcel = obtenerRutaExcelSst();
+
+  console.log("[Excel SST] Configuración:", {
+    usuario: JSON.stringify(process.env.ONEDRIVE_USER_ID),
+    ruta: JSON.stringify(rutaExcel),
+  });
 
   const buffer = await descargarArchivoOneDrive(rutaExcel);
 
@@ -180,6 +185,35 @@ async function actualizarExtintoresEnOneDrive() {
 }
 
 /**
+ * Protege las hojas alimentadas por la base de datos para que no se editen
+ * desde Excel. La contraseña es opcional y se toma de
+ * `EXCEL_SST_CLAVE_PROTECCION`.
+ *
+ * La protección es un cambio de presentación: si falla, no impide que se
+ * actualicen los datos del libro y el error queda en el resultado.
+ *
+ * @param {AdmZip} zip Archivo XLSM abierto como contenedor ZIP.
+ * @param {boolean} incluirInicio Si también se protege la hoja Inicio.
+ * @returns {Object} Hojas protegidas, o el motivo por el que no se aplicó.
+ */
+
+function protegerHojasSeguro(zip, incluirInicio) {
+  try {
+    return {
+      aplicada: true,
+      ...protegerHojas(zip, {
+        clave: process.env.EXCEL_SST_CLAVE_PROTECCION || "",
+        incluirInicio,
+      }),
+    };
+  } catch (error) {
+    console.error("[Excel SST] No se pudo proteger las hojas:", error);
+
+    return { aplicada: false, error: error.message };
+  }
+}
+
+/**
  * Actualiza en memoria todas las secciones del seguimiento SST.
  *
  * Descarga el archivo XLSM y actualiza los módulos de extintores, camillas,
@@ -208,9 +242,15 @@ async function actualizarExcelSeguimientoSstEnMemoria() {
 
   const botiquines = await actualizarBotiquines(zip);
 
+  const encabezados = corregirEncabezados(zip);
+
   const resumen = await actualizarResumen(zip);
 
   const general = await actualizarGeneral(zip);
+
+  const inicio = actualizarInicio(zip);
+
+  const proteccion = protegerHojasSeguro(zip, !inicio.omitida);
 
   const macrosConservadas = validarMacrosExcel(zip);
 
@@ -232,6 +272,12 @@ async function actualizarExcelSeguimientoSstEnMemoria() {
     resumen,
 
     general,
+
+    encabezados,
+
+    inicio,
+
+    proteccion,
   };
 }
 
@@ -279,6 +325,12 @@ async function actualizarExcelSeguimientoSstEnOneDrive() {
     resumen: resultado.resumen,
 
     general: resultado.general,
+
+    encabezados: resultado.encabezados,
+
+    inicio: resultado.inicio,
+
+    proteccion: resultado.proteccion,
   };
 }
 

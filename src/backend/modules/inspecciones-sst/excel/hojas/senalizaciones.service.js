@@ -10,11 +10,14 @@ const {
   actualizarRangoTablaXml,
 } = require("../../../../shared/utils/excelXml.util");
 
-const RUTA_HOJA_SENALIZACIONES =
-  "xl/worksheets/sheet4.xml";
+const { aplicarFormatoHojaDatos } = require("./formatoHojas.service");
 
-const RUTA_TABLA_SENALIZACIONES =
-  "xl/tables/table3.xml";
+const {
+  obtenerRutaHoja,
+  obtenerRutaTabla,
+} = require("../rutasLibroExcel");
+
+const NOMBRE_HOJA_SENALIZACIONES = "Señalizacion";
 
 const ULTIMA_COLUMNA_SENALIZACIONES =
   "P";
@@ -120,14 +123,18 @@ async function actualizarSenalizaciones(zip) {
   const filasSenalizaciones =
     await obtenerFilasSenalizacionesSstAprobadas();
 
+  const rutaHoja = obtenerRutaHoja(zip, NOMBRE_HOJA_SENALIZACIONES);
+
+  const rutaTabla = obtenerRutaTabla(zip, rutaHoja);
+
   const hojaXml = obtenerXml(
     zip,
-    RUTA_HOJA_SENALIZACIONES,
+    rutaHoja,
   );
 
   const tablaXml = obtenerXml(
     zip,
-    RUTA_TABLA_SENALIZACIONES,
+    rutaTabla,
   );
 
   const hojaActualizada =
@@ -162,15 +169,23 @@ async function actualizarSenalizaciones(zip) {
 
   reemplazarXml(
     zip,
-    RUTA_HOJA_SENALIZACIONES,
+    rutaHoja,
     hojaActualizada,
   );
 
   reemplazarXml(
     zip,
-    RUTA_TABLA_SENALIZACIONES,
+    rutaTabla,
     tablaActualizada.xml,
   );
+
+  aplicarFormatoHojaDatos(zip, {
+    ruta: rutaHoja,
+    ultimaColumna: ULTIMA_COLUMNA_SENALIZACIONES,
+    columnasFecha: ["C"],
+    calificaciones: { desde: "M", hasta: "N" },
+    filaFinal: 1000,
+  });
 
   return {
     totalSenalizaciones:

@@ -1,5 +1,47 @@
 const ExcelJS = require("exceljs");
 
+const {
+  COLORES,
+  FUENTES,
+  COLORES_PESTANA,
+  aArgb,
+} = require("../utils/paletaExcel.util");
+
+/**
+ * Formato de las hojas de datos de los seguimientos, igual al de las hojas de
+ * datos del tablero SST: encabezado verde, filas en crema y bordes suaves.
+ */
+
+const ALTO_ENCABEZADO = 42;
+
+const ALTO_FILA_DATOS = 20;
+
+const BORDE_CELDA = { style: "thin", color: { argb: aArgb(COLORES.borde) } };
+
+const BORDE_ENCABEZADO = {
+  style: "thin",
+  color: { argb: aArgb(COLORES.verdeOscuro) },
+};
+
+/**
+ * Última fila que conserva el formato de las hojas de datos, tengan o no
+ * registros, para que se vean igual de formateadas.
+ */
+
+const FILA_FINAL_FORMATO = 500;
+
+const FUENTE_DATOS = {
+  name: FUENTES.principal,
+  size: 10,
+  color: { argb: aArgb(COLORES.texto) },
+};
+
+const RELLENO_DATOS = {
+  type: "pattern",
+  pattern: "solid",
+  fgColor: { argb: aArgb(COLORES.crema) },
+};
+
 /**
  * Crea un nuevo libro de Excel utilizando ExcelJS.
  *
@@ -84,7 +126,8 @@ function configurarColumnas(worksheet, columnas) {
 }
 
 /**
- * Congela las filas superiores de una hoja para mantener visible el encabezado.
+ * Congela las filas superiores y la primera columna de una hoja para mantener
+ * visibles el encabezado y el identificador, y oculta la cuadrícula.
  *
  * @param {ExcelJS.Worksheet} worksheet Hoja que se configurará.
  * @param {number} [filas=1] Cantidad de filas que permanecerán fijas.
@@ -99,7 +142,9 @@ function congelarEncabezado(worksheet, filas = 1) {
   worksheet.views = [
     {
       state: "frozen",
+      xSplit: 1,
       ySplit: filas,
+      showGridLines: false,
     },
   ];
 }
@@ -166,22 +211,20 @@ function aplicarEstiloEncabezado(worksheet, fila = 1) {
 
   const encabezado = worksheet.getRow(fila);
 
-  encabezado.height = 32;
+  encabezado.height = ALTO_ENCABEZADO;
 
   encabezado.eachCell((cell) => {
     cell.font = {
+      name: FUENTES.principal,
+      size: 10,
       bold: true,
-      color: {
-        argb: "FFFFFFFF",
-      },
+      color: { argb: aArgb(COLORES.blanco) },
     };
 
     cell.fill = {
       type: "pattern",
       pattern: "solid",
-      fgColor: {
-        argb: "FF102A5C",
-      },
+      fgColor: { argb: aArgb(COLORES.verde) },
     };
 
     cell.alignment = {
@@ -191,24 +234,73 @@ function aplicarEstiloEncabezado(worksheet, fila = 1) {
     };
 
     cell.border = {
-      top: {
-        style: "thin",
-        color: { argb: "FFD9E1F2" },
-      },
-      left: {
-        style: "thin",
-        color: { argb: "FFD9E1F2" },
-      },
-      bottom: {
-        style: "thin",
-        color: { argb: "FFD9E1F2" },
-      },
-      right: {
-        style: "thin",
-        color: { argb: "FFD9E1F2" },
-      },
+      left: BORDE_ENCABEZADO,
+      right: BORDE_ENCABEZADO,
     };
   });
+}
+
+/**
+ * Da a una celda de datos el estilo de las hojas de datos: fuente del tablero,
+ * relleno crema, bordes finos y alineación vertical centrada.
+ *
+ * @param {ExcelJS.Cell} cell Celda que recibe el estilo.
+ * @returns {void}
+ */
+
+function aplicarEstiloDato(cell) {
+  cell.font = { ...FUENTE_DATOS };
+
+  cell.fill = { ...RELLENO_DATOS };
+
+  cell.alignment = {
+    vertical: "middle",
+    wrapText: false,
+  };
+
+  cell.border = {
+    top: BORDE_CELDA,
+    left: BORDE_CELDA,
+    bottom: BORDE_CELDA,
+    right: BORDE_CELDA,
+  };
+}
+
+/**
+ * Extiende el formato de las filas de datos hasta `FILA_FINAL_FORMATO` y deja
+ * la pestaña en gris, como en las hojas de datos del tablero SST.
+ *
+ * Las celdas que ya tienen estilo no se tocan: solo se completan las que no lo
+ * tienen, tanto en las filas que faltan como en una fila vacía que haya
+ * quedado sin formato, con todas las columnas en blanco y con el estilo de
+ * datos.
+ *
+ * @param {ExcelJS.Worksheet} worksheet Hoja de datos ya construida.
+ * @param {number} ultimaColumna Cantidad de columnas de la tabla.
+ * @returns {void}
+ * @throws {Error} Si no se recibe una hoja.
+ */
+
+function completarFormatoHojaDatos(worksheet, ultimaColumna) {
+  if (!worksheet) {
+    throw new Error("Se requiere una hoja");
+  }
+
+  worksheet.properties.tabColor = { argb: aArgb(COLORES_PESTANA.datos) };
+
+  for (let fila = 2; fila <= FILA_FINAL_FORMATO; fila += 1) {
+    const row = worksheet.getRow(fila);
+
+    row.height = row.height || ALTO_FILA_DATOS;
+
+    for (let columna = 1; columna <= ultimaColumna; columna += 1) {
+      const celda = row.getCell(columna);
+
+      if (!celda.fill) {
+        aplicarEstiloDato(celda);
+      }
+    }
+  }
 }
 
 /**
@@ -233,25 +325,10 @@ function aplicarFormatoCuerpo(
   for (let fila = filaInicio; fila <= filaFin; fila += 1) {
     const row = worksheet.getRow(fila);
 
-    row.height = 20;
+    row.height = ALTO_FILA_DATOS;
 
     row.eachCell({ includeEmpty: true }, (cell) => {
-      cell.font = {
-        name: "Calibri",
-        size: 10,
-      };
-
-      cell.alignment = {
-        vertical: "middle",
-        wrapText: false,
-      };
-
-      cell.border = {
-        bottom: {
-          style: "hair",
-          color: { argb: "FFD9E2F3" },
-        },
-      };
+      aplicarEstiloDato(cell);
     });
   }
 }
@@ -394,6 +471,8 @@ module.exports = {
 
   aplicarEstiloEncabezado,
   aplicarFormatoCuerpo,
+  completarFormatoHojaDatos,
+  FILA_FINAL_FORMATO,
   centrarColumnas,
   alinearColumnasIzquierda,
 

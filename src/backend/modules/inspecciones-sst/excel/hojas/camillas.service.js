@@ -10,9 +10,14 @@ const {
   actualizarRangoTablaXml,
 } = require("../../../../shared/utils/excelXml.util");
 
-const RUTA_HOJA_CAMILLAS = "xl/worksheets/sheet3.xml";
+const { aplicarFormatoHojaDatos } = require("./formatoHojas.service");
 
-const RUTA_TABLA_CAMILLAS = "xl/tables/table2.xml";
+const {
+  obtenerRutaHoja,
+  obtenerRutaTabla,
+} = require("../rutasLibroExcel");
+
+const NOMBRE_HOJA_CAMILLAS = "Camillas";
 
 const ULTIMA_COLUMNA_CAMILLAS = "U";
 
@@ -110,9 +115,13 @@ async function actualizarCamillas(zip) {
 
   const filasCamillas = await obtenerFilasCamillasSstAprobadas();
 
-  const hojaXml = obtenerXml(zip, RUTA_HOJA_CAMILLAS);
+  const rutaHoja = obtenerRutaHoja(zip, NOMBRE_HOJA_CAMILLAS);
 
-  const tablaXml = obtenerXml(zip, RUTA_TABLA_CAMILLAS);
+  const rutaTabla = obtenerRutaTabla(zip, rutaHoja);
+
+  const hojaXml = obtenerXml(zip, rutaHoja);
+
+  const tablaXml = obtenerXml(zip, rutaTabla);
 
   const hojaActualizada = actualizarFilasHojaXml({
     hojaXml,
@@ -136,9 +145,17 @@ async function actualizarCamillas(zip) {
     cantidadFilas: filasCamillas.length,
   });
 
-  reemplazarXml(zip, RUTA_HOJA_CAMILLAS, hojaActualizada);
+  reemplazarXml(zip, rutaHoja, hojaActualizada);
 
-  reemplazarXml(zip, RUTA_TABLA_CAMILLAS, tablaActualizada.xml);
+  reemplazarXml(zip, rutaTabla, tablaActualizada.xml);
+
+  aplicarFormatoHojaDatos(zip, {
+    ruta: rutaHoja,
+    ultimaColumna: ULTIMA_COLUMNA_CAMILLAS,
+    columnasFecha: ["C"],
+    calificaciones: { desde: "L", hasta: "R" },
+    filaFinal: 1000,
+  });
 
   return {
     totalCamillas: filasCamillas.length,

@@ -6,6 +6,7 @@ const {
   aplicarFormatoFecha,
   aplicarEstiloEncabezado,
   aplicarFormatoCuerpo,
+  completarFormatoHojaDatos,
 } = require("../../../../shared/services/excel.service");
 
 /**
@@ -224,6 +225,8 @@ function construirHojaInspecciones(workbook, inspecciones) {
   // =====================================================
   // NAVEGACIÓN
   // =====================================================
+
+  completarFormatoHojaDatos(hoja, 19);
 
   congelarEncabezado(hoja, 1);
 

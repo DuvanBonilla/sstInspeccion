@@ -9,11 +9,14 @@ const {
   actualizarRangoTablaXml,
 } = require("../../../../shared/utils/excelXml.util");
 
-const RUTA_HOJA_BOTIQUINES =
-  "xl/worksheets/sheet7.xml";
+const { aplicarFormatoHojaDatos } = require("./formatoHojas.service");
 
-const RUTA_TABLA_BOTIQUINES =
-  "xl/tables/table5.xml";
+const {
+  obtenerRutaHoja,
+  obtenerRutaTabla,
+} = require("../rutasLibroExcel");
+
+const NOMBRE_HOJA_BOTIQUINES = "Botiquin";
 
 const ULTIMA_COLUMNA_BOTIQUINES = "W";
 
@@ -122,14 +125,18 @@ async function actualizarBotiquines(zip) {
   const filas =
     await obtenerFilasBotiquinesSstAprobados();
 
+  const rutaHoja = obtenerRutaHoja(zip, NOMBRE_HOJA_BOTIQUINES);
+
+  const rutaTabla = obtenerRutaTabla(zip, rutaHoja);
+
   const hojaXml = obtenerXml(
     zip,
-    RUTA_HOJA_BOTIQUINES,
+    rutaHoja,
   );
 
   const tablaXml = obtenerXml(
     zip,
-    RUTA_TABLA_BOTIQUINES,
+    rutaTabla,
   );
 
   const hojaXmlActualizada = actualizarFilasHojaXml({
@@ -159,15 +166,23 @@ async function actualizarBotiquines(zip) {
 
   reemplazarXml(
     zip,
-    RUTA_HOJA_BOTIQUINES,
+    rutaHoja,
     hojaXmlActualizada,
   );
 
   reemplazarXml(
     zip,
-    RUTA_TABLA_BOTIQUINES,
+    rutaTabla,
     tablaXmlActualizada,
   );
+
+  aplicarFormatoHojaDatos(zip, {
+    ruta: rutaHoja,
+    ultimaColumna: ULTIMA_COLUMNA_BOTIQUINES,
+    columnasFecha: ["D", "P", "R"],
+    calificaciones: { desde: "O", hasta: "O" },
+    filaFinal: 3000,
+  });
 
   return {
     totalBotiquinItems: filas.length,

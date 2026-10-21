@@ -1,9 +1,20 @@
 const { obtenerOCrearHoja } = require("../../../../shared/services/excel.service");
 
+const {
+  COLORES: PALETA,
+  aArgb,
+} = require("../../../../shared/utils/paletaExcel.util");
+
+/**
+ * Paleta de la hoja General. Usa los colores del tablero SST para que ambos
+ * seguimientos compartan la misma identidad visual.
+ */
+
 const COLORES = {
-  azulPrincipal: "FF102A5C",
-  azulSeccion: "FF1F4E79",
-  azulClaro: "FFEAF1FB",
+  encabezado: aArgb(PALETA.verdeOscuro),
+  seccion: aArgb(PALETA.verde),
+  suave: aArgb(PALETA.verdeSuave),
+  texto: aArgb(PALETA.texto),
 
   blanco: "FFFFFFFF",
   grisClaro: "FFF2F4F7",
@@ -66,7 +77,7 @@ function aplicarBorde(celda) {
 function aplicarTexto(
   celda,
   {
-    color = COLORES.azulPrincipal,
+    color = COLORES.texto,
     tamaño = 10,
     negrita = false,
     horizontal = "center",
@@ -96,7 +107,7 @@ function crearSeccion(hoja, fila, titulo) {
 
   celda.value = titulo;
 
-  aplicarFondo(celda, COLORES.azulSeccion);
+  aplicarFondo(celda, COLORES.seccion);
 
   aplicarTexto(celda, {
     color: COLORES.blanco,
@@ -120,7 +131,7 @@ function crearEncabezado(hoja, fila, configuracion) {
 
     celda.value = columna.titulo;
 
-    aplicarFondo(celda, COLORES.azulPrincipal);
+    aplicarFondo(celda, COLORES.encabezado);
 
     aplicarTexto(celda, {
       color: COLORES.blanco,
@@ -159,8 +170,8 @@ function crearIndicador(
     titulo,
     formula,
     resultado,
-    fondo = COLORES.azulClaro,
-    color = COLORES.azulPrincipal,
+    fondo = COLORES.suave,
+    color = COLORES.texto,
     formato,
   },
 ) {
@@ -339,6 +350,8 @@ function aplicarEstiloFilaDatos(hoja, numeroFila) {
 function construirHojaGeneralEpp(workbook, inspecciones, seguimiento, planes) {
   const hoja = obtenerOCrearHoja(workbook, "General");
 
+  hoja.properties.tabColor = { argb: aArgb(PALETA.verde) };
+
   hoja.views = [
     {
       showGridLines: false,
@@ -406,7 +419,7 @@ function construirHojaGeneralEpp(workbook, inspecciones, seguimiento, planes) {
 
   titulo.value = "SEGUIMIENTO GENERAL DE INSPECCIONES EPP";
 
-  aplicarFondo(titulo, COLORES.azulPrincipal);
+  aplicarFondo(titulo, COLORES.encabezado);
 
   aplicarTexto(titulo, {
     color: COLORES.blanco,
@@ -498,7 +511,7 @@ function construirHojaGeneralEpp(workbook, inspecciones, seguimiento, planes) {
     horizontal: "left",
   });
 
-  aplicarFondo(etiquetaBusqueda, COLORES.azulClaro);
+  aplicarFondo(etiquetaBusqueda, COLORES.suave);
 
   const entradaBusqueda = hoja.getCell("C10");
 
@@ -806,7 +819,7 @@ function construirHojaGeneralEpp(workbook, inspecciones, seguimiento, planes) {
 
       resultado: planes.length,
 
-      fondo: COLORES.azulClaro,
+      fondo: COLORES.suave,
     },
     {
       inicio: "C",

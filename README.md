@@ -119,7 +119,7 @@ El backend está organizado por módulos de negocio. Cada módulo agrupa sus rut
 - `src/backend/modules/`:
   - `paginas/`: entrega de las vistas HTML.
   - `inspecciones-sst/`: registro SST, PDF SST, PDF de prueba, validadores y seguimiento Excel SST (`excel/`).
-  - `inspecciones-epp/`: registro EPP, PDF, correo y resumen EPP, catálogo de EPP (`catalogo/`) y seguimiento y sincronización Excel EPP (`excel/`).
+  - `inspecciones-epp/`: registro EPP, PDF, correo y resumen EPP, catálogo de EPP (`catalogo/`) y seguimiento y sincronización Excel EPP (`excel/`), con la hoja Inicio y la protección de hojas.
   - `aprobaciones/`: flujo de aprobación, reinicio con código y cierre de la inspección.
   - `estadisticas/`: consultas y endpoints de los paneles SST y EPP.
   - `excel/`: endpoints para actualizar y sincronizar los Excel de seguimiento.
@@ -127,7 +127,7 @@ El backend está organizado por módulos de negocio. Cada módulo agrupa sus rut
   - `models/`: lectura de la inspección completa (SST o EPP).
   - `services/`: Microsoft Graph, correo, evidencias en OneDrive, utilidades Excel y solicitudes de aprobación.
   - `middlewares/`: recepción de archivos y autorización de procesos protegidos.
-  - `utils/`: optimización PDF, fechas de evidencias, lectura de solicitudes, XML y texto.
+  - `utils/`: optimización PDF, fechas de evidencias, lectura de solicitudes, XML, texto y la paleta de los tableros Excel (`paletaExcel.util.js`, compartida por SST y EPP).
 
 Reglas de dependencia:
 
@@ -304,6 +304,8 @@ Crea un archivo `.env` en la raíz. No almacenes credenciales reales en el repos
 | `ONEDRIVE_EXCEL_PATH` | Sí | Ruta del seguimiento SST |
 | `ONEDRIVE_EPP_EXCEL_PATH` | Para EPP | Ruta `.xlsx` del seguimiento EPP |
 | `ONEDRIVE_EVIDENCIAS_PATH` | Opcional | Ruta base personalizada para evidencias |
+| `EXCEL_SST_CLAVE_PROTECCION` | Opcional | Contraseña de protección de las hojas del seguimiento SST; si se omite, se protegen sin contraseña |
+| `EXCEL_EPP_CLAVE_PROTECCION` | Opcional | Contraseña de protección de las hojas del seguimiento EPP; en `03 - Planes de Acción` solo quedan libres Responsable del Cierre y Fecha de Cierre. Si se omite, se protegen sin contraseña |
 | `APP_URL` | Recomendada | URL pública utilizada para construir enlaces |
 | `AZURE_EPP_SYNC_SECRET` | Para sincronización | Secreto Bearer del endpoint de cierres EPP |
 | `GRAPH_EMAIL_TO_TEST` | Opcional | Destinatario de pruebas de correo |
