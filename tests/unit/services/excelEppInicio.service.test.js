@@ -50,7 +50,8 @@ function formula(hoja, referencia) {
 test("la paleta del tablero SST es la misma que usa el tablero EPP", () => {
   assert.equal(estilosSst.COLORES, COLORES);
   assert.equal(estilosSst.FUENTES, FUENTES);
-  assert.equal(aArgb(COLORES.verde), "FF1E9E57");
+  assert.equal(aArgb("1E9E57"), "FF1E9E57");
+  assert.equal(aArgb(COLORES.verde), `FF${COLORES.verde}`);
 });
 
 test("Inicio es la primera pestaña y usa la cuadrícula del tablero SST", () => {

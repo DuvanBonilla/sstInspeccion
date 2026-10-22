@@ -7,9 +7,9 @@
  */
 
 const COLORES = {
-  verde: "1E9E57",
-  verdeOscuro: "137A42",
-  verdeSuave: "D9F2E3",
+  verde: "468C72",
+  verdeOscuro: "2F6B55",
+  verdeSuave: "E2F0E9",
   blanco: "FFFFFF",
   texto: "1F2937",
   textoSecundario: "6B7280",
@@ -22,8 +22,8 @@ const COLORES = {
   rojo: "D64545",
   rojoTexto: "B42318",
   rojoSuave: "FAD4D4",
-  verdeAgua: "2E9E5B",
-  serieBueno: "1E9E57",
+  verdeAgua: "5FA386",
+  serieBueno: "5FA386",
   serieRegular: "F2B33D",
   serieMalo: "E0533D",
   serieNoCumple: "8B1E1E",

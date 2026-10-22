@@ -10,6 +10,11 @@ const {
   aplicarColorPorValor,
 } = require("../../../../shared/services/excel.service");
 
+const {
+  COLORES: PALETA,
+  aArgb,
+} = require("../../../../shared/utils/paletaExcel.util");
+
 const { COLORES_EVALUACION } = require("./estilos.service");
 
 /**
@@ -377,13 +382,13 @@ function construirHojaPlanesAccion(workbook, planes) {
               type: "pattern",
               pattern: "solid",
               bgColor: {
-                argb: "FFFAD4D4",
+                argb: aArgb(PALETA.rojoSuave),
               },
             },
             font: {
               bold: true,
               color: {
-                argb: "FFB42318",
+                argb: aArgb(PALETA.rojoTexto),
               },
             },
           },
@@ -398,13 +403,13 @@ function construirHojaPlanesAccion(workbook, planes) {
               type: "pattern",
               pattern: "solid",
               bgColor: {
-                argb: "FFFAD4D4",
+                argb: aArgb(PALETA.rojoSuave),
               },
             },
             font: {
               bold: true,
               color: {
-                argb: "FFB42318",
+                argb: aArgb(PALETA.rojoTexto),
               },
             },
           },
@@ -423,13 +428,13 @@ function construirHojaPlanesAccion(workbook, planes) {
               type: "pattern",
               pattern: "solid",
               bgColor: {
-                argb: "FFFFF0C2",
+                argb: aArgb(PALETA.ambarSuave),
               },
             },
             font: {
               bold: true,
               color: {
-                argb: "FF9A6700",
+                argb: aArgb(PALETA.ambarTexto),
               },
             },
           },
@@ -448,13 +453,13 @@ function construirHojaPlanesAccion(workbook, planes) {
               type: "pattern",
               pattern: "solid",
               bgColor: {
-                argb: "FFD9F2E3",
+                argb: aArgb(PALETA.verdeSuave),
               },
             },
             font: {
               bold: true,
               color: {
-                argb: "FF137A42",
+                argb: aArgb(PALETA.verdeOscuro),
               },
             },
           },
@@ -473,13 +478,13 @@ function construirHojaPlanesAccion(workbook, planes) {
               type: "pattern",
               pattern: "solid",
               bgColor: {
-                argb: "FFD9F2E3",
+                argb: aArgb(PALETA.verdeSuave),
               },
             },
             font: {
               bold: true,
               color: {
-                argb: "FF137A42",
+                argb: aArgb(PALETA.verdeOscuro),
               },
             },
           },
@@ -508,13 +513,13 @@ function construirHojaPlanesAccion(workbook, planes) {
               type: "pattern",
               pattern: "solid",
               bgColor: {
-                argb: "FFD9F2E3",
+                argb: aArgb(PALETA.verdeSuave),
               },
             },
             font: {
               bold: true,
               color: {
-                argb: "FF137A42",
+                argb: aArgb(PALETA.verdeOscuro),
               },
             },
           },
@@ -533,13 +538,13 @@ function construirHojaPlanesAccion(workbook, planes) {
               type: "pattern",
               pattern: "solid",
               bgColor: {
-                argb: "FFFFF0C2",
+                argb: aArgb(PALETA.ambarSuave),
               },
             },
             font: {
               bold: true,
               color: {
-                argb: "FF9A6700",
+                argb: aArgb(PALETA.ambarTexto),
               },
             },
           },

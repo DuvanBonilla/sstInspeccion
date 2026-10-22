@@ -20,8 +20,8 @@ const COLORES = {
   grisClaro: "FFF2F4F7",
   grisTexto: "FF667085",
 
-  verdeFondo: "FFEAF7EE",
-  verdeTexto: "FF16794B",
+  verdeFondo: aArgb(PALETA.verdeSuave),
+  verdeTexto: aArgb(PALETA.verdeOscuro),
 
   amarilloFondo: "FFFFF4E5",
   amarilloTexto: "FFB54708",

@@ -1,39 +1,49 @@
+const {
+  COLORES: PALETA,
+  aArgb,
+} = require("../../../../shared/utils/paletaExcel.util");
+
+/**
+ * Colores de las celdas de resultado y de evaluación del EPP. Usan la paleta
+ * del tablero SST para que ambos seguimientos compartan la misma identidad.
+ */
+
 const COLORES_RESULTADO = {
   "CON NOVEDAD": {
-    fondo: "FFFAD4D4",
-    texto: "FFB42318",
+    fondo: aArgb(PALETA.rojoSuave),
+    texto: aArgb(PALETA.rojoTexto),
   },
 
   "SIN NOVEDAD": {
-    fondo: "FFD9F2E3",
-    texto: "FF137A42",
+    fondo: aArgb(PALETA.verdeSuave),
+    texto: aArgb(PALETA.verdeOscuro),
   },
 
   "SIN EVALUACIÓN": {
-    fondo: "FFEDEFF2",
-    texto: "FF6B7280",
+    fondo: aArgb(PALETA.grisSuave),
+    texto: aArgb(PALETA.textoSecundario),
   },
 };
 
 const COLORES_EVALUACION = {
   B: {
-    fondo: "FFD9F2E3",
-    texto: "FF137A42",
+    fondo: aArgb(PALETA.verdeSuave),
+    texto: aArgb(PALETA.verdeOscuro),
   },
 
   R: {
-    fondo: "FFFFF0C2",
-    texto: "FF9A6700",
+    fondo: aArgb(PALETA.ambarSuave),
+    texto: aArgb(PALETA.ambarTexto),
   },
 
   M: {
-    fondo: "FFFAD4D4",
-    texto: "FFB42318",
+    fondo: aArgb(PALETA.rojoSuave),
+    texto: aArgb(PALETA.rojoTexto),
   },
 
   NA: {
-    fondo: "FFEDEFF2",
-    texto: "FF6B7280",
+    fondo: aArgb(PALETA.grisSuave),
+    texto: aArgb(PALETA.textoSecundario),
   },
 };
 
