@@ -453,13 +453,13 @@ function construirHojaPlanesAccion(workbook, planes) {
               type: "pattern",
               pattern: "solid",
               bgColor: {
-                argb: aArgb(PALETA.verdeSuave),
+                argb: aArgb(PALETA.okSuave),
               },
             },
             font: {
               bold: true,
               color: {
-                argb: aArgb(PALETA.verdeOscuro),
+                argb: aArgb(PALETA.okTexto),
               },
             },
           },
@@ -478,13 +478,13 @@ function construirHojaPlanesAccion(workbook, planes) {
               type: "pattern",
               pattern: "solid",
               bgColor: {
-                argb: aArgb(PALETA.verdeSuave),
+                argb: aArgb(PALETA.okSuave),
               },
             },
             font: {
               bold: true,
               color: {
-                argb: aArgb(PALETA.verdeOscuro),
+                argb: aArgb(PALETA.okTexto),
               },
             },
           },
@@ -513,13 +513,13 @@ function construirHojaPlanesAccion(workbook, planes) {
               type: "pattern",
               pattern: "solid",
               bgColor: {
-                argb: aArgb(PALETA.verdeSuave),
+                argb: aArgb(PALETA.okSuave),
               },
             },
             font: {
               bold: true,
               color: {
-                argb: aArgb(PALETA.verdeOscuro),
+                argb: aArgb(PALETA.okTexto),
               },
             },
           },

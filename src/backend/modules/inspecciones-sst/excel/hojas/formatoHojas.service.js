@@ -37,7 +37,7 @@ const COLUMNAS_TEXTO_LARGO =
 
 const BORDE_CELDA = { estilo: "thin", color: COLORES.borde };
 
-const BORDE_ENCABEZADO = { estilo: "thin", color: COLORES.verdeOscuro };
+const BORDE_ENCABEZADO = { estilo: "thin", color: COLORES.acentoOscuro };
 
 /**
  * Elementos que, según el esquema SpreadsheetML, deben ir después del formato
@@ -90,9 +90,9 @@ function estiloEncabezado() {
       nombre: FUENTES.principal,
       tamano: 10,
       negrita: true,
-      color: COLORES.blanco,
+      color: COLORES.textoAcento,
     },
-    relleno: COLORES.verde,
+    relleno: COLORES.acento,
     borde: { izquierdo: BORDE_ENCABEZADO, derecho: BORDE_ENCABEZADO },
     alineacion: { horizontal: "center", vertical: "center", ajustar: true },
   };

@@ -15,8 +15,8 @@ const COLORES_RESULTADO = {
   },
 
   "SIN NOVEDAD": {
-    fondo: aArgb(PALETA.verdeSuave),
-    texto: aArgb(PALETA.verdeOscuro),
+    fondo: aArgb(PALETA.okSuave),
+    texto: aArgb(PALETA.okTexto),
   },
 
   "SIN EVALUACIÓN": {
@@ -27,8 +27,8 @@ const COLORES_RESULTADO = {
 
 const COLORES_EVALUACION = {
   B: {
-    fondo: aArgb(PALETA.verdeSuave),
-    texto: aArgb(PALETA.verdeOscuro),
+    fondo: aArgb(PALETA.okSuave),
+    texto: aArgb(PALETA.okTexto),
   },
 
   R: {

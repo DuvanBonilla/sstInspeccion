@@ -18,7 +18,7 @@ const {
  */
 
 const ESTILOS_CALIFICACION = [
-  { valor: "B", fondo: COLORES.verdeSuave, texto: COLORES.verdeOscuro },
+  { valor: "B", fondo: COLORES.okSuave, texto: COLORES.okTexto },
   { valor: "R", fondo: COLORES.ambarSuave, texto: COLORES.ambarTexto },
   { valor: "M", fondo: COLORES.rojoSuave, texto: COLORES.rojoTexto },
   { valor: "NC", fondo: COLORES.rojoSuave, texto: COLORES.rojoTexto },
@@ -30,7 +30,7 @@ const ESTILOS_CALIFICACION = [
  */
 
 const ESTILOS_ESTADO = [
-  { valor: "Conforme", fondo: COLORES.verdeSuave, texto: COLORES.verdeOscuro },
+  { valor: "Conforme", fondo: COLORES.okSuave, texto: COLORES.okTexto },
   { valor: "Por vencer", fondo: COLORES.ambarSuave, texto: COLORES.ambarTexto },
   {
     valor: "Con observaciones",

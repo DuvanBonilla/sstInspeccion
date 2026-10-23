@@ -83,32 +83,32 @@ const AUXILIARES = {
 
 const BORDE = { estilo: "thin", color: COLORES.borde };
 
-const BORDE_ACENTO = { estilo: "medium", color: COLORES.verde };
+const BORDE_ACENTO = { estilo: "medium", color: COLORES.acento };
 
 function fuente(tamano, { negrita = false, color = COLORES.texto, nombre } = {}) {
   return { nombre: nombre || FUENTES.principal, tamano, negrita, color };
 }
 
 const ESTILOS = {
-  banda: { relleno: COLORES.verde },
+  banda: { relleno: COLORES.acento },
   titulo: {
-    fuente: fuente(18, { negrita: true, color: COLORES.blanco }),
+    fuente: fuente(18, { negrita: true, color: COLORES.textoAcento }),
     alineacion: { vertical: "center" },
   },
   sistema: {
-    fuente: fuente(11, { negrita: true, color: COLORES.blanco }),
+    fuente: fuente(11, { negrita: true, color: COLORES.textoAcento }),
     alineacion: { horizontal: "right", vertical: "center" },
   },
-  subtitulo: { fuente: fuente(10, { color: COLORES.blanco }) },
+  subtitulo: { fuente: fuente(10, { color: COLORES.textoAcento }) },
   etiquetaMeta: { fuente: fuente(9, { negrita: true }) },
   valorMeta: { fuente: fuente(10, { negrita: true }) },
   boton: {
-    relleno: COLORES.verde,
-    fuente: fuente(10, { negrita: true, color: COLORES.blanco }),
+    relleno: COLORES.acento,
+    fuente: fuente(10, { negrita: true, color: COLORES.textoAcento }),
     alineacion: { horizontal: "center", vertical: "center" },
   },
   botonDatos: {
-    relleno: COLORES.verdeOscuro,
+    relleno: COLORES.acentoOscuro,
     fuente: fuente(10, { negrita: true, color: COLORES.blanco }),
     alineacion: { horizontal: "center", vertical: "center" },
   },
@@ -131,13 +131,13 @@ const ESTILOS = {
   },
   detalle: { fuente: fuente(8, { color: COLORES.textoSecundario }) },
   conformidad: {
-    fuente: fuente(8, { negrita: true, color: COLORES.verdeOscuro }),
+    fuente: fuente(8, { negrita: true, color: COLORES.acentoOscuro }),
     formato: FORMATOS.conformidad,
   },
-  tituloPanel: { fuente: fuente(11, { negrita: true, color: COLORES.verdeOscuro }) },
+  tituloPanel: { fuente: fuente(11, { negrita: true, color: COLORES.acentoOscuro }) },
   encabezadoTabla: {
-    relleno: COLORES.verde,
-    fuente: fuente(9, { negrita: true, color: COLORES.blanco }),
+    relleno: COLORES.acento,
+    fuente: fuente(9, { negrita: true, color: COLORES.textoAcento }),
     alineacion: { horizontal: "center", vertical: "center" },
   },
   filaTabla: {
@@ -413,7 +413,7 @@ const EXTINTORES_POR_AGENTE = [
   { columnas: ["O", "Q"], color: COLORES.ambar, nombre: "Solkaflam", origen: "L", icono: "solkaflam" },
   { columnas: ["R", "T"], color: COLORES.gris, nombre: "CO2", origen: "M", icono: "co2" },
   { columnas: ["U", "W"], color: COLORES.rojo, nombre: "Multipropósito", origen: "N", icono: "multiproposito" },
-  { columnas: ["X", "Z"], color: COLORES.verdeAgua, nombre: "Agua", origen: "O", icono: "agua" },
+  { columnas: ["X", "Z"], color: COLORES.ok, nombre: "Agua", origen: "O", icono: "agua" },
 ];
 
 function dibujarAgentes(lienzo) {
@@ -725,7 +725,7 @@ function construirFormatoCondicionalXml(registro) {
   const barraDatos =
     `<cfRule type="dataBar" priority="${ESTILOS_ESTADO.length + 1}">` +
     '<dataBar minLength="0" maxLength="100"><cfvo type="num" val="0"/><cfvo type="num" val="1"/>' +
-    `<color rgb="FF${COLORES.verde}"/></dataBar></cfRule>`;
+    `<color rgb="FF${COLORES.ok}"/></dataBar></cfRule>`;
 
   return (
     `<conditionalFormatting sqref="L31:L40 X31:X40">${reglasEstado}</conditionalFormatting>` +

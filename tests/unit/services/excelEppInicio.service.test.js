@@ -51,7 +51,7 @@ test("la paleta del tablero SST es la misma que usa el tablero EPP", () => {
   assert.equal(estilosSst.COLORES, COLORES);
   assert.equal(estilosSst.FUENTES, FUENTES);
   assert.equal(aArgb("1E9E57"), "FF1E9E57");
-  assert.equal(aArgb(COLORES.verde), `FF${COLORES.verde}`);
+  assert.equal(aArgb(COLORES.acento), `FF${COLORES.acento}`);
 });
 
 test("Inicio es la primera pestaña y usa la cuadrícula del tablero SST", () => {
@@ -62,8 +62,8 @@ test("Inicio es la primera pestaña y usa la cuadrícula del tablero SST", () =>
   assert.equal(hoja.getColumn("B").width, 6.2);
   assert.equal(hoja.getColumn("Z").width, 6.2);
   assert.equal(hoja.getCell("B2").value, "TABLERO DE INSPECCIONES EPP");
-  assert.equal(hoja.getCell("B2").fill.fgColor.argb, aArgb(COLORES.verde));
-  assert.equal(hoja.properties.tabColor.argb, aArgb(COLORES.verde));
+  assert.equal(hoja.getCell("B2").fill.fgColor.argb, aArgb(COLORES.acento));
+  assert.equal(hoja.properties.tabColor.argb, aArgb(COLORES.acento));
 });
 
 test("las cinco tarjetas ocupan cinco columnas cada una", () => {

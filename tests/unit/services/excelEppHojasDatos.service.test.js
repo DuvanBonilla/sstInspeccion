@@ -49,12 +49,12 @@ test("las hojas de datos tienen la pestaña gris y la cuadrícula oculta", () =>
   }
 });
 
-test("el encabezado es verde con letra blanca, como en las hojas de datos del SST", () => {
+test("el encabezado es de acento con letra oscura, como en las hojas de datos del SST", () => {
   for (const hoja of crearHojas()) {
     const celda = hoja.getCell("A1");
 
-    assert.equal(celda.fill.fgColor.argb, aArgb(COLORES.verde), hoja.name);
-    assert.equal(celda.font.color.argb, aArgb(COLORES.blanco), hoja.name);
+    assert.equal(celda.fill.fgColor.argb, aArgb(COLORES.acento), hoja.name);
+    assert.equal(celda.font.color.argb, aArgb(COLORES.textoAcento), hoja.name);
     assert.equal(celda.font.bold, true, hoja.name);
     assert.equal(hoja.getRow(1).height, 42, hoja.name);
   }
@@ -99,7 +99,7 @@ test("las hojas se escriben y se vuelven a leer sin perder el formato", async ()
 
   const hoja = leido.getWorksheet("01 - Inspecciones");
 
-  assert.equal(hoja.getCell("A1").fill.fgColor.argb, aArgb(COLORES.verde));
+  assert.equal(hoja.getCell("A1").fill.fgColor.argb, aArgb(COLORES.acento));
   assert.equal(hoja.getCell("A300").fill.fgColor.argb, aArgb(COLORES.blanco));
 });
 
@@ -114,7 +114,7 @@ test("sin planes, la fila vacía de la tabla de la hoja 03 también lleva el for
   }
 });
 
-test("la pestaña General es verde, como la de Inicio", () => {
+test("la pestaña General es del color de acento, como la de Inicio", () => {
   const {
     construirHojaGeneralEpp,
   } = require("../../../src/backend/modules/inspecciones-epp/excel/hojas/general.service");
@@ -123,5 +123,5 @@ test("la pestaña General es verde, como la de Inicio", () => {
 
   construirHojaGeneralEpp(workbook, [], [], []);
 
-  assert.equal(workbook.getWorksheet("General").properties.tabColor.argb, aArgb(COLORES.verde));
+  assert.equal(workbook.getWorksheet("General").properties.tabColor.argb, aArgb(COLORES.acento));
 });

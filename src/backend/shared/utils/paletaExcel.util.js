@@ -6,10 +6,21 @@
  * librerías que exigen el canal alfa lo agregan con `aArgb`.
  */
 
+/**
+ * El color de acento (`acento*`) pinta las bandas, los encabezados y los
+ * botones; es un azul pastel, por lo que el texto que va encima es oscuro
+ * (`textoAcento`). El verde (`ok*`) queda reservado para los estados
+ * favorables: conforme, bueno, sin novedad y cumplido.
+ */
+
 const COLORES = {
-  verde: "468C72",
-  verdeOscuro: "2F6B55",
-  verdeSuave: "E2F0E9",
+  acento: "A7C7E7",
+  acentoOscuro: "3B5B7F",
+  acentoSuave: "EAF2FA",
+  textoAcento: "1F3A5F",
+  ok: "5FA386",
+  okSuave: "E2F0E9",
+  okTexto: "2F6B55",
   blanco: "FFFFFF",
   texto: "1F2937",
   textoSecundario: "6B7280",
@@ -22,7 +33,6 @@ const COLORES = {
   rojo: "D64545",
   rojoTexto: "B42318",
   rojoSuave: "FAD4D4",
-  verdeAgua: "5FA386",
   serieBueno: "5FA386",
   serieRegular: "F2B33D",
   serieMalo: "E0533D",
@@ -45,16 +55,16 @@ const FORMATOS = {
  */
 
 const COLORES_PESTANA = {
-  inicio: COLORES.verde,
-  general: COLORES.verdeOscuro,
+  inicio: COLORES.acento,
+  general: COLORES.acento,
   datos: COLORES.gris,
 };
 
 /**
  * Convierte un color hexadecimal RGB al formato ARGB opaco de ExcelJS.
  *
- * @param {string} hex Color de seis dígitos, por ejemplo `1E9E57`.
- * @returns {string} Color con canal alfa, por ejemplo `FF1E9E57`.
+ * @param {string} hex Color de seis dígitos, por ejemplo `A7C7E7`.
+ * @returns {string} Color con canal alfa, por ejemplo `FFA7C7E7`.
  */
 
 function aArgb(hex) {

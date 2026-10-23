@@ -11,17 +11,18 @@ const {
  */
 
 const COLORES = {
-  encabezado: aArgb(PALETA.verdeOscuro),
-  seccion: aArgb(PALETA.verde),
-  suave: aArgb(PALETA.verdeSuave),
+  encabezado: aArgb(PALETA.acento),
+  seccion: aArgb(PALETA.acento),
+  suave: aArgb(PALETA.acentoSuave),
   texto: aArgb(PALETA.texto),
+  textoAcento: aArgb(PALETA.textoAcento),
 
   blanco: "FFFFFFFF",
   grisClaro: "FFF2F4F7",
   grisTexto: "FF667085",
 
-  verdeFondo: aArgb(PALETA.verdeSuave),
-  verdeTexto: aArgb(PALETA.verdeOscuro),
+  verdeFondo: aArgb(PALETA.okSuave),
+  verdeTexto: aArgb(PALETA.okTexto),
 
   amarilloFondo: "FFFFF4E5",
   amarilloTexto: "FFB54708",
@@ -110,7 +111,7 @@ function crearSeccion(hoja, fila, titulo) {
   aplicarFondo(celda, COLORES.seccion);
 
   aplicarTexto(celda, {
-    color: COLORES.blanco,
+    color: COLORES.textoAcento,
     tamaño: 10,
     negrita: true,
     horizontal: "left",
@@ -134,7 +135,7 @@ function crearEncabezado(hoja, fila, configuracion) {
     aplicarFondo(celda, COLORES.encabezado);
 
     aplicarTexto(celda, {
-      color: COLORES.blanco,
+      color: COLORES.textoAcento,
       tamaño: 9,
       negrita: true,
     });
@@ -350,7 +351,7 @@ function aplicarEstiloFilaDatos(hoja, numeroFila) {
 function construirHojaGeneralEpp(workbook, inspecciones, seguimiento, planes) {
   const hoja = obtenerOCrearHoja(workbook, "General");
 
-  hoja.properties.tabColor = { argb: aArgb(PALETA.verde) };
+  hoja.properties.tabColor = { argb: aArgb(PALETA.acento) };
 
   hoja.views = [
     {
@@ -422,7 +423,7 @@ function construirHojaGeneralEpp(workbook, inspecciones, seguimiento, planes) {
   aplicarFondo(titulo, COLORES.encabezado);
 
   aplicarTexto(titulo, {
-    color: COLORES.blanco,
+    color: COLORES.textoAcento,
     tamaño: 16,
     negrita: true,
   });

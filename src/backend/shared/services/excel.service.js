@@ -9,7 +9,7 @@ const {
 
 /**
  * Formato de las hojas de datos de los seguimientos, igual al de las hojas de
- * datos del tablero SST: encabezado verde, filas blancas y bordes suaves.
+ * datos del tablero SST: encabezado de acento, filas blancas y bordes suaves.
  */
 
 const ALTO_ENCABEZADO = 42;
@@ -20,7 +20,7 @@ const BORDE_CELDA = { style: "thin", color: { argb: aArgb(COLORES.borde) } };
 
 const BORDE_ENCABEZADO = {
   style: "thin",
-  color: { argb: aArgb(COLORES.verdeOscuro) },
+  color: { argb: aArgb(COLORES.acentoOscuro) },
 };
 
 /**
@@ -218,13 +218,13 @@ function aplicarEstiloEncabezado(worksheet, fila = 1) {
       name: FUENTES.principal,
       size: 10,
       bold: true,
-      color: { argb: aArgb(COLORES.blanco) },
+      color: { argb: aArgb(COLORES.textoAcento) },
     };
 
     cell.fill = {
       type: "pattern",
       pattern: "solid",
-      fgColor: { argb: aArgb(COLORES.verde) },
+      fgColor: { argb: aArgb(COLORES.acento) },
     };
 
     cell.alignment = {

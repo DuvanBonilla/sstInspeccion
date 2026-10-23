@@ -92,28 +92,28 @@ const POSICION_ICONO_BLOQUE = { tamano: 48, margenX: 0, margenY: 6, altoFila: 20
 
 const BORDE = { estilo: "thin", color: COLORES.borde };
 
-const BORDE_ACENTO = { estilo: "medium", color: COLORES.verde };
+const BORDE_ACENTO = { estilo: "medium", color: COLORES.acento };
 
 function fuente(tamano, { negrita = false, color = COLORES.texto, nombre } = {}) {
   return { nombre: nombre || FUENTES.principal, tamano, negrita, color };
 }
 
 const ESTILOS = {
-  banda: { relleno: COLORES.verde },
+  banda: { relleno: COLORES.acento },
   titulo: {
-    fuente: fuente(18, { negrita: true, color: COLORES.blanco }),
+    fuente: fuente(18, { negrita: true, color: COLORES.textoAcento }),
     alineacion: { vertical: "center" },
   },
   sistema: {
-    fuente: fuente(11, { negrita: true, color: COLORES.blanco }),
+    fuente: fuente(11, { negrita: true, color: COLORES.textoAcento }),
     alineacion: { horizontal: "right", vertical: "center" },
   },
-  subtitulo: { fuente: fuente(10, { color: COLORES.blanco }) },
+  subtitulo: { fuente: fuente(10, { color: COLORES.textoAcento }) },
   etiquetaMeta: { fuente: fuente(9, { negrita: true }) },
   valorMeta: { fuente: fuente(10, { negrita: true }) },
   boton: {
-    relleno: COLORES.verde,
-    fuente: fuente(10, { negrita: true, color: COLORES.blanco }),
+    relleno: COLORES.acento,
+    fuente: fuente(10, { negrita: true, color: COLORES.textoAcento }),
     alineacion: { horizontal: "center", vertical: "center" },
   },
   tarjeta: { relleno: COLORES.blanco },
@@ -131,13 +131,13 @@ const ESTILOS = {
   },
   detalle: { fuente: fuente(8, { color: COLORES.textoSecundario }) },
   conformidad: {
-    fuente: fuente(8, { negrita: true, color: COLORES.verdeOscuro }),
+    fuente: fuente(8, { negrita: true, color: COLORES.acentoOscuro }),
     alineacion: { horizontal: "right" },
   },
-  tituloPanel: { fuente: fuente(11, { negrita: true, color: COLORES.verdeOscuro }) },
+  tituloPanel: { fuente: fuente(11, { negrita: true, color: COLORES.acentoOscuro }) },
   encabezadoTabla: {
-    relleno: COLORES.verde,
-    fuente: fuente(9, { negrita: true, color: COLORES.blanco }),
+    relleno: COLORES.acento,
+    fuente: fuente(9, { negrita: true, color: COLORES.textoAcento }),
     alineacion: { horizontal: "center", vertical: "center" },
   },
   filaTabla: {
@@ -421,7 +421,7 @@ function dibujarEstadoPlanes(lienzo, refs) {
     },
     {
       columnas: ["H", "J"],
-      color: COLORES.verdeAgua,
+      color: COLORES.ok,
       nombre: "Cumplidos",
       icono: ICONOS.cumplidos,
       cifra: cumplidos,
@@ -713,7 +713,7 @@ function dibujarCumplimiento(lienzo, refs) {
   lienzo.combinar("O49:Z49").texto("O49", "Leyenda de condición del EPP", ESTILOS.seccion);
 
   const leyenda = [
-    { codigo: "B", texto: "Bueno", fondo: COLORES.verdeSuave, color: COLORES.verdeOscuro },
+    { codigo: "B", texto: "Bueno", fondo: COLORES.okSuave, color: COLORES.okTexto },
     { codigo: "R", texto: "Regular", fondo: COLORES.ambarSuave, color: COLORES.ambarTexto },
     { codigo: "M", texto: "Malo", fondo: COLORES.rojoSuave, color: COLORES.rojoTexto },
     { codigo: "NA", texto: "No aplica", fondo: COLORES.grisSuave, color: COLORES.textoSecundario },
@@ -755,7 +755,7 @@ function agregarBarrasDeAvance(hoja) {
             { type: "num", value: 0 },
             { type: "num", value: 1 },
           ],
-          color: { argb: `FF${COLORES.verdeAgua}` },
+          color: { argb: `FF${COLORES.ok}` },
         },
       ],
     });
